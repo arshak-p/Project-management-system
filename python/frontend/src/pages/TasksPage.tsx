@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Plus, Search, Loader2, Trash2, CheckCircle2, Circle, AlertTriangle, ArrowUp } from 'lucide-react';
+import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -36,9 +36,16 @@ export default function TasksPage() {
   const [filterState, setFilterState] = useState('');
   const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = () => {
-    Promise.all([api.getTasks(), api.getProjects(), api.getStates(), api.getModules(), api.getAssignableUsers().catch(() => ({ data: [] }))])
+    Promise.all([
+      api.getTasks({ archived: showArchived }), 
+      api.getProjects(), 
+      api.getStates(), 
+      api.getModules(), 
+      api.getAssignableUsers().catch(() => ({ data: [] }))
+    ])
       .then(([t, p, s, m, u]) => {
         setTasks(t.data);
         setProjects(p.data);
@@ -50,7 +57,7 @@ export default function TasksPage() {
       .finally(() => setIsLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [showArchived]);
 
   // Sync to local storage
   useEffect(() => {
@@ -78,9 +85,15 @@ export default function TasksPage() {
     } finally { setSaving(false); }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Delete this task? This cannot be undone.')) return;
+  const handleArchive = async (id: number) => {
+    if (!confirm('Archive this task to historical data?')) return;
     await api.deleteTask(id);
+    load();
+  };
+
+  const handleRestore = async (id: number) => {
+    if (!confirm('Restore this task to active work items?')) return;
+    await api.updateTask(id, { is_active: true });
     load();
   };
 
@@ -168,6 +181,14 @@ export default function TasksPage() {
             {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
+        <label className="flex items-center gap-3 bg-surface border border-border px-5 py-2.5 rounded-xl cursor-pointer hover:border-primary transition-all">
+          <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
+          <span className="text-[10px] font-black uppercase tracking-widest">Archived</span>
+          <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
+          <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
+          </div>
+        </label>
       </div>
 
       {/* Tasks List */}
@@ -184,7 +205,7 @@ export default function TasksPage() {
               </div>
             )}
             {filtered.map(task => (
-              <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className="flex items-center gap-4 px-5 py-4 hover:bg-surface/30 transition-colors group cursor-pointer">
+              <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`flex items-center gap-4 px-5 py-4 hover:bg-surface/30 transition-colors group cursor-pointer ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''}`}>
                 <div className="w-2 h-10 rounded-full bg-gradient-to-b from-primary to-[#8b5cf6] flex-shrink-0"></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -200,9 +221,15 @@ export default function TasksPage() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-xs bg-surface border border-border px-3 py-1 rounded-full text-text-muted">State #{task.state}</span>
-                  <button onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }} className="p-2 opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error text-text-muted rounded-lg transition-all">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {task.is_active ? (
+                    <button onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }} title="Archive Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-500 text-text-muted rounded-lg transition-all">
+                      <Database className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button onClick={(e) => { e.stopPropagation(); handleRestore(task.id); }} title="Restore Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-emerald-500/10 hover:text-emerald-500 text-text-muted rounded-lg transition-all">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

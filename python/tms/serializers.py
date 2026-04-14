@@ -38,7 +38,7 @@ class DepartmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Department
-        fields = ("id", "name", "slug", "head_id", "created_at")
+        fields = ("id", "name", "slug", "head_id", "created_at", "is_active")
 
 
 class UserBriefSerializer(serializers.ModelSerializer):
@@ -93,27 +93,32 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ProjectSerializer(serializers.ModelSerializer):
+    total_minutes = serializers.SerializerMethodField()
+
     class Meta:
         model = Project
-        fields = ("id", "name", "slug", "description", "created_at", "updated_at")
+        fields = ("id", "name", "slug", "description", "created_at", "updated_at", "is_active", "total_minutes")
+
+    def get_total_minutes(self, obj):
+        return sum(log.minutes for log in TimeLog.objects.filter(work_item__project=obj))
 
 
 class ModuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Module
-        fields = ("id", "name", "slug", "sort_order")
+        fields = ("id", "name", "slug", "sort_order", "is_active")
 
 
 class StateSerializer(serializers.ModelSerializer):
     class Meta:
         model = State
-        fields = ("id", "name", "slug", "sort_order")
+        fields = ("id", "name", "slug", "sort_order", "is_active")
 
 
 class LabelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Label
-        fields = ("id", "key", "name", "color_hint")
+        fields = ("id", "key", "name", "color_hint", "is_active")
 
 
 class CycleSerializer(serializers.ModelSerializer):
@@ -129,6 +134,7 @@ class CycleSerializer(serializers.ModelSerializer):
             "parent_cycle",
             "created_at",
             "updated_at",
+            "is_active",
         )
 
 
@@ -207,6 +213,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
     state_slug = serializers.SlugField(source="state.slug", read_only=True)
     module_slug = serializers.SlugField(source="module.slug", read_only=True)
     label_details = LabelSerializer(source="labels", many=True, read_only=True)
+    total_minutes = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkItem
@@ -232,8 +239,13 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "created_by",
             "created_at",
             "updated_at",
+            "is_active",
+            "total_minutes",
         )
-        read_only_fields = ("task_code", "created_by", "created_at", "updated_at")
+        read_only_fields = ("task_code", "created_by", "created_at", "updated_at", "total_minutes")
+
+    def get_total_minutes(self, obj):
+        return sum(log.minutes for log in obj.time_logs.all())
 
     def validate(self, attrs):
         request = self.context["request"]

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Loader2, Users, Shield, User2, Mail, Plus, X, Phone, Briefcase, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Loader2, Users, Shield, User2, Mail, Plus, X, Phone, Briefcase, Eye, EyeOff, Database } from 'lucide-react';
 
 const ROLE_COLORS: Record<string, string> = {
   admin: 'text-red-400 bg-red-400/10 border-red-400/20',
@@ -58,15 +58,16 @@ export default function TeamPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = () => {
-    api.getUsers()
+    api.getUsers({ archived: showArchived })
       .then(r => setUsers(r.data))
       .catch(err => console.error('Fetching issue on Team Page:', err))
       .finally(() => setIsLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [showArchived]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,13 +85,23 @@ export default function TeamPage() {
     } finally { setSaving(false); }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this team member? This cannot be undone.')) return;
+  const handleArchive = async (id: number) => {
+    if (!confirm('Archive this team member? Access will be revoked immediately.')) return;
     try {
       await api.deleteUser(id);
       load();
     } catch (err: any) {
-      alert('Failed to delete member.');
+      alert('Failed to archive member.');
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    if (!confirm('Restore this team member to active status?')) return;
+    try {
+      await api.updateUser(id, { is_active: true });
+      load();
+    } catch (err: any) {
+      alert('Failed to restore member.');
     }
   };
 
@@ -219,9 +230,19 @@ export default function TeamPage() {
           <h1 className="text-3xl font-bold">Team Directory</h1>
           <p className="text-text-muted mt-1">{users.length} member{users.length !== 1 ? 's' : ''} across all departments.</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90 transition-opacity">
-          <Plus className="w-4 h-4" /> Add Member
-        </button>
+        <div className="flex gap-4 items-center">
+          <label className="flex items-center gap-3 glass px-5 py-2.5 rounded-xl cursor-pointer hover:bg-white/5 transition-all text-xs font-bold">
+            <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
+            <span className="uppercase tracking-widest text-[10px]">Archives</span>
+            <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
+            <div className={`w-9 h-4.5 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+              <div className={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full transition-all ${showArchived ? 'left-5' : 'left-0.5'}`}></div>
+            </div>
+          </label>
+          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90 transition-opacity">
+            <Plus className="w-4 h-4" /> Add Member
+          </button>
+        </div>
       </div>
 
       {/* Role Stats */}
@@ -253,14 +274,24 @@ export default function TeamPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filtered.map((user, i) => (
-            <div key={user.id} className="glass rounded-2xl border border-border/50 hover:border-primary/30 transition-all group overflow-hidden relative">
-              <button 
-                onClick={(e) => { e.stopPropagation(); handleDelete(user.id); }} 
-                className="absolute top-2 right-2 p-2 opacity-0 group-hover:opacity-100 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all z-10"
-                title="Delete Member"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+            <div key={user.id} className={`glass rounded-2xl border border-border/50 hover:border-primary/30 transition-all group overflow-hidden relative ${!user.is_active ? 'opacity-60 grayscale-[0.6]' : ''}`}>
+              {user.is_active ? (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleArchive(user.id); }} 
+                  className="absolute top-2 right-2 p-2 opacity-0 group-hover:opacity-100 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg transition-all z-10"
+                  title="Archive Member"
+                >
+                  <Database className="w-4 h-4" />
+                </button>
+              ) : (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleRestore(user.id); }} 
+                  className="absolute top-2 right-2 p-2 opacity-0 group-hover:opacity-100 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg transition-all z-10"
+                  title="Restore Member"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
               <div className={`h-1 bg-gradient-to-r ${getAvatarGradient(i)}`}></div>
               <div className="p-6 text-center">
                 <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${getAvatarGradient(i)} flex items-center justify-center text-2xl font-black text-white mx-auto mb-4 shadow-lg group-hover:scale-105 transition-transform`}>
@@ -280,8 +311,8 @@ export default function TeamPage() {
                 <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-2 gap-2 text-center">
                   <div>
                     <p className="text-xs text-text-muted">Status</p>
-                    <span className={`text-xs font-bold ${user.is_active ? 'text-green-400' : 'text-red-400'}`}>
-                      {user.is_active ? '🟢 Active' : '🔴 Inactive'}
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${user.is_active ? 'text-emerald-500' : 'text-amber-500'}`}>
+                      {user.is_active ? '🟢 Operational' : '🟡 Offline Log'}
                     </span>
                   </div>
                   <div>

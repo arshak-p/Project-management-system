@@ -54,7 +54,10 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
       .finally(() => setIsLoading(false));
   };
 
-  useEffect(() => { loadData(); }, [taskId]);
+  useEffect(() => { 
+    loadData(); 
+    api.recordView(taskId).catch(() => {}); // Notify PM that member is viewing
+  }, [taskId]);
 
   useEffect(() => {
     const wsUrl = `ws://127.0.0.1:8000/ws/tasks/${taskId}/?token=${localStorage.getItem('access_token')}`;

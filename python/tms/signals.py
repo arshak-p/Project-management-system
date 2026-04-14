@@ -8,7 +8,7 @@ from asgiref.sync import async_to_sync
 from accounts.models import User
 from tms.notify import notify_user
 
-from tms.models import ActivityLog, UserProfile, WorkItem, WorkItemComment
+from tms.models import ActivityLog, UserProfile, WorkItem, WorkItemComment, Project, Department, Cycle
 
 
 @receiver(post_save, sender=User)
@@ -23,7 +23,7 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
     if kwargs.get("raw"):
         return
     actor = getattr(instance, "_activity_user", None)
-    action = "created" if created else "updated"
+    action = "created" if created else ("deactivated" if not instance.is_active else "updated")
     ActivityLog.objects.create(
         entity_type="work_item",
         entity_id=str(instance.pk),
@@ -38,20 +38,25 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
     )
 
     if not created and actor:
+        # Determine notification title and body
+        is_deactivated = action == "deactivated"
+        notif_title = f"Archived: {instance.task_code}" if is_deactivated else f"Task Updated: {instance.task_code}"
+        notif_body = f"{actor.first_name or actor.email} archived '{instance.title}'" if is_deactivated else f"{actor.first_name or actor.email} updated '{instance.title}'"
+
         # Notify assignee if they didn't make the change
         if instance.assignee and instance.assignee.id != actor.id:
             notify_user(
                 instance.assignee.id,
-                title=f"Task Updated: {instance.task_code}",
-                body=f"{actor.first_name or actor.email} updated '{instance.title}'",
+                title=notif_title,
+                body=notif_body,
                 link=f"/task/{instance.id}"
             )
         # Notify creator if they didn't make the change
         if instance.created_by and instance.created_by.id != actor.id and (not instance.assignee or instance.assignee.id != instance.created_by.id):
             notify_user(
                 instance.created_by.id,
-                title=f"Task Updated: {instance.task_code}",
-                body=f"{actor.first_name or actor.email} updated your task '{instance.title}'",
+                title=notif_title,
+                body=notif_body,
                 link=f"/task/{instance.id}"
             )
 
@@ -97,3 +102,44 @@ def log_comment_save(sender, instance: WorkItemComment, created: bool, **kwargs)
                 }
             }
         )
+
+@receiver(post_save, sender=Project)
+def log_project_save(sender, instance: Project, created: bool, **kwargs):
+    if kwargs.get("raw"): return
+    actor = getattr(instance, "_activity_user", None)
+    action = "created" if created else ("deactivated" if not instance.is_active else "updated")
+    ActivityLog.objects.create(
+        entity_type="project",
+        entity_id=str(instance.pk),
+        action=action,
+        user=actor,
+        project=instance,
+        payload={"name": instance.name, "slug": instance.slug}
+    )
+
+@receiver(post_save, sender=Department)
+def log_department_save(sender, instance: Department, created: bool, **kwargs):
+    if kwargs.get("raw"): return
+    actor = getattr(instance, "_activity_user", None)
+    action = "created" if created else ("deactivated" if not instance.is_active else "updated")
+    ActivityLog.objects.create(
+        entity_type="department",
+        entity_id=str(instance.pk),
+        action=action,
+        user=actor,
+        payload={"name": instance.name}
+    )
+
+@receiver(post_save, sender=Cycle)
+def log_cycle_save(sender, instance: Cycle, created: bool, **kwargs):
+    if kwargs.get("raw"): return
+    actor = getattr(instance, "_activity_user", None)
+    action = "created" if created else ("deactivated" if not instance.is_active else "updated")
+    ActivityLog.objects.create(
+        entity_type="cycle",
+        entity_id=str(instance.pk),
+        action=action,
+        user=actor,
+        project=instance.project,
+        payload={"name": instance.name, "start_date": str(instance.start_date)}
+    )

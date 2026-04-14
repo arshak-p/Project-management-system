@@ -2,6 +2,7 @@
 from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
+from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -34,7 +35,5 @@ class JWTQueryTokenMiddleware:
                         uid = int(token["user_id"])
                         scope["user"] = await _user_from_id(uid)
                     except (InvalidToken, TokenError, KeyError, ValueError, TypeError):
-                        from django.contrib.auth.models import AnonymousUser
-
                         scope["user"] = AnonymousUser()
         return await self.app(scope, receive, send)

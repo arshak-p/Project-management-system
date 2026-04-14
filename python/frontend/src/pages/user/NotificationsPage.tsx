@@ -23,6 +23,8 @@ export default function NotificationsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       load();
+      // Notify other components (like Dashboard) that unread count changed
+      window.dispatchEvent(new Event('notificationRead'));
     } catch (e) { console.error(e); }
   };
 

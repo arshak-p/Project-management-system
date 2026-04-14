@@ -17,6 +17,7 @@ class Department(models.Model):
         related_name="headed_departments",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         ordering = ["name"]
@@ -33,6 +34,7 @@ class Project(models.Model):
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         ordering = ["name"]
@@ -106,6 +108,7 @@ class Module(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=64, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         ordering = ["sort_order", "name"]
@@ -120,6 +123,7 @@ class State(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=64, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         ordering = ["sort_order"]
@@ -138,6 +142,7 @@ class Label(models.Model):
         blank=True,
         help_text="UI hint: e.g. red, amber, violet (Tailwind semantic).",
     )
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         ordering = ["name"]
@@ -163,6 +168,7 @@ class Cycle(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         ordering = ["-start_date", "name"]
@@ -240,6 +246,7 @@ class WorkItem(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         ordering = ["project_id", "state_id", "board_position", "-updated_at"]

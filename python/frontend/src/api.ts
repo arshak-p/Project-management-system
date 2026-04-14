@@ -2,71 +2,111 @@ import axios from 'axios';
 
 export const API_URL = 'http://127.0.0.1:8000/api';
 
-const getHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+// Configure base axios instance with interceptors
+const apiClient = axios.create({
+  baseURL: API_URL,
 });
+
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken) {
+        try {
+          const response = await axios.post(`${API_URL}/auth/refresh/`, {
+            refresh: refreshToken,
+          });
+          const newToken = response.data.access;
+          localStorage.setItem('access_token', newToken);
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return axios(originalRequest);
+        } catch (refreshError) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          window.location.reload();
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const api = {
   // Auth
   login: (email: string, password: string) =>
-    axios.post(`${API_URL.replace('/api', '')}/api/auth/login/`, { email, password }),
+    axios.post(`${API_URL}/auth/login/`, { email, password }),
 
   // Users
-  getMe: () => axios.get(`${API_URL}/users/me/`, { headers: getHeaders() }),
-  getUsers: () => axios.get(`${API_URL}/users/`, { headers: getHeaders() }),
-  getAssignableUsers: () => axios.get(`${API_URL}/users/assignable/`, { headers: getHeaders() }),
+  getMe: () => apiClient.get('/users/me/'),
+  getUsers: (params?: object) => apiClient.get('/users/', { params }),
+  getAssignableUsers: () => apiClient.get('/users/assignable/'),
 
   // Projects
-  getProjects: () => axios.get(`${API_URL}/projects/`, { headers: getHeaders() }),
-  createProject: (data: object) => axios.post(`${API_URL}/projects/`, data, { headers: getHeaders() }),
-  deleteProject: (id: number) => axios.delete(`${API_URL}/projects/${id}/`, { headers: getHeaders() }),
+  getProjects: (params?: object) => apiClient.get('/projects/', { params }),
+  createProject: (data: object) => apiClient.post('/projects/', data),
+  updateProject: (id: number, data: object) => apiClient.patch(`/projects/${id}/`, data),
+  deleteProject: (id: number) => apiClient.delete(`/projects/${id}/`),
 
   // Tasks/WorkItems
-  getTasks: () => axios.get(`${API_URL}/work-items/`, { headers: getHeaders() }),
-  getTask: (id: number) => axios.get(`${API_URL}/work-items/${id}/`, { headers: getHeaders() }),
-  createTask: (data: object) => axios.post(`${API_URL}/work-items/`, data, { headers: getHeaders() }),
-  updateTask: (id: number, data: object) => axios.patch(`${API_URL}/work-items/${id}/`, data, { headers: getHeaders() }),
-  deleteTask: (id: number) => axios.delete(`${API_URL}/work-items/${id}/`, { headers: getHeaders() }),
+  getTasks: (params?: object) => apiClient.get('/work-items/', { params }),
+  getTask: (id: number) => apiClient.get(`/work-items/${id}/`),
+  createTask: (data: object) => apiClient.post('/work-items/', data),
+  updateTask: (id: number, data: object) => apiClient.patch(`/work-items/${id}/`, data),
+  deleteTask: (id: number) => apiClient.delete(`/work-items/${id}/`),
+  recordView: (id: number) => apiClient.post(`/work-items/${id}/record-view/`),
 
   // Comments
-  getComments: (taskId: number) => axios.get(`${API_URL}/comments/?work_item=${taskId}`, { headers: getHeaders() }),
-  createComment: (data: object) => axios.post(`${API_URL}/comments/`, data, { headers: getHeaders() }),
+  getComments: (taskId: number) => apiClient.get(`/comments/?work_item=${taskId}`),
+  createComment: (data: object) => apiClient.post('/comments/', data),
 
   // Attachments
-  getAttachments: (taskId: number) => axios.get(`${API_URL}/attachments/?work_item=${taskId}`, { headers: getHeaders() }),
-  createAttachment: (data: FormData) => axios.post(`${API_URL}/attachments/`, data, { headers: { ...getHeaders(), 'Content-Type': 'multipart/form-data' } }),
+  getAttachments: (taskId: number) => apiClient.get(`/attachments/?work_item=${taskId}`),
+  createAttachment: (data: FormData) => apiClient.post('/attachments/', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
 
   // Time Logs
-  getTimeLogs: (taskId: number) => axios.get(`${API_URL}/time-logs/?work_item=${taskId}`, { headers: getHeaders() }),
-  createTimeLog: (data: object) => axios.post(`${API_URL}/time-logs/`, data, { headers: getHeaders() }),
+  getTimeLogs: (taskId: number) => apiClient.get(`/time-logs/?work_item=${taskId}`),
+  createTimeLog: (data: object) => apiClient.post('/time-logs/', data),
 
   // States
-  getStates: () => axios.get(`${API_URL}/states/`, { headers: getHeaders() }),
-  createState: (data: object) => axios.post(`${API_URL}/states/`, data, { headers: getHeaders() }),
+  getStates: () => apiClient.get('/states/'),
+  createState: (data: object) => apiClient.post('/states/', data),
 
   // Modules
-  getModules: () => axios.get(`${API_URL}/modules/`, { headers: getHeaders() }),
+  getModules: () => apiClient.get('/modules/'),
 
   // Departments
-  getDepartments: () => axios.get(`${API_URL}/departments/`, { headers: getHeaders() }),
+  getDepartments: () => apiClient.get('/departments/'),
 
   // Cycles (Sprints)
-  getCycles: () => axios.get(`${API_URL}/cycles/`, { headers: getHeaders() }),
-  createCycle: (data: object) => axios.post(`${API_URL}/cycles/`, data, { headers: getHeaders() }),
+  getCycles: () => apiClient.get('/cycles/'),
+  createCycle: (data: object) => apiClient.post('/cycles/', data),
+
+  // Time Logs (All logs for reporting)
+  getAllTimeLogs: () => apiClient.get('/time-logs/'),
 
   // Analytics
-  getAnalytics: () => axios.get(`${API_URL}/analytics/summary/`, { headers: getHeaders() }),
+  getAnalytics: (params?: object) => apiClient.get('/analytics/summary/', { params }),
 
   // Activity
-  getActivity: () => axios.get(`${API_URL}/activity/`, { headers: getHeaders() }),
+  getActivity: () => apiClient.get('/activity/'),
 
   // Notifications
-  getNotifications: () => axios.get(`${API_URL}/notifications/`, { headers: getHeaders() }),
+  getNotifications: () => apiClient.get('/notifications/'),
 
   // Create user (admin only)
   createUser: (data: object) =>
-    axios.post(`${API_URL.replace('/api', '')}/api/auth/create-user/`, data, { headers: getHeaders() }),
+    apiClient.post('/auth/create-user/', data),
   deleteUser: (id: number) =>
-    axios.delete(`${API_URL}/users/${id}/`, { headers: getHeaders() }),
+    apiClient.delete(`/users/${id}/`),
 };
-

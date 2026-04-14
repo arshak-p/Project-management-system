@@ -54,27 +54,41 @@ class SalesSafeViewSet(viewsets.ModelViewSet):
 
 
 class DepartmentViewSet(SalesSafeViewSet):
-    queryset = Department.objects.all()
+    queryset = Department.objects.filter(is_active=True)
     serializer_class = DepartmentSerializer
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            return [permissions.IsAuthenticated(), IsAdminRole()]
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         return super().get_permissions()
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
 
 class UserViewSet(SalesSafeViewSet):
-    queryset = User.objects.filter(is_superuser=False).select_related("tms_profile").prefetch_related()
     serializer_class = UserSerializer
+
+    def get_queryset(self):
+        include_archived = self.request.query_params.get("archived") == "true"
+        qs = User.objects.filter(is_superuser=False).select_related("tms_profile").prefetch_related()
+        if not include_archived:
+            qs = qs.filter(is_active=True)
+        return qs
 
     def get_permissions(self):
         if self.action in ("list", "create", "destroy", "update", "partial_update"):
-            return [permissions.IsAuthenticated(), IsAdminRole()]
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         if self.action == "assignable":
             return [permissions.IsAuthenticated(), BlockSalesWrites()]
         if self.action == "me":
             return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), BlockSalesWrites()]
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
     @action(detail=False, methods=["get"])
     def me(self, request):
@@ -99,50 +113,63 @@ class ProjectViewSet(SalesSafeViewSet):
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
-        return access.projects_for_user(self.request.user)
+        include_archived = self.request.query_params.get("archived") == "true"
+        return access.projects_for_user(self.request.user, include_archived=include_archived)
 
     def get_permissions(self):
-        if self.action in ("create", "update", "partial_update"):
+        if self.action in ("create", "update", "partial_update", "destroy"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
-        if self.action == "destroy":
-            return [permissions.IsAuthenticated(), IsAdminRole()]
         return super().get_permissions()
 
     def perform_destroy(self, instance):
         u = self.request.user
-        if not (u.is_superuser or u.role == User.Role.ADMIN):
-            raise PermissionDenied("Only admins can delete projects.")
-        instance.delete()
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
+            raise PermissionDenied("Only admins and project managers can delete projects.")
+        instance._activity_user = u
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
 
 class ModuleViewSet(SalesSafeViewSet):
-    queryset = Module.objects.all()
+    queryset = Module.objects.filter(is_active=True)
     serializer_class = ModuleSerializer
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            return [permissions.IsAuthenticated(), IsAdminRole()]
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         return [permissions.IsAuthenticated(), BlockSalesWrites()]
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
 
 class StateViewSet(SalesSafeViewSet):
-    queryset = State.objects.all()
+    queryset = State.objects.filter(is_active=True)
     serializer_class = StateSerializer
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            return [permissions.IsAuthenticated(), IsAdminRole()]
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         return [permissions.IsAuthenticated(), BlockSalesWrites()]
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
 
 class LabelViewSet(SalesSafeViewSet):
-    queryset = Label.objects.all()
+    queryset = Label.objects.filter(is_active=True)
     serializer_class = LabelSerializer
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            return [permissions.IsAuthenticated(), IsAdminRole()]
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         return [permissions.IsAuthenticated(), BlockSalesWrites()]
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
 
 class CycleViewSet(SalesSafeViewSet):
@@ -150,9 +177,13 @@ class CycleViewSet(SalesSafeViewSet):
 
     def get_queryset(self):
         u = self.request.user
-        qs = Cycle.objects.select_related("project")
+        qs = Cycle.objects.filter(is_active=True).select_related("project")
         projects = access.projects_for_user(u)
         return qs.filter(project__in=projects)
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
 
 class CycleMemberViewSet(SalesSafeViewSet):
@@ -171,7 +202,8 @@ class WorkItemViewSet(SalesSafeViewSet):
     search_fields = ("title", "task_code", "description")
 
     def get_queryset(self):
-        qs = access.work_items_for_user(self.request.user)
+        include_archived = self.request.query_params.get("archived") == "true"
+        qs = access.work_items_for_user(self.request.user, include_archived=include_archived)
         slug = self.request.query_params.get("project_slug")
         if slug:
             qs = qs.filter(project__slug=slug)
@@ -197,9 +229,25 @@ class WorkItemViewSet(SalesSafeViewSet):
 
     def perform_destroy(self, instance):
         u = self.request.user
-        if not (u.is_superuser or u.role == User.Role.ADMIN):
-            raise PermissionDenied("Only admins can delete tasks.")
-        instance.delete()
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
+            raise PermissionDenied("Only admins and project managers can delete tasks.")
+        instance._activity_user = u
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"], url_path="record-view")
+    def record_view(self, request, pk=None):
+        item = self.get_object()
+        u = request.user
+        # Don't notify if the viewer is the creator or the PM themselves
+        if u != item.created_by:
+            Notification.objects.create(
+                user=item.created_by,
+                title="Task Viewed",
+                body=f"'{u.get_full_name() or u.email}' is currently viewing task: {item.task_code}",
+                link=f"/task/{item.id}"
+            )
+        return Response({"status": "seen noted"})
 
     @action(detail=False, methods=["post"], url_path="reorder")
     def reorder(self, request):
@@ -321,7 +369,7 @@ class ProjectMemberViewSet(SalesSafeViewSet):
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            return [permissions.IsAuthenticated(), IsAdminRole()]
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         return [permissions.IsAuthenticated(), BlockSalesWrites()]
 
 
@@ -336,6 +384,12 @@ class AnalyticsSummaryView(APIView):
     def get(self, request):
         u = request.user
         wis = access.work_items_for_user(u)
+        
+        # Performance/Personal toggle
+        is_personal = request.query_params.get("personal") == "true"
+        if is_personal:
+            wis = wis.filter(assignee=u)
+
         project_slug = request.query_params.get("project")
         if project_slug:
             wis = wis.filter(project__slug=project_slug)
@@ -344,8 +398,16 @@ class AnalyticsSummaryView(APIView):
             wis = wis.filter(
                 Q(department_id=dept_id) | Q(assignee__tms_profile__department_id=dept_id)
             )
+            
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        if start_date:
+            wis = wis.filter(created_at__date__gte=start_date)
+        if end_date:
+            wis = wis.filter(created_at__date__lte=end_date)
 
         total = wis.count()
+        total_time = sum(log.minutes for log in TimeLog.objects.filter(work_item__in=wis))
         terminal = wis.filter(state__slug__in=["approved", "launched_completed"]).count()
         by_state = list(
             wis.values("state__slug", "state__name").annotate(c=Count("id")).order_by()
@@ -361,29 +423,46 @@ class AnalyticsSummaryView(APIView):
             wis.values("project_id", "project__slug", "project__name").annotate(c=Count("id")).order_by("-c")
         )
 
-        # Historical trend (last 30 days)
-        last_30_days = []
+        # Optimized Historical trend (last 30 days) - Query once, process in Python
         now = timezone.now()
+        start_30 = (now - timezone.timedelta(days=29)).date()
+        
+        # Get all counts grouped by date in 2 clever queries
+        created_counts = dict(
+            wis.filter(created_at__date__gte=start_30)
+            .values("created_at__date")
+            .annotate(c=Count("id"))
+            .values_list("created_at__date", "c")
+        )
+        completed_counts = dict(
+            wis.filter(
+                state__slug__in=["approved", "launched_completed"], 
+                updated_at__date__gte=start_30
+            )
+            .values("updated_at__date")
+            .annotate(c=Count("id"))
+            .values_list("updated_at__date", "c")
+        )
+
+        last_30_days = []
         for i in range(29, -1, -1):
             day = (now - timezone.timedelta(days=i)).date()
             day_str = day.strftime("%Y-%m-%d")
-            # Created on this day
-            created_c = wis.filter(created_at__date=day).count()
-            # Completed on this day (assuming updated_at is set on completion)
-            completed_c = wis.filter(
-                state__slug__in=["approved", "launched_completed"], 
-                updated_at__date=day
-            ).count()
             last_30_days.append({
                 "date": day_str,
-                "created": created_c,
-                "completed": completed_c
+                "created": created_counts.get(day, 0),
+                "completed": completed_counts.get(day, 0)
             })
 
         return Response(
             {
                 "generated_at": timezone.now().isoformat(),
-                "totals": {"all": total, "completed_or_launched": terminal, "pending": total - terminal},
+                "totals": {
+                    "all": total, 
+                    "completed_or_launched": terminal, 
+                    "pending": total - terminal,
+                    "total_time_minutes": total_time
+                },
                 "by_state": by_state,
                 "by_module": by_module,
                 "by_project": by_project,

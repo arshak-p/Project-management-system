@@ -31,7 +31,9 @@ function App() {
       });
       
       const token = response.data.access;
+      const refresh = response.data.refresh;
       localStorage.setItem('access_token', token);
+      localStorage.setItem('refresh_token', refresh);
       setIsAuthenticated(true);
       
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,6 +50,7 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     setIsAuthenticated(false);
   };
 
@@ -61,7 +64,7 @@ function App() {
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary opacity-20 rounded-full blur-[120px]"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#8b5cf6] opacity-20 rounded-full blur-[120px]"></div>
       
-      <div className="w-full max-w-md glass p-10 rounded-2xl shadow-2xl relative z-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+      <div className="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl relative z-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
         <div className="text-center mb-8">
           <img 
             src="/colour parrot-icon.webp" 
@@ -98,7 +101,7 @@ function App() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-surface/50 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text placeholder-text-muted/50 transition-all outline-none"
+                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text placeholder-text-muted/50 transition-all outline-none"
                 placeholder="you@your.com"
                 required
               />
@@ -115,7 +118,7 @@ function App() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-surface/50 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text placeholder-text-muted/50 transition-all outline-none"
+                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text placeholder-text-muted/50 transition-all outline-none"
                 placeholder="Enter your password"
                 required
               />

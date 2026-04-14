@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Briefcase, CheckCircle2, Users,
-  LogOut, Bell, LayoutGrid, ChevronRight, Menu, X,
-  ClipboardList, UserCircle, ArrowLeft, Sun, Moon
+  LogOut, Bell, LayoutGrid, Menu, X,
+  ClipboardList, UserCircle, ArrowLeft, Sun, Moon,
+  Clock3, CalendarRange, Activity
 } from 'lucide-react';
 import OverviewPage from './pages/OverviewPage';
 import ProjectsPage from './pages/ProjectsPage';
@@ -15,25 +17,27 @@ import NotificationsPage from './pages/user/NotificationsPage';
 import ProfilePage from './pages/user/ProfilePage';
 import TimesheetsPage from './pages/TimesheetsPage';
 import CyclesPage from './pages/CyclesPage';
-import { Clock3, CalendarRange } from 'lucide-react';
+import ActivityPage from './pages/ActivityPage';
 
-type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles';
+type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity';
 
 const ADMIN_NAV = [
-  { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
+  { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
   { id: 'projects', label: 'Projects', icon: <Briefcase className="w-5 h-5" /> },
-  { id: 'cycles', label: 'Sprints / Cycles', icon: <CalendarRange className="w-5 h-5" /> },
-  { id: 'tasks', label: 'Work Items', icon: <CheckCircle2 className="w-5 h-5" /> },
+  { id: 'cycles', label: 'Cycles', icon: <CalendarRange className="w-5 h-5" /> },
+  { id: 'tasks', label: 'Tasks', icon: <CheckCircle2 className="w-5 h-5" /> },
   { id: 'kanban', label: 'Kanban Board', icon: <LayoutGrid className="w-5 h-5" /> },
-  { id: 'team', label: 'Team Members', icon: <Users className="w-5 h-5" /> },
+  { id: 'team', label: 'Team', icon: <Users className="w-5 h-5" /> },
   { id: 'timesheets', label: 'Timesheets', icon: <Clock3 className="w-5 h-5" /> },
+  { id: 'activity', label: 'Activity Log', icon: <Activity className="w-5 h-5" /> },
 ];
 
 const USER_NAV = [
   { id: 'my_tasks', label: 'My Tasks', icon: <ClipboardList className="w-5 h-5" /> },
   { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
-  { id: 'profile', label: 'My Profile', icon: <UserCircle className="w-5 h-5" /> },
+  { id: 'profile', label: 'Profile', icon: <UserCircle className="w-5 h-5" /> },
 ];
+
 
 const ADMIN_ROLES = ['admin', 'team_head', 'project_manager'];
 
@@ -54,194 +58,151 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     api.getMe().then(r => {
       setMe(r.data);
-      const isAdmin = r.data.is_superuser || ADMIN_ROLES.includes(r.data.role);
-      setPage(isAdmin ? 'overview' : 'my_tasks');
-    }).catch(() => {});
-    api.getNotifications().then(r => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setUnreadCount(r.data.filter((n: any) => !n.read).length);
-    }).catch(() => {});
+      const isA = r.data.is_superuser || ADMIN_ROLES.includes(r.data.role);
+      if (!isA && page === 'overview') setPage('my_tasks');
+    }).catch(() => onLogout());
+    
+    const hb = setInterval(() => {
+       api.getNotifications().then(r => {
+         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         const newData = r.data.filter((n: any) => !n.read);
+         setUnreadCount(newData.length);
+       });
+    }, 30000);
+    return () => clearInterval(hb);
   }, []);
 
   const isAdmin = me?.is_superuser || ADMIN_ROLES.includes(me?.role);
   const isStrictAdmin = me?.is_superuser || me?.role === 'admin';
-  const navItems = isAdmin ? ADMIN_NAV.filter(item => {
-    // PMs cannot see global Team Members settings
-    if (item.id === 'team' && !isStrictAdmin) return false;
-    // Timesheets are usually okay, but we can leave them for PMs as they manage tasks.
-    return true;
-  }) : USER_NAV;
+  const navItems = isAdmin ? ADMIN_NAV.filter(item => (item.id !== 'team' || isStrictAdmin)) : USER_NAV;
 
-
-
-  const getPageLabel = (id: string) => {
-    return [...ADMIN_NAV, ...USER_NAV].find(n => n.id === id)?.label || id;
+  const handleNav = (newPage: Page, pushHistory = true) => {
+    if (pushHistory && page !== newPage) setHistory(prev => [...prev.slice(-10), page]);
+    setPage(newPage);
+    if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
-  const navItemClass = (id: string) =>
-    `flex w-full items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-sm relative ${
-      page === id
-        ? 'bg-primary/10 text-primary border border-primary/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
-        : 'text-text-muted hover:bg-surface/70 hover:text-text border border-transparent'
-    }`;
-
-  const handleNav = (id: Page, pushHistory = true) => { 
-    if (pushHistory && id !== page) setHistory(prev => [...prev, page]);
-    setPage(id); 
-    setSidebarOpen(false); 
-  };
-
-  const goBack = () => {
-    if (history.length === 0) return;
-    const prev = history[history.length - 1];
-    setHistory(prevStack => prevStack.slice(0, -1));
-    handleNav(prev, false);
-  };
+  const navItemClass = (id: string) => `
+    flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold transition-all relative group mb-2
+    ${page === id 
+      ? 'glass text-primary shadow-glow border-primary/20 scale-105' 
+      : 'text-text-muted hover:text-text hover:bg-white/5'}
+  `;
 
   return (
-    <div className="h-screen bg-background text-text flex overflow-hidden">
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+    <div className="h-screen bg-background text-text flex overflow-hidden font-inter">
+       <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-md" 
+            onClick={() => setSidebarOpen(false)} 
+          />
+        )}
+      </AnimatePresence>
 
-      {/* Sidebar */}
-      <aside className={`fixed md:sticky top-0 h-screen w-64 z-30 flex flex-col border-r border-border glass transition-transform duration-300 md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        {/* Logo */}
-        <div className="p-5 border-b border-border/50">
-          <div className="flex items-center justify-between">
-            <button onClick={() => handleNav(isAdmin ? 'overview' : 'my_tasks')} className="flex items-center gap-3">
-              <img 
-                src="/colour parrot-icon.webp" 
-                alt="Logo" 
-                className="h-14 w-auto max-w-[4rem] object-contain drop-shadow-[0_0_10px_rgba(59,130,246,0.3)] flex-shrink-0 -ml-1"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  const fallback = document.getElementById('dash-fallback-logo');
-                  if (fallback) fallback.style.display = 'flex';
-                }}
-              />
-              <div id="dash-fallback-logo" className="hidden w-10 h-10 bg-gradient-to-br from-primary to-[#8b5cf6] rounded-xl items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.4)] flex-shrink-0">
-                <span className="font-black text-white text-sm">CP</span>
-              </div>
-              <div className="text-left">
-                <p className="font-black text-base bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#8b5cf6]">Colour Parrot</p>
-                <p className="text-xs text-text-muted capitalize">{me?.role?.replace('_', ' ') || 'Loading...'}</p>
-              </div>
-            </button>
-            <button onClick={() => setSidebarOpen(false)} className="md:hidden p-1 text-text-muted hover:text-text">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+      <aside className={`
+        fixed lg:sticky top-0 h-[calc(100vh-2rem)] w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 transition-transform duration-500
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] lg:translate-x-0'}
+      `}>
+        <div className="p-10 flex items-center justify-between">
+          <button onClick={() => handleNav(isAdmin ? 'overview' : 'my_tasks')} className="flex items-center gap-5 group">
+            <div className="relative">
+               <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full group-hover:bg-primary/40 transition-all"></div>
+               <img src="/colour parrot-icon.webp" alt="Logo" className="relative h-12 w-auto animate-float" />
+            </div>
+            <div className="text-left">
+              <p className="font-black text-xl tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#d946ef]">C-Parrot</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-text-muted mt-2 opacity-50">Management System</p>
+            </div>
+          </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {isAdmin && (
-            <>
-              <p className="text-xs font-semibold text-text-muted/60 uppercase tracking-wider mb-2 px-1">Admin</p>
-              {navItems.map(item => (
-                <button key={item.id} onClick={() => handleNav(item.id as Page)} className={navItemClass(item.id)}>
-                  {item.icon} {item.label}
-                  {page === item.id && <ChevronRight className="w-4 h-4 ml-auto" />}
-                </button>
-              ))}
-              <p className="text-xs font-semibold text-text-muted/60 uppercase tracking-wider mt-4 mb-2 px-1">My Account</p>
-            </>
-          )}
-          {USER_NAV.map(item => (
+        <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+          {navItems.map((item) => (
             <button key={item.id} onClick={() => handleNav(item.id as Page)} className={navItemClass(item.id)}>
               {item.icon}
-              {item.label}
+              <span className="flex-1">{item.label}</span>
               {item.id === 'notifications' && unreadCount > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                <span className="bg-primary text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black shadow-glow">
                   {unreadCount}
                 </span>
               )}
-              {page === item.id && item.id !== 'notifications' && <ChevronRight className="w-4 h-4 ml-auto" />}
             </button>
           ))}
         </nav>
 
-        {/* User Footer */}
-        <div className="p-4 border-t border-border/50">
-          {me && (
-            <button onClick={() => handleNav('profile')} className="w-full flex items-center gap-3 px-3 py-3 glass rounded-xl border border-border/50 mb-3 hover:border-primary/30 transition-colors text-left">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-[#8b5cf6] flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                {me.first_name ? me.first_name.charAt(0) : me.email.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold truncate">{me.first_name ? `${me.first_name} ${me.last_name || ''}`.trim() : 'My Profile'}</p>
-                <p className="text-xs text-text-muted truncate">{me.email}</p>
-              </div>
-            </button>
-          )}
-          <button onClick={onLogout} className="flex w-full items-center gap-3 px-4 py-2.5 text-text-muted hover:bg-red-500/10 hover:text-red-400 rounded-xl font-medium transition-all group border border-transparent hover:border-red-500/20 text-sm">
-            <LogOut className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" /> Sign out
+        <div className="p-4 mt-auto space-y-3">
+          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold text-text-muted hover:text-text hover:bg-white/5 transition-all">
+            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />} Mode Shift
+          </button>
+          <button onClick={onLogout} className="w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold text-error border border-error/10 hover:bg-error/10 transition-all">
+            <LogOut className="w-5 h-5" /> De-Authorize
           </button>
         </div>
       </aside>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Topbar */}
-        <header className="sticky top-0 z-10 border-b border-border/50 glass px-6 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-text-muted hover:text-text glass border border-border rounded-lg">
+      <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
+        <header className="h-24 flex items-center justify-between px-10">
+          <div className="flex items-center gap-6">
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-3 glass rounded-2xl">
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-4">
-              {history.length > 0 && (
-                <button onClick={goBack} className="p-2 text-text-muted hover:text-primary glass border border-border rounded-lg transition-all flex items-center gap-1 group">
-                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                  <span className="text-xs font-bold hidden lg:block">Back</span>
-                </button>
-              )}
-              <div>
-                <h2 className="font-bold text-lg">{getPageLabel(page)}</h2>
-                <p className="text-xs text-text-muted hidden sm:block">Colour Parrot — Digital Advertising Agency</p>
-              </div>
+               {history.length > 0 && (
+                 <button onClick={() => {
+                   const h = [...history];
+                   const prev = h.pop();
+                   setHistory(h);
+                   if (prev) handleNav(prev, false);
+                 }} className="p-3 glass rounded-2xl hover:text-primary transition-all">
+                   <ArrowLeft className="w-4 h-4" />
+                 </button>
+               )}
+               <h2 className="font-black text-xs text-text-muted uppercase tracking-[0.4em] opacity-40 italic">{page}</h2>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2.5 text-text-muted hover:text-primary glass border border-border rounded-xl transition-all"
-              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-primary" />}
-            </button>
-            <button onClick={() => handleNav('notifications')} className="relative p-2.5 glass border border-border hover:border-primary/50 rounded-xl text-text-muted hover:text-primary transition-colors">
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-            <button onClick={() => handleNav('profile')} className="p-2.5 glass border border-border hover:border-primary/50 rounded-xl text-text-muted hover:text-primary transition-colors">
-              <UserCircle className="w-5 h-5" />
-            </button>
+
+          <div className="flex items-center gap-6">
+            {me && (
+              <button onClick={() => handleNav('profile')} className="flex items-center gap-4 p-2 pl-6 glass rounded-full hover:border-primary/50 transition-all">
+                <p className="text-xs font-black tracking-tight uppercase opacity-60">{me.first_name || 'Operator'}</p>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-[#d946ef] flex items-center justify-center text-white text-xs font-black shadow-glow">
+                  {me.first_name?.[0] || '?' }
+                </div>
+              </button>
+            )}
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6 relative">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#8b5cf6] opacity-5 rounded-full blur-[100px] pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary opacity-5 rounded-full blur-[100px] pointer-events-none"></div>
-          <div className="max-w-7xl mx-auto relative z-10">
-            {page === 'overview' && <OverviewPage onNavigate={(p: any) => handleNav(p)} />}
-            {page === 'projects' && <ProjectsPage />}
-            {page === 'cycles' && <CyclesPage />}
-            {page === 'tasks' && <TasksPage />}
-            {page === 'kanban' && <KanjiBoardPage />}
-            {page === 'team' && <TeamPage />}
-            {page === 'timesheets' && <TimesheetsPage />}
-            {page === 'my_tasks' && <MyTasksPage />}
-            {page === 'notifications' && <NotificationsPage />}
-            {page === 'profile' && <ProfilePage />}
+        <main className="flex-1 overflow-y-auto px-10 pb-10 custom-scrollbar">
+          <div className="max-w-7xl mx-auto">
+             <AnimatePresence mode="wait">
+                <motion.div
+                  key={page}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  {page === 'overview' && <OverviewPage onNavigate={(p: any) => handleNav(p)} />}
+                  {page === 'projects' && <ProjectsPage onNavigate={(p: any) => handleNav(p)} />}
+                  {page === 'cycles' && <CyclesPage />}
+                  {page === 'tasks' && <TasksPage />}
+                  {page === 'kanban' && <KanjiBoardPage />}
+                  {page === 'team' && <TeamPage />}
+                  {page === 'timesheets' && <TimesheetsPage />}
+                  {page === 'my_tasks' && <MyTasksPage />}
+                  {page === 'notifications' && <NotificationsPage />}
+                  {page === 'profile' && <ProfilePage />}
+                  {page === 'activity' && <ActivityPage />}
+                </motion.div>
+             </AnimatePresence>
           </div>
         </main>
       </div>
     </div>
   );
 }
+
+

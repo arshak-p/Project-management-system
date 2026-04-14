@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api, API_URL } from '../api';
-import { Clock, Clock3 } from 'lucide-react';
+import { api } from '../api';
+import { Clock, Clock3, Download } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 
 export default function TimesheetsPage() {
@@ -10,33 +10,24 @@ export default function TimesheetsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedUser, setSelectedUser] = useState('all');
+  const [selectedProject, setSelectedProject] = useState('all');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-
-  useEffect(() => {
-    api.getTasks()
-      .then(t => setTasks(t.data))
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  // Time is tied to tasks in our DB, so we'll fetch all time logs natively if we had an endpoint, 
-  // but we only have /api/time-logs/?work_item=X. Wait! If we don't have a global /api/time-logs/,
-  // we can just summarize the ones we do have, but actually in Django REST ViewSets list by default shows everything!
-  // Let's fetch all time logs directly.
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [projects, setProjects] = useState<any[]>([]);
   const [allLogs, setAllLogs] = useState<any[]>([]);
 
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    fetch(`${API_URL}/time-logs/`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) setAllLogs(data);
-        else if (data.results) setAllLogs(data.results);
-      }).catch(e => console.error(e));
-  }, []);
+  const load = () => {
+    setIsLoading(true);
+    Promise.all([api.getTasks(), api.getProjects(), api.getAllTimeLogs()])
+      .then(([t, p, l]) => {
+        setTasks(t.data);
+        setProjects(p.data);
+        setAllLogs(l.data);
+      })
+      .catch(err => console.error("Error fetching logs:", err))
+      .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
 
   if (isLoading) return (
     <div className="flex justify-center items-center h-64">
@@ -55,8 +46,42 @@ export default function TimesheetsPage() {
     if (selectedUser !== 'all' && log.user?.id?.toString() !== selectedUser) {
       match = false;
     }
+    const taskObj = tasks.find(t => t.id === log.work_item);
+    if (selectedProject !== 'all' && taskObj?.project?.toString() !== selectedProject) {
+      match = false;
+    }
     return match;
   });
+
+  const handleDownloadCSV = () => {
+    if (filteredLogs.length === 0) return;
+    
+    // Header
+    const headers = ["Date", "Team Member", "Project", "Task", "Note", "Duration (mins)"];
+    
+    // Rows
+    const rows = filteredLogs.map(log => {
+      const taskObj = tasks.find(t => t.id === log.work_item);
+      return [
+        log.logged_at || log.created_at.split('T')[0],
+        log.user?.first_name || 'System',
+        taskObj?.project_name || 'General',
+        taskObj?.title || 'Unknown Task',
+        `"${log.note.replace(/"/g, '""')}"`, // escape quotes
+        log.minutes
+      ];
+    });
+
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `colour_parrot_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const totalMinutes = filteredLogs.reduce((acc, log) => acc + log.minutes, 0);
 
@@ -79,34 +104,57 @@ export default function TimesheetsPage() {
       {selectedTaskId && (
         <TaskDetailModal 
           taskId={selectedTaskId} 
-          onClose={() => { setSelectedTaskId(null); }} 
+          onClose={() => { setSelectedTaskId(null); load(); }} 
         />
       )}
-      <div className="flex justify-between items-end flex-wrap gap-4">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Clock3 className="w-8 h-8 text-primary" /> Reports & Timesheets
+            <Clock3 className="text-primary w-8 h-8" />
+            Reporting & Timesheets
           </h1>
-          <p className="text-text-muted mt-1">Review team hours logged across all project tasks.</p>
+          <p className="text-text-muted mt-1 text-sm">Download professional activity reports for clients or payroll.</p>
         </div>
-        
-        <div className="flex items-center gap-3 glass p-2 rounded-xl border border-border">
+
+        <button 
+          onClick={handleDownloadCSV}
+          disabled={filteredLogs.length === 0}
+          className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-bold hover:opacity-90 transition-all shadow-xl shadow-primary/20 disabled:opacity-50 active:scale-95"
+        >
+          <Download className="w-5 h-5" />
+          Export (CSV)
+        </button>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="flex items-center justify-between flex-wrap gap-4 glass p-4 rounded-2xl border border-border">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="flex flex-col">
-            <label className="text-[10px] uppercase font-bold text-text-muted px-1">Member</label>
-            <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)} className="bg-surface border border-border text-sm rounded-lg px-2 py-1.5 outline-none focus:border-primary">
-              <option value="all">All Team Members</option>
+            <label className="text-[10px] uppercase font-bold text-text-muted px-1 mb-1">Team Member</label>
+            <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)} className="bg-surface/50 border border-border text-sm rounded-xl px-3 py-2 outline-none focus:border-primary min-w-[180px]">
+              <option value="all">Every Specialist</option>
               {Array.from(allUsersMap.entries()).map(([id, name]) => (
                 <option key={id} value={id}>{name}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col">
-            <label className="text-[10px] uppercase font-bold text-text-muted px-1">Start Date</label>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface border border-border text-sm rounded-lg px-2 py-1 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+            <label className="text-[10px] uppercase font-bold text-text-muted px-1 mb-1">Project / Client</label>
+            <select value={selectedProject} onChange={e => setSelectedProject(e.target.value)} className="bg-surface/50 border border-border text-sm rounded-xl px-3 py-2 outline-none focus:border-primary min-w-[180px]">
+              <option value="all">All Clients</option>
+              {projects.map((p: any) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-col">
-            <label className="text-[10px] uppercase font-bold text-text-muted px-1">End Date</label>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface border border-border text-sm rounded-lg px-2 py-1 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+
+            <label className="text-[10px] uppercase font-bold text-text-muted px-1 mb-1">Start Date</label>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface/50 border border-border text-sm rounded-xl px-3 py-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] uppercase font-bold text-text-muted px-1 mb-1">End Date</label>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface/50 border border-border text-sm rounded-xl px-3 py-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
           </div>
         </div>
         
@@ -145,7 +193,7 @@ export default function TimesheetsPage() {
             This Month
           </button>
           <button 
-            onClick={() => { setStartDate(''); setEndDate(''); setSelectedUser('all'); }}
+            onClick={() => { setStartDate(''); setEndDate(''); setSelectedUser('all'); setSelectedProject('all'); }}
             className="px-3 py-1.5 text-text-muted hover:text-text text-xs font-bold transition-colors"
           >
             Clear All

@@ -1,73 +1,49 @@
-# React + TypeScript + Vite
+# 🦜 Colour Parrot Task Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A high-performance, premium digital agency command center built for **Colour Parrot**.
 
-Currently, two official plugins are available:
+## 🚀 Core Features
+- **Role-Based Access Control (RBAC)**: Custom views for Admins, Project Managers, Team Heads, Specialists, and Clients.
+- **Interactive Kanban & Timeline**: Manage workflows with drag-and-drop convenience.
+- **Analytics Dashboard**: Real-time tracking of productivity, work status, and project distribution.
+- **Personal Workspace**: Unique dashboards for every team member to track their own performance.
+- **Timesheets & Reporting**: Filterable logs with one-click "Today/Week/Month" reporting and CSV/PDF ready views.
+- **Real-Time Notifications**: Integrated bell notifications with read-sync across all open tabs.
+- **Dark/Light Mode**: Premium glassmorphic design with persistent theme preferences.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠️ Technology Stack
+- **Backend**: Python 3.13 + Django 5.1 + Django REST Framework + JWT Auth.
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + Lucide Icons.
+- **Real-time**: Django Channels + WebSockets (optional).
 
-## React Compiler
+## 🏁 Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. Backend Setup
+```bash
+cd python
+venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. Frontend Setup
+```bash
+cd python/frontend
+npm install
+npm run dev
 ```
+
+### 3. Seed Data (Optional)
+To populate the system with professional agency test data:
+```bash
+python seed_report.py
+```
+
+## 🔒 Security
+- **JWT Authentication**: All endpoints require secure token-based login.
+- **Row-Level Security**: Users see only what they are authorized to see.
+- **CORS Protection**: Secured API access.
+
+---
+© 2026 Colour Parrot Digital Agency. All rights reserved.
