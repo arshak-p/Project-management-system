@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import type { Cycle, Project } from '../api';
 import { Loader2, CalendarRange, Plus, ExternalLink, CalendarDays } from 'lucide-react';
 
 export default function CyclesPage() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [cycles, setCycles] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [projects, setProjects] = useState<any[]>([]);
+  const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Form

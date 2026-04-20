@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
-import { Loader2, Users, Shield, User2, Mail, Plus, X, Phone, Briefcase, Eye, EyeOff, Database } from 'lucide-react';
+import type { User, JobTitle } from '../api';
+import { Loader2, Users, Shield, User2, Mail, Plus, X, Phone, Briefcase, Eye, EyeOff, Database, Pencil, CalendarRange } from 'lucide-react';
 
 const ROLE_COLORS: Record<string, string> = {
   admin: 'text-red-400 bg-red-400/10 border-red-400/20',
@@ -45,11 +46,11 @@ const defaultForm = {
   role: 'specialist',
   title: '',
   phone: '',
+  date_joined: '',
 };
 
 export default function TeamPage() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -58,31 +59,63 @@ export default function TeamPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState('');
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [me, setMe] = useState<User | null>(null);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
 
-  const load = () => {
-    api.getUsers({ archived: showArchived })
-      .then(r => setUsers(r.data))
+  const load = useCallback(() => {
+    Promise.all([
+      api.getUsers({ archived: showArchived }),
+      api.getMe(),
+      api.getJobTitles()
+    ])
+      .then(([r, m, j]) => {
+        setUsers(r.data);
+        setMe(m.data);
+        setJobTitles(j.data);
+      })
       .catch(err => console.error('Fetching issue on Team Page:', err))
       .finally(() => setIsLoading(false));
-  };
+  }, [showArchived]);
 
-  useEffect(() => { load(); }, [showArchived]);
+  useEffect(() => { load(); }, [load]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true); setError(''); setSuccess('');
     try {
-      await api.createUser(form);
-      setSuccess(`✅ Member "${form.first_name || form.email}" added successfully!`);
+      if (editingUser) {
+        await api.updateUser(editingUser.id, form);
+        setSuccess(`✅ Member details updated successfully!`);
+      } else {
+        await api.createUser(form);
+        setSuccess(`✅ Member "${form.first_name || form.email}" added successfully!`);
+      }
       setForm(defaultForm);
+      setEditingUser(null);
       load();
       setTimeout(() => { setShowModal(false); setSuccess(''); }, 1500);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      const detail = err.response?.data?.detail;
-      setError(Array.isArray(detail) ? detail.join(' ') : detail || 'Failed to create member.');
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string | string[]; error?: string | string[] } } })?.response?.data?.detail 
+        || (err as { response?: { data?: { detail?: string | string[]; error?: string | string[] } } })?.response?.data?.error;
+      setError(Array.isArray(detail) ? detail.join(' ') : (typeof detail === 'string' ? detail : 'Failed to save member.'));
     } finally { setSaving(false); }
+  };
+
+  const openEdit = (user: User) => {
+    setEditingUser(user);
+    setForm({
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      email: user.email,
+      password: '',
+      role: user.role,
+      title: user.title || '',
+      phone: user.phone || '',
+      date_joined: user.date_joined ? new Date(user.date_joined).toISOString().split('T')[0] : '',
+    });
+    setShowModal(true);
   };
 
   const handleArchive = async (id: number) => {
@@ -90,7 +123,7 @@ export default function TeamPage() {
     try {
       await api.deleteUser(id);
       load();
-    } catch (err: any) {
+    } catch {
       alert('Failed to archive member.');
     }
   };
@@ -100,7 +133,7 @@ export default function TeamPage() {
     try {
       await api.updateUser(id, { is_active: true });
       load();
-    } catch (err: any) {
+    } catch {
       alert('Failed to restore member.');
     }
   };
@@ -116,29 +149,25 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-      {/* Add Member Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="glass w-full max-w-lg rounded-2xl border border-primary/30 shadow-[0_25px_50px_-10px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-border/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-primary to-[#8b5cf6] rounded-xl flex items-center justify-center">
                   <Plus className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">Add Team Member</h3>
-                  <p className="text-xs text-text-muted">Create a new account for your team</p>
+                  <h3 className="font-bold text-lg">{editingUser ? 'Update Member' : 'Add Team Member'}</h3>
+                  <p className="text-xs text-text-muted">{editingUser ? 'Modify account details' : 'Create a new account for your team'}</p>
                 </div>
               </div>
-              <button onClick={() => { setShowModal(false); setError(''); setForm(defaultForm); }} className="p-2 hover:bg-surface rounded-xl text-text-muted hover:text-text transition-colors">
+              <button onClick={() => { setShowModal(false); setError(''); setForm(defaultForm); setEditingUser(null); }} className="p-2 hover:bg-surface rounded-xl text-text-muted hover:text-text transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <form onSubmit={handleCreate} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4" autoComplete="off">
               {error && (
                 <div className="p-3 bg-error/10 border border-error/20 rounded-xl text-sm text-error animate-in fade-in">
                   {error}
@@ -155,14 +184,21 @@ export default function TeamPage() {
                   <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">First Name</label>
                   <div className="relative">
                     <User2 className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
-                    <input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} placeholder="Arshak" className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+                    <input 
+                      type="text"
+                      autoComplete="off"
+                      className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none transition-all" 
+                      placeholder="John" 
+                      value={form.first_name} 
+                      onChange={e => setForm({ ...form, first_name: e.target.value })} 
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Last Name</label>
                   <div className="relative">
                     <User2 className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
-                    <input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} placeholder="Pulikkal" className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+                    <input type="text" autoComplete="off" value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} placeholder="Doe" className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
                   </div>
                 </div>
               </div>
@@ -171,14 +207,22 @@ export default function TeamPage() {
                 <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Email Address <span className="text-error">*</span></label>
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
-                  <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="member@colourparrot.com" required className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+                  <input 
+                    type="email"
+                    autoComplete="off"
+                    className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none transition-all" 
+                    placeholder="name@agency.com" 
+                    value={form.email} 
+                    onChange={e => setForm({ ...form, email: e.target.value })} 
+                    required 
+                  />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Password <span className="text-error">*</span></label>
                 <div className="relative">
-                  <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Min 8 characters" required className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+                  <input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Min 8 characters" required className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-text-muted hover:text-text">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -195,20 +239,45 @@ export default function TeamPage() {
                     </select>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Job Title</label>
-                  <div className="relative">
-                    <Briefcase className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
-                    <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Designer" className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+
+                {form.role === 'specialist' && (
+                  <div className="space-y-1.5 animate-in slide-in-from-right-2 duration-300">
+                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Job Title</label>
+                    <div className="relative">
+                      <Briefcase className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
+                      <select 
+                        value={form.title} 
+                        onChange={e => setForm({ ...form, title: e.target.value })} 
+                        className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none appearance-none"
+                      >
+                        <option value="">Select Designation</option>
+                        {jobTitles.map(jt => (
+                          <option key={jt.id} value={jt.name}>{jt.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Phone Number</label>
                 <div className="relative">
                   <Phone className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
-                  <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+91 9876543210" className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+                  <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+91 00000 00000" className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+                </div>
+              </div>
+
+              <div className="space-y-1.5 ">
+                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Official Joining Date</label>
+                <div className="relative">
+                  <CalendarRange className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
+                  <input 
+                    type="date" 
+                    value={form.date_joined} 
+                    onChange={e => setForm({ ...form, date_joined: e.target.value })} 
+                    className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
+                  />
                 </div>
               </div>
 
@@ -217,7 +286,7 @@ export default function TeamPage() {
                   Cancel
                 </button>
                 <button type="submit" disabled={saving} className="flex-1 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2 shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)]">
-                  {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><Plus className="w-4 h-4" /> Add Member</>}
+                  {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <>{editingUser ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {editingUser ? 'Update Member' : 'Add Member'}</>}
                 </button>
               </div>
             </form>
@@ -239,13 +308,14 @@ export default function TeamPage() {
               <div className={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full transition-all ${showArchived ? 'left-5' : 'left-0.5'}`}></div>
             </div>
           </label>
-          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90 transition-opacity">
-            <Plus className="w-4 h-4" /> Add Member
-          </button>
+          {(me?.is_superuser || me?.role === 'admin') && (
+            <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90 transition-opacity">
+              <Plus className="w-4 h-4" /> Add Member
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Role Stats */}
       <div className="flex flex-wrap gap-3">
         {Object.entries(roleStats).map(([role, count]) => (
           <span key={role} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${ROLE_COLORS[role] || 'text-text-muted bg-surface/50 border-border'}`}>
@@ -254,7 +324,6 @@ export default function TeamPage() {
         ))}
       </div>
 
-      {/* Search */}
       <div className="relative">
         <Users className="w-4 h-4 absolute left-4 top-3.5 text-text-muted" />
         <input type="text" placeholder="Search by name, email or role..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
@@ -275,22 +344,35 @@ export default function TeamPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filtered.map((user, i) => (
             <div key={user.id} className={`glass rounded-2xl border border-border/50 hover:border-primary/30 transition-all group overflow-hidden relative ${!user.is_active ? 'opacity-60 grayscale-[0.6]' : ''}`}>
-              {user.is_active ? (
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleArchive(user.id); }} 
-                  className="absolute top-2 right-2 p-2 opacity-0 group-hover:opacity-100 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg transition-all z-10"
-                  title="Archive Member"
-                >
-                  <Database className="w-4 h-4" />
-                </button>
-              ) : (
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleRestore(user.id); }} 
-                  className="absolute top-2 right-2 p-2 opacity-0 group-hover:opacity-100 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg transition-all z-10"
-                  title="Restore Member"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+              {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-10">
+                   <button 
+                    onClick={(e) => { e.stopPropagation(); openEdit(user); }} 
+                    className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all"
+                    title="Edit Member"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  {(me?.is_superuser || me?.role === 'admin') && (
+                    user.is_active ? (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleArchive(user.id); }} 
+                        className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg transition-all"
+                        title="Archive Member"
+                      >
+                        <Database className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleRestore(user.id); }} 
+                        className="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg transition-all"
+                        title="Restore Member"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    )
+                  )}
+                </div>
               )}
               <div className={`h-1 bg-gradient-to-r ${getAvatarGradient(i)}`}></div>
               <div className="p-6 text-center">
@@ -317,7 +399,7 @@ export default function TeamPage() {
                   </div>
                   <div>
                     <p className="text-xs text-text-muted">Joined</p>
-                    <p className="text-xs font-medium">{new Date(user.date_joined).toLocaleDateString()}</p>
+                    <p className="text-xs font-medium">{user.date_joined ? new Date(user.date_joined).toLocaleDateString() : 'N/A'}</p>
                   </div>
                 </div>
               </div>

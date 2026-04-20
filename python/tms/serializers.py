@@ -10,6 +10,7 @@ from tms.models import (
     Cycle,
     CycleMember,
     Department,
+    JobTitle,
     Label,
     Module,
     Notification,
@@ -41,6 +42,27 @@ class DepartmentSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "slug", "head_id", "created_at", "is_active")
 
 
+class JobTitleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobTitle
+        fields = ("id", "name", "is_active", "created_at")
+
+    def create(self, validated_data):
+        u = validated_data.pop('_activity_user', None)
+        instance = JobTitle(**validated_data)
+        if u: instance._activity_user = u
+        instance.save()
+        return instance
+
+    def update(self, instance, validated_data):
+        u = validated_data.pop('_activity_user', None)
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        if u: instance._activity_user = u
+        instance.save()
+        return instance
+
+
 class UserBriefSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -66,6 +88,7 @@ class UserSerializer(serializers.ModelSerializer):
             "department_id",
             "client_project_id",
             "is_active",
+            "date_joined",
         )
         read_only_fields = ("id",)
 
@@ -77,10 +100,12 @@ class UserSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
+        u_actor = validated_data.pop("_activity_user", None)
         dept_id = validated_data.pop("department_id", _UNSET)
         cp_id = validated_data.pop("client_project_id", _UNSET)
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
+        if u_actor: instance._activity_user = u_actor
         instance.save()
         if dept_id is not _UNSET or cp_id is not _UNSET:
             prof, _ = UserProfile.objects.get_or_create(user=instance)
@@ -98,6 +123,21 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ("id", "name", "slug", "description", "created_at", "updated_at", "is_active", "total_minutes")
+
+    def create(self, validated_data):
+        u = validated_data.pop('_activity_user', None)
+        instance = Project(**validated_data)
+        if u: instance._activity_user = u
+        instance.save()
+        return instance
+
+    def update(self, instance, validated_data):
+        u = validated_data.pop('_activity_user', None)
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        if u: instance._activity_user = u
+        instance.save()
+        return instance
 
     def get_total_minutes(self, obj):
         return sum(log.minutes for log in TimeLog.objects.filter(work_item__project=obj))

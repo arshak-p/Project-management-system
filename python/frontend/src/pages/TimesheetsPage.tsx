@@ -1,22 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
+import type { Task, Project, TimeLog } from '../api';
 import { Clock, Clock3, Download } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 
 export default function TimesheetsPage() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedUser, setSelectedUser] = useState('all');
   const [selectedProject, setSelectedProject] = useState('all');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [allLogs, setAllLogs] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [allLogs, setAllLogs] = useState<TimeLog[]>([]);
 
-  const load = () => {
-    setIsLoading(true);
+  const load = useCallback(() => {
     Promise.all([api.getTasks(), api.getProjects(), api.getAllTimeLogs()])
       .then(([t, p, l]) => {
         setTasks(t.data);
@@ -25,9 +24,9 @@ export default function TimesheetsPage() {
       })
       .catch(err => console.error("Error fetching logs:", err))
       .finally(() => setIsLoading(false));
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
 
   if (isLoading) return (
     <div className="flex justify-center items-center h-64">
@@ -37,7 +36,6 @@ export default function TimesheetsPage() {
 
   const filteredLogs = allLogs.filter(log => {
     let match = true;
-    // Normalize log date to YYYY-MM-DD
     const logDateStr = (log.logged_at || log.created_at).split('T')[0];
     
     if (startDate && logDateStr < startDate) match = false;
@@ -56,18 +54,16 @@ export default function TimesheetsPage() {
   const handleDownloadCSV = () => {
     if (filteredLogs.length === 0) return;
     
-    // Header
     const headers = ["Date", "Team Member", "Project", "Task", "Note", "Duration (mins)"];
     
-    // Rows
     const rows = filteredLogs.map(log => {
       const taskObj = tasks.find(t => t.id === log.work_item);
       return [
         log.logged_at || log.created_at.split('T')[0],
         log.user?.first_name || 'System',
-        taskObj?.project_name || 'General',
+        projects.find(p => p.id === taskObj?.project)?.name || 'General',
         taskObj?.title || 'Unknown Task',
-        `"${log.note.replace(/"/g, '""')}"`, // escape quotes
+        `"${log.note.replace(/"/g, '""')}"`,
         log.minutes
       ];
     });
@@ -85,7 +81,6 @@ export default function TimesheetsPage() {
 
   const totalMinutes = filteredLogs.reduce((acc, log) => acc + log.minutes, 0);
 
-  // Group by user
   const userAgg: Record<number, { name: string, minutes: number, id: number }> = {};
   filteredLogs.forEach(log => {
     const uid = log.user?.id || 0;
@@ -93,7 +88,6 @@ export default function TimesheetsPage() {
     userAgg[uid].minutes += log.minutes;
   });
 
-  // Unique users for dropdown
   const allUsersMap = new Map();
   allLogs.forEach(l => {
     if (l.user) allUsersMap.set(l.user.id, l.user.first_name || l.user.email);
@@ -126,7 +120,6 @@ export default function TimesheetsPage() {
         </button>
       </div>
 
-      {/* Filters Bar */}
       <div className="flex items-center justify-between flex-wrap gap-4 glass p-4 rounded-2xl border border-border">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex flex-col">
@@ -142,13 +135,12 @@ export default function TimesheetsPage() {
             <label className="text-[10px] uppercase font-bold text-text-muted px-1 mb-1">Project / Client</label>
             <select value={selectedProject} onChange={e => setSelectedProject(e.target.value)} className="bg-surface/50 border border-border text-sm rounded-xl px-3 py-2 outline-none focus:border-primary min-w-[180px]">
               <option value="all">All Clients</option>
-              {projects.map((p: any) => (
+              {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col">
-
             <label className="text-[10px] uppercase font-bold text-text-muted px-1 mb-1">Start Date</label>
             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface/50 border border-border text-sm rounded-xl px-3 py-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
           </div>
@@ -184,7 +176,7 @@ export default function TimesheetsPage() {
             onClick={() => {
               const end = new Date();
               const start = new Date();
-              start.setDate(1); // First of month
+              start.setDate(1);
               setStartDate(start.toISOString().split('T')[0]);
               setEndDate(end.toISOString().split('T')[0]);
             }}

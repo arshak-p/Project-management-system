@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { api, API_URL } from '../../api';
+import { api } from '../../api';
+import type { Notification } from '../../api';
 import { Bell, CheckCircle, Clock } from 'lucide-react';
 import TaskDetailModal from '../../components/TaskDetailModal';
 
 export default function NotificationsPage() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
@@ -17,18 +17,14 @@ export default function NotificationsPage() {
 
   const markRead = async (id: number) => {
     try {
-      const token = localStorage.getItem('access_token');
-      await fetch(`${API_URL}/notifications/${id}/mark-read/`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.markNotificationRead(id);
       load();
       // Notify other components (like Dashboard) that unread count changed
       window.dispatchEvent(new Event('notificationRead'));
     } catch (e) { console.error(e); }
   };
 
-  const handleNotifyClick = (n: any) => {
+  const handleNotifyClick = (n: Notification) => {
     if (!n.read) markRead(n.id);
     if (n.link && n.link.startsWith('/task/')) {
       const taskId = parseInt(n.link.replace('/task/', ''));

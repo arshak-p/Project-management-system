@@ -1,12 +1,7 @@
-"""
-Core domain models for Colour Parrot TMS: projects (clients), modules, workflow,
-work items (tasks), cycles (sprints), time logs, and audit trail.
-"""
 from django.conf import settings
 from django.db import models
-class Department(models.Model):
-    """Agency department; team heads administer tasks for their department."""
 
+class Department(models.Model):
     name = models.CharField(max_length=120, unique=True)
     slug = models.SlugField(max_length=64, unique=True)
     head = models.ForeignKey(
@@ -25,10 +20,18 @@ class Department(models.Model):
     def __str__(self) -> str:
         return self.name
 
+class JobTitle(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
 
 class Project(models.Model):
-    """Client engagement — each client brand is a project."""
-
     name = models.CharField(max_length=160)
     slug = models.SlugField(max_length=80, unique=True)
     description = models.TextField(blank=True)
@@ -42,13 +45,7 @@ class Project(models.Model):
     def __str__(self) -> str:
         return self.name
 
-
 class UserProfile(models.Model):
-    """
-    Extended profile (department, client project) kept in tms so Department.head can reference User
-    without circular migration issues between accounts and tms.
-    """
-
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -73,10 +70,7 @@ class UserProfile(models.Model):
         verbose_name = "User profile"
         verbose_name_plural = "User profiles"
 
-
 class ProjectMember(models.Model):
-    """Internal users explicitly linked to a project (in addition to assignee-based access)."""
-
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="memberships")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="project_memberships"
@@ -86,10 +80,7 @@ class ProjectMember(models.Model):
     class Meta:
         unique_together = [("project", "user")]
 
-
 class ProjectTaskSequence(models.Model):
-    """Per-project counter for human-readable task IDs (e.g. RR-42)."""
-
     project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name="task_sequence")
     last_number = models.PositiveIntegerField(default=0)
 
@@ -101,10 +92,7 @@ class ProjectTaskSequence(models.Model):
         self.save(update_fields=["last_number"])
         return f"{prefix}-{self.last_number}"
 
-
 class Module(models.Model):
-    """Work category (Branding, Social Media, …) — same catalogue for every client."""
-
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=64, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
@@ -116,10 +104,7 @@ class Module(models.Model):
     def __str__(self) -> str:
         return self.name
 
-
 class State(models.Model):
-    """Workflow column / status (ordered pipeline)."""
-
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=64, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
@@ -131,16 +116,12 @@ class State(models.Model):
     def __str__(self) -> str:
         return self.name
 
-
 class Label(models.Model):
-    """Colour-coded tags (Urgent, Revision, …)."""
-
     key = models.SlugField(max_length=64, unique=True)
     name = models.CharField(max_length=120)
     color_hint = models.CharField(
         max_length=32,
         blank=True,
-        help_text="UI hint: e.g. red, amber, violet (Tailwind semantic).",
     )
     is_active = models.BooleanField(default=True, db_index=True)
 
@@ -150,10 +131,7 @@ class Label(models.Model):
     def __str__(self) -> str:
         return self.name
 
-
 class Cycle(models.Model):
-    """Monthly campaign / sprint window; supports recurring retainers."""
-
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="cycles")
     name = models.CharField(max_length=160)
     start_date = models.DateField()
@@ -176,10 +154,7 @@ class Cycle(models.Model):
     def __str__(self) -> str:
         return f"{self.project.slug}: {self.name}"
 
-
 class CycleMember(models.Model):
-    """People actively planned for a cycle (capacity / sprint membership)."""
-
     cycle = models.ForeignKey(Cycle, on_delete=models.CASCADE, related_name="cycle_members")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cycle_memberships"
@@ -189,10 +164,7 @@ class CycleMember(models.Model):
     class Meta:
         unique_together = [("cycle", "user")]
 
-
 class WorkItem(models.Model):
-    """Task / ticket — central entity for Kanban, list, and calendar views."""
-
     class Priority(models.TextChoices):
         URGENT = "urgent", "Urgent"
         HIGH = "high", "High"
@@ -235,7 +207,6 @@ class WorkItem(models.Model):
     labels = models.ManyToManyField(Label, blank=True, related_name="work_items")
     board_position = models.PositiveIntegerField(
         default=0,
-        help_text="Ordering within a Kanban column (per state).",
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -273,7 +244,6 @@ class WorkItem(models.Model):
             self.task_code = self.allocate_task_code(self.project)
         super().save(*args, **kwargs)
 
-
 class WorkItemComment(models.Model):
     work_item = models.ForeignKey(WorkItem, on_delete=models.CASCADE, related_name="comments")
     author = models.ForeignKey(
@@ -285,10 +255,8 @@ class WorkItemComment(models.Model):
     class Meta:
         ordering = ["created_at"]
 
-
 def attachment_upload_to(instance: "WorkItemAttachment", filename: str) -> str:
     return f"work_items/{instance.work_item_id}/{filename}"
-
 
 class WorkItemAttachment(models.Model):
     work_item = models.ForeignKey(WorkItem, on_delete=models.CASCADE, related_name="attachments")
@@ -301,10 +269,7 @@ class WorkItemAttachment(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
-
 class TimeLog(models.Model):
-    """Time tracking entry in minutes."""
-
     work_item = models.ForeignKey(WorkItem, on_delete=models.CASCADE, related_name="time_logs")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="time_logs"
@@ -317,10 +282,7 @@ class TimeLog(models.Model):
     class Meta:
         ordering = ["-logged_at"]
 
-
 class Notification(models.Model):
-    """In-app / real-time notification queue per user."""
-
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"
     )
@@ -333,10 +295,7 @@ class Notification(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
-
 class ActivityLog(models.Model):
-    """Immutable audit trail for dashboards and compliance."""
-
     entity_type = models.CharField(max_length=64, db_index=True)
     entity_id = models.CharField(max_length=64, db_index=True)
     action = models.CharField(max_length=64)
@@ -358,4 +317,4 @@ class ActivityLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-created_at"]

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, API_URL } from '../../api';
+import type { User } from '../../api';
 import { User2, Mail, Phone, Briefcase, Save, Loader2, CheckCircle2 } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -11,8 +12,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [me, setMe] = useState<any>(null);
+  const [me, setMe] = useState<User | null>(null);
   const [form, setForm] = useState({ first_name: '', last_name: '', title: '', phone: '' });
   const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,6 +32,7 @@ export default function ProfilePage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!me) return;
     setSaving(true);
     try {
       const token = localStorage.getItem('access_token');
@@ -75,7 +76,7 @@ export default function ProfilePage() {
             <Mail className="w-3.5 h-3.5" /> {me?.email}
           </p>
           <span className="inline-block mt-2 px-3 py-1 glass border border-border rounded-full text-xs font-semibold text-primary">
-            {ROLE_LABELS[me?.role] || me?.role}
+            {me?.role ? (ROLE_LABELS[me.role] || me.role) : 'N/A'}
           </span>
         </div>
       </div>
@@ -100,7 +101,7 @@ export default function ProfilePage() {
           </div>
           <div className="bg-surface/50 rounded-xl p-3 border border-border/50">
             <p className="text-xs text-text-muted mb-1">Member since</p>
-            <p className="text-sm font-semibold">{new Date(me?.date_joined).toLocaleDateString()}</p>
+            <p className="text-sm font-semibold">{me?.date_joined ? new Date(me.date_joined).toLocaleDateString() : 'N/A'}</p>
           </div>
         </div>
       </div>

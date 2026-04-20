@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
+import type { User } from './api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Briefcase, CheckCircle2, Users,
-  LogOut, Bell, LayoutGrid, Menu, X,
+  LogOut, Bell, LayoutGrid, Menu,
   ClipboardList, UserCircle, ArrowLeft, Sun, Moon,
-  Clock3, CalendarRange, Activity
+  Clock3, CalendarRange, Activity, Map as MapIcon, BrainCircuit, ShieldCheck
 } from 'lucide-react';
 import OverviewPage from './pages/OverviewPage';
 import ProjectsPage from './pages/ProjectsPage';
@@ -18,8 +19,18 @@ import ProfilePage from './pages/user/ProfilePage';
 import TimesheetsPage from './pages/TimesheetsPage';
 import CyclesPage from './pages/CyclesPage';
 import ActivityPage from './pages/ActivityPage';
+import JobTitlesPage from './pages/JobTitlesPage';
+import AgencyRoadmap from './pages/AgencyRoadmap';
+import TaskCalendarPage from './pages/TaskCalendarPage';
+import StrategistPage from './pages/StrategistPage';
+import TeamIntelligencePage from './pages/TeamIntelligencePage';
 
-type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity';
+type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence';
+
+interface Notification {
+  id: number;
+  read: boolean;
+}
 
 const ADMIN_NAV = [
   { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -30,6 +41,11 @@ const ADMIN_NAV = [
   { id: 'team', label: 'Team', icon: <Users className="w-5 h-5" /> },
   { id: 'timesheets', label: 'Timesheets', icon: <Clock3 className="w-5 h-5" /> },
   { id: 'activity', label: 'Activity Log', icon: <Activity className="w-5 h-5" /> },
+  { id: 'calendar', label: 'Tactical Calendar', icon: <CalendarRange className="w-5 h-5" /> },
+  { id: 'strategist', label: 'Strategic Planning', icon: <BrainCircuit className="w-5 h-5" /> },
+  { id: 'intelligence', label: 'Team Intelligence', icon: <ShieldCheck className="w-5 h-5" /> },
+  { id: 'job_titles', label: 'Job Designations', icon: <Briefcase className="w-5 h-5" /> },
+  { id: 'roadmap', label: 'Agency Roadmap', icon: <MapIcon className="w-5 h-5" /> },
 ];
 
 const USER_NAV = [
@@ -43,8 +59,7 @@ const ADMIN_ROLES = ['admin', 'team_head', 'project_manager'];
 
 export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [page, setPage] = useState<Page>('overview');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [me, setMe] = useState<any>(null);
+  const [me, setMe] = useState<User | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [history, setHistory] = useState<Page[]>([]);
@@ -58,23 +73,23 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     api.getMe().then(r => {
       setMe(r.data);
-      const isA = r.data.is_superuser || ADMIN_ROLES.includes(r.data.role);
+      const isA = r.data.is_superuser || ADMIN_ROLES.includes(r.data.role || '');
       if (!isA && page === 'overview') setPage('my_tasks');
     }).catch(() => onLogout());
-    
+  }, [onLogout, page]);
+
+  useEffect(() => {
     const hb = setInterval(() => {
        api.getNotifications().then(r => {
-         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-         const newData = r.data.filter((n: any) => !n.read);
+         const newData = r.data.filter((n: Notification) => !n.read);
          setUnreadCount(newData.length);
        });
     }, 30000);
     return () => clearInterval(hb);
   }, []);
 
-  const isAdmin = me?.is_superuser || ADMIN_ROLES.includes(me?.role);
-  const isStrictAdmin = me?.is_superuser || me?.role === 'admin';
-  const navItems = isAdmin ? ADMIN_NAV.filter(item => (item.id !== 'team' || isStrictAdmin)) : USER_NAV;
+  const isAdmin = me?.is_superuser || ADMIN_ROLES.includes(me?.role || '');
+  const navItems = isAdmin ? ADMIN_NAV : USER_NAV;
 
   const handleNav = (newPage: Page, pushHistory = true) => {
     if (pushHistory && page !== newPage) setHistory(prev => [...prev.slice(-10), page]);
@@ -83,9 +98,9 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   };
 
   const navItemClass = (id: string) => `
-    flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold transition-all relative group mb-2
+    flex items-center gap-4 px-6 py-3.5 rounded-[1.25rem] text-sm font-bold transition-all duration-300 relative group mb-1
     ${page === id 
-      ? 'glass text-primary shadow-glow border-primary/20 scale-105' 
+      ? 'bg-primary/10 text-primary shadow-sm border border-primary/20' 
       : 'text-text-muted hover:text-text hover:bg-white/5'}
   `;
 
@@ -102,7 +117,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       </AnimatePresence>
 
       <aside className={`
-        fixed lg:sticky top-0 h-[calc(100vh-2rem)] w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 transition-transform duration-500
+        fixed lg:sticky top-0 h-[calc(100vh-2rem)] w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 shadow-premium transition-transform duration-500
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] lg:translate-x-0'}
       `}>
         <div className="p-10 flex items-center justify-between">
@@ -121,6 +136,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => (
             <button key={item.id} onClick={() => handleNav(item.id as Page)} className={navItemClass(item.id)}>
+              {page === item.id && (
+                <motion.div 
+                  layoutId="activeNav"
+                  className="absolute left-0 w-1.5 h-6 bg-primary rounded-r-full shadow-[0_0_10px_var(--primary)]"
+                />
+              )}
               {item.icon}
               <span className="flex-1">{item.label}</span>
               {item.id === 'notifications' && unreadCount > 0 && (
@@ -185,8 +206,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                   exit={{ opacity: 0, scale: 0.98 }}
                   transition={{ duration: 0.4 }}
                 >
-                  {page === 'overview' && <OverviewPage onNavigate={(p: any) => handleNav(p)} />}
-                  {page === 'projects' && <ProjectsPage onNavigate={(p: any) => handleNav(p)} />}
+                  {page === 'overview' && <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} />}
+                  {page === 'projects' && <ProjectsPage onNavigate={(p: string) => handleNav(p as Page)} />}
                   {page === 'cycles' && <CyclesPage />}
                   {page === 'tasks' && <TasksPage />}
                   {page === 'kanban' && <KanjiBoardPage />}
@@ -196,6 +217,11 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                   {page === 'notifications' && <NotificationsPage />}
                   {page === 'profile' && <ProfilePage />}
                   {page === 'activity' && <ActivityPage />}
+                  {page === 'calendar' && <TaskCalendarPage />}
+                  {page === 'strategist' && <StrategistPage />}
+                  {page === 'intelligence' && <TeamIntelligencePage />}
+                  {page === 'job_titles' && <JobTitlesPage />}
+                  {page === 'roadmap' && <AgencyRoadmap />}
                 </motion.div>
              </AnimatePresence>
           </div>

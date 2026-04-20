@@ -30,6 +30,7 @@ class CreateUserView(APIView):
         role = data.get('role', User.Role.SPECIALIST)
         title = data.get('title', '').strip()
         phone = data.get('phone', '').strip()
+        date_joined = data.get('date_joined')
 
         if not email or not password:
             return Response({'detail': 'Email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -49,16 +50,20 @@ class CreateUserView(APIView):
             username = f'{base}{counter}'
             counter += 1
 
-        user = User.objects.create_user(
+        user = User(
             username=username,
             email=email,
-            password=password,
             first_name=first_name,
             last_name=last_name,
             role=role,
             title=title,
             phone=phone,
         )
+        if date_joined:
+            user.date_joined = date_joined
+        user.set_password(password)
+        user._activity_user = request.user
+        user.save()
         return Response({
             'id': user.id,
             'email': user.email,

@@ -1,35 +1,22 @@
-"""Queryset scoping helpers for role-based access (used by DRF viewsets)."""
 from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
 from django.db.models import Q, QuerySet
-
 from accounts.models import User
-
-if TYPE_CHECKING:
-    from tms.models import WorkItem
-
+from tms.models import Project, WorkItem
 
 def user_department_id(user: User) -> int | None:
     profile = getattr(user, "tms_profile", None)
     return profile.department_id if profile else None
 
-
 def user_client_project_id(user: User) -> int | None:
     profile = getattr(user, "tms_profile", None)
     return profile.client_project_id if profile else None
 
-
-def work_items_for_user(user: User, include_archived=False) -> QuerySet:
-    """Return a queryset of WorkItem visible to the given user (before optional filters)."""
-    from tms.models import WorkItem
-
+def work_items_for_user(user: User, include_archived: bool = False) -> QuerySet[WorkItem]:
     qs = WorkItem.objects.all()
     if not include_archived:
         qs = qs.filter(is_active=True)
 
-    base: QuerySet[WorkItem] = qs.select_related(
+    base: QuerySet = qs.select_related(
         "project",
         "state",
         "module",
@@ -50,8 +37,6 @@ def work_items_for_user(user: User, include_archived=False) -> QuerySet:
         if pid:
             return base.filter(project_id=pid)
         return base.none()
-    if user.role == User.Role.PROJECT_MANAGER:
-        return base
     if user.role == User.Role.TEAM_HEAD:
         dept_id = user_department_id(user)
         if not dept_id:
@@ -65,10 +50,7 @@ def work_items_for_user(user: User, include_archived=False) -> QuerySet:
         return base.filter(assignee=user)
     return base.none()
 
-
-def projects_for_user(user: User, include_archived=False) -> QuerySet:
-    from tms.models import Project
-
+def projects_for_user(user: User, include_archived: bool = False) -> QuerySet:
     qs = Project.objects.all()
     if not include_archived:
         qs = qs.filter(is_active=True)
@@ -91,9 +73,7 @@ def projects_for_user(user: User, include_archived=False) -> QuerySet:
         return qs.filter(work_items__assignee=user).distinct()
     return qs.none()
 
-
-def can_edit_work_item(user: User, work_item) -> bool:
-    """Whether the user may change task fields (not only read)."""
+def can_edit_work_item(user: User, work_item: WorkItem) -> bool:
     if not user.is_authenticated:
         return False
     if user.is_superuser or user.role == User.Role.ADMIN:
@@ -121,12 +101,10 @@ def can_edit_work_item(user: User, work_item) -> bool:
         return work_item.assignee_id == user.id
     return False
 
-
-def client_may_approve_work_item(user: User, work_item) -> bool:
-    """Client users may move tasks from client_review toward approved (limited transition)."""
+def client_may_approve_work_item(user: User, work_item: WorkItem) -> bool:
     if user.role != User.Role.CLIENT:
         return True
     if work_item.project_id != user_client_project_id(user):
         return False
-    # Actual state slugs checked in serializer; this is coarse gate.
     return True
+

@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
+import type { Project } from '../api';
 import { Plus, Database, Loader2, Globe, Layers, ChevronRight } from 'lucide-react';
 
-export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: any) => void }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [projects, setProjects] = useState<any[]>([]);
+export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', slug: '', description: '' });
@@ -12,8 +12,13 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: any) 
   const [error, setError] = useState('');
   const [showArchived, setShowArchived] = useState(false);
 
-  const load = () => api.getProjects({ archived: showArchived }).then(r => setProjects(r.data)).finally(() => setIsLoading(false));
-  useEffect(() => { load(); }, [showArchived]);
+  const load = useCallback(() => {
+    api.getProjects({ archived: showArchived })
+      .then(r => setProjects(r.data))
+      .finally(() => setIsLoading(false));
+  }, [showArchived]);
+
+  useEffect(() => { load(); }, [load]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +28,9 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: any) 
       setShowForm(false);
       setForm({ name: '', slug: '', description: '' });
       load();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-       setError(JSON.stringify(err.response?.data || 'Failed to initialize project orbit.'));
+    } catch (err: unknown) {
+       const errorData = (err as { response?: { data?: unknown } })?.response?.data;
+       setError(JSON.stringify(errorData || 'Failed to initialize project orbit.'));
     } finally { setSaving(false); }
   };
 
@@ -34,7 +39,7 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: any) 
     try {
       await api.deleteProject(id);
       load();
-    } catch (err: any) {
+    } catch {
       alert('Archive operation failed. Security level insufficient.');
     }
   };
@@ -44,7 +49,7 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: any) 
     try {
       await api.updateProject(id, { is_active: true });
       load();
-    } catch (err: any) {
+    } catch {
       alert('Restore failed.');
     }
   };

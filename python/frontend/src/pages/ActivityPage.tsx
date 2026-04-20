@@ -1,23 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
+import type { Activity } from '../api';
 import { motion } from 'framer-motion';
-import { Activity, Clock, User, Briefcase, FileText, Database, Search } from 'lucide-react';
+import { Activity as ActivityIcon, Clock, User, Briefcase, FileText, Database, Search } from 'lucide-react';
 
 export default function ActivityPage() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [activities, setActivities] = useState<any[]>([]);
+    const [activities, setActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState('');
 
-    const load = () => {
-        setIsLoading(true);
+    const load = useCallback(() => {
         api.getActivity()
             .then(r => setActivities(r.data))
             .catch(() => {})
             .finally(() => setIsLoading(false));
-    };
+    }, []);
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
 
     const filtered = activities.filter(a => 
         a.action.toLowerCase().includes(filter.toLowerCase()) ||
@@ -29,7 +28,7 @@ export default function ActivityPage() {
         switch (type) {
             case 'project': return <Briefcase className="w-4 h-4" />;
             case 'work_item': return <FileText className="w-4 h-4" />;
-            case 'comment': return <Activity className="w-4 h-4" />;
+            case 'comment': return <ActivityIcon className="w-4 h-4" />;
             default: return <Database className="w-4 h-4" />;
         }
     };
@@ -117,7 +116,7 @@ export default function ActivityPage() {
                                     <td className="px-8 py-6">
                                         <div className="max-w-xs">
                                             <p className="text-xs font-bold text-text-muted line-clamp-1 italic">
-                                                {a.payload?.name || a.payload?.title || a.payload?.task_code || `Record ID: ${a.entity_id}`}
+                                                {(a.payload as any)?.name || (a.payload as any)?.title || (a.payload as any)?.task_code || `Record ID: ${a.entity_id}`}
                                             </p>
                                             {a.project_name && (
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-primary/40 mt-1">{a.project_name}</p>

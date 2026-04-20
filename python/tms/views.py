@@ -1,5 +1,5 @@
 """REST viewsets for Colour Parrot TMS (scoped querysets + analytics)."""
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -15,6 +15,7 @@ from tms.models import (
     Cycle,
     CycleMember,
     Department,
+    JobTitle,
     Label,
     Module,
     Notification,
@@ -32,6 +33,7 @@ from tms.serializers import (
     CycleMemberSerializer,
     CycleSerializer,
     DepartmentSerializer,
+    JobTitleSerializer,
     LabelSerializer,
     ModuleSerializer,
     NotificationSerializer,
@@ -57,14 +59,25 @@ class DepartmentViewSet(SalesSafeViewSet):
     queryset = Department.objects.filter(is_active=True)
     serializer_class = DepartmentSerializer
 
+
+class JobTitleViewSet(SalesSafeViewSet):
+    queryset = JobTitle.objects.filter(is_active=True)
+    serializer_class = JobTitleSerializer
+
     def get_permissions(self):
-        if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        if self.action in ("create", "update", "partial_update", "destroy"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         return super().get_permissions()
 
+    def perform_create(self, serializer):
+        serializer.save(_activity_user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(_activity_user=self.request.user)
+
     def perform_destroy(self, instance):
         instance.is_active = False
-        instance.save(update_fields=["is_active"])
+        instance.save()
 
 
 class UserViewSet(SalesSafeViewSet):
@@ -78,13 +91,18 @@ class UserViewSet(SalesSafeViewSet):
         return qs
 
     def get_permissions(self):
-        if self.action in ("list", "create", "destroy", "update", "partial_update"):
+        if self.action in ("list", "retrieve", "update", "partial_update"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
+        if self.action in ("create", "destroy"):
+            return [permissions.IsAuthenticated(), IsAdminRole()]
         if self.action == "assignable":
             return [permissions.IsAuthenticated(), BlockSalesWrites()]
         if self.action == "me":
             return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), BlockSalesWrites()]
+
+    def perform_update(self, serializer):
+        serializer.save(_activity_user=self.request.user)
 
     def perform_destroy(self, instance):
         instance.is_active = False
@@ -120,6 +138,12 @@ class ProjectViewSet(SalesSafeViewSet):
         if self.action in ("create", "update", "partial_update", "destroy"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         return super().get_permissions()
+
+    def perform_create(self, serializer):
+        serializer.save(_activity_user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(_activity_user=self.request.user)
 
     def perform_destroy(self, instance):
         u = self.request.user
@@ -218,14 +242,26 @@ class WorkItemViewSet(SalesSafeViewSet):
             or u.role == User.Role.TEAM_HEAD
         ):
             raise PermissionDenied("Only admins and project managers can create tasks.")
-        serializer.save()
+        serializer.save(_activity_user=u)
 
     def perform_update(self, serializer):
         u = self.request.user
         inst = serializer.instance
         if not access.can_edit_work_item(u, inst):
             raise PermissionDenied("You cannot edit this task.")
-        serializer.save()
+
+        # Enforcement: Only PM/Admin can approve or move to final review
+        new_state_id = self.request.data.get("state")
+        if new_state_id:
+            try:
+                new_state = State.objects.get(pk=new_state_id)
+                if new_state.slug in ("client-review", "completed-launched") and new_state.id != inst.state_id:
+                    if not (u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER)):
+                        raise PermissionDenied("Only Project Managers or Admins can approve work for Client Review or Completion.")
+            except State.DoesNotExist:
+                pass
+
+        serializer.save(_activity_user=u)
 
     def perform_destroy(self, instance):
         u = self.request.user
@@ -247,7 +283,7 @@ class WorkItemViewSet(SalesSafeViewSet):
                 body=f"'{u.get_full_name() or u.email}' is currently viewing task: {item.task_code}",
                 link=f"/task/{item.id}"
             )
-        return Response({"status": "seen noted"})
+        return Response({"status": "view_recorded"})
 
     @action(detail=False, methods=["post"], url_path="reorder")
     def reorder(self, request):
@@ -407,8 +443,8 @@ class AnalyticsSummaryView(APIView):
             wis = wis.filter(created_at__date__lte=end_date)
 
         total = wis.count()
-        total_time = sum(log.minutes for log in TimeLog.objects.filter(work_item__in=wis))
-        terminal = wis.filter(state__slug__in=["approved", "launched_completed"]).count()
+        total_time = TimeLog.objects.filter(work_item__in=wis).aggregate(total=Sum('minutes'))['total'] or 0
+        terminal = wis.filter(state__slug__in=["launched", "completed-launched"]).count()
         by_state = list(
             wis.values("state__slug", "state__name").annotate(c=Count("id")).order_by()
         )
@@ -436,7 +472,7 @@ class AnalyticsSummaryView(APIView):
         )
         completed_counts = dict(
             wis.filter(
-                state__slug__in=["approved", "launched_completed"], 
+                state__slug__in=["launched", "completed-launched"], 
                 updated_at__date__gte=start_30
             )
             .values("updated_at__date")

@@ -5,6 +5,7 @@ from tms import views
 
 router = DefaultRouter()
 router.register(r"departments", views.DepartmentViewSet, basename="department")
+router.register(r"job-titles", views.JobTitleViewSet, basename="jobtitle")
 router.register(r"users", views.UserViewSet, basename="user")
 router.register(r"projects", views.ProjectViewSet, basename="project")
 router.register(r"modules", views.ModuleViewSet, basename="module")

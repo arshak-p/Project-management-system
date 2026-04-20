@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
+import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState } from '../api';
 import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download } from 'lucide-react';
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -9,23 +10,18 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: 'text-slate-400 bg-slate-400/10 border-slate-400/20',
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TabType = 'details' | 'comments' | 'refs' | 'time';
+
 export default function TaskDetailModal({ taskId, onClose }: { taskId: number; onClose: () => void }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [task, setTask] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [comments, setComments] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [timeLogs, setTimeLogs] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [attachments, setAttachments] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [users, setUsers] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [states, setStates] = useState<any[]>([]);
+  const [task, setTask] = useState<Task | null>(null);
+  const [comments, setComments] = useState<TaskComment[]>([]);
+  const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
+  const [attachments, setAttachments] = useState<WorkItemAttachment[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [states, setStates] = useState<TaskState[]>([]);
   
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'refs' | 'time'>('details');
+  const [activeTab, setActiveTab] = useState<TabType>('details');
   const [uploading, setUploading] = useState(false);
 
   const [newComment, setNewComment] = useState('');
@@ -34,12 +30,12 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
   const [timeLogObj, setTimeLogObj] = useState({ minutes: '', note: '' });
   const [addingTime, setAddingTime] = useState(false);
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     Promise.all([
       api.getTask(taskId),
       api.getComments(taskId),
       api.getTimeLogs(taskId),
-      api.getAssignableUsers().catch(() => ({ data: [] })), // Assignable members
+      api.getAssignableUsers().catch(() => ({ data: [] })),
       api.getStates(),
       api.getAttachments(taskId).catch(() => ({ data: [] })),
     ])
@@ -52,12 +48,12 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
         setAttachments(aRes.data);
       })
       .finally(() => setIsLoading(false));
-  };
+  }, [taskId]);
 
   useEffect(() => { 
     loadData(); 
-    api.recordView(taskId).catch(() => {}); // Notify PM that member is viewing
-  }, [taskId]);
+    api.recordView(taskId).catch(() => {});
+  }, [taskId, loadData]);
 
   useEffect(() => {
     const wsUrl = `ws://127.0.0.1:8000/ws/tasks/${taskId}/?token=${localStorage.getItem('access_token')}`;
@@ -67,7 +63,6 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
       try {
         const payload = JSON.parse(e.data);
         if (payload.type === 'comment') {
-          // Add the new comment in real-time instantly without fetching
           setComments(prev => {
             if (prev.find(c => c.id === payload.data.id)) return prev;
             return [...prev, payload.data];
@@ -81,7 +76,7 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
     return () => ws.close();
   }, [taskId]);
 
-  const handleUpdateField = async (field: string, value: any) => {
+  const handleUpdateField = async (field: string, value: string | number | null) => {
     try {
       await api.updateTask(taskId, { [field]: value });
       loadData();
@@ -153,7 +148,6 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="glass w-full max-w-4xl h-[90vh] rounded-2xl border border-primary/30 shadow-[0_25px_50px_-10px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
         
-        {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-border/50 bg-surface/30">
           <div className="flex-1 min-w-0 pr-4">
             <div className="flex items-center gap-3 mb-2 flex-wrap">
@@ -172,12 +166,9 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
           </button>
         </div>
 
-        {/* Content Layout */}
         <div className="flex flex-1 overflow-hidden">
           
-          {/* Main Area (Left) */}
           <div className="flex-1 flex flex-col border-r border-border/50 bg-background/50">
-            {/* Tabs */}
             <div className="flex px-6 border-b border-border/50 pt-2 shrink-0">
               {[
                 { id: 'details', label: 'Details', icon: <AlignLeft className="w-4 h-4" /> },
@@ -187,7 +178,7 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
               ].map(t => (
                 <button
                   key={t.id}
-                  onClick={() => setActiveTab(t.id as any)}
+                  onClick={() => setActiveTab(t.id as TabType)}
                   className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === t.id ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text hover:border-border'
                   }`}
@@ -198,7 +189,6 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
               ))}
             </div>
 
-            {/* Tab Views */}
             <div className="flex-1 overflow-y-auto p-6">
               {activeTab === 'details' && (
                 <div className="space-y-6">
@@ -325,7 +315,6 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
             </div>
           </div>
 
-          {/* Sidebar Area (Right) */}
           <div className="w-72 bg-surface/20 shrink-0 p-6 overflow-y-auto space-y-6">
             
             <div className="space-y-1.5">
@@ -344,7 +333,7 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
               <select 
                 value={task.assignee?.id || ''} 
                 onChange={e => handleUpdateField('assignee_id', e.target.value ? Number(e.target.value) : null)}
-                disabled={users.length === 0} // Non-admins can't see list to reassign usually
+                disabled={users.length === 0}
                 className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors disabled:opacity-50"
               >
                 <option value="">Unassigned</option>

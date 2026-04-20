@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { useEffect, useState, useCallback } from 'react';
 import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
+import { api } from '../api';
+import type { Project, TaskState, WorkModule, User, Task } from '../api';
 
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'text-red-400 bg-red-400/10',
@@ -17,16 +18,11 @@ const PRIORITY_ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function TasksPage() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [tasks, setTasks] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [projects, setProjects] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [states, setStates] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [modules, setModules] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [users, setUsers] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [states, setStates] = useState<TaskState[]>([]);
+  const [modules, setModules] = useState<WorkModule[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -34,11 +30,12 @@ export default function TasksPage() {
   const [error, setError] = useState('');
   const [filterProject, setFilterProject] = useState(localStorage.getItem('jump_project_filter') || '');
   const [filterState, setFilterState] = useState('');
+  const [filterAssignee, setFilterAssignee] = useState('');
   const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     Promise.all([
       api.getTasks({ archived: showArchived }), 
       api.getProjects(), 
@@ -55,11 +52,10 @@ export default function TasksPage() {
       })
       .catch((err) => console.error('Fetching issue on Tasks:', err))
       .finally(() => setIsLoading(false));
-  };
+  }, [showArchived]);
 
-  useEffect(() => { load(); }, [showArchived]);
+  useEffect(() => { load(); }, [load]);
 
-  // Sync to local storage
   useEffect(() => {
     localStorage.setItem('jump_project_filter', filterProject);
   }, [filterProject]);
@@ -79,9 +75,9 @@ export default function TasksPage() {
       setShowForm(false);
       setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', assignee: '' });
       load();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      setError(JSON.stringify(err.response?.data || 'Failed to create task'));
+    } catch (err: unknown) {
+      const errorData = (err as { response?: { data?: unknown } })?.response?.data;
+      setError(JSON.stringify(errorData || 'Failed to create task'));
     } finally { setSaving(false); }
   };
 
@@ -102,6 +98,7 @@ export default function TasksPage() {
     if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !t.task_code?.toLowerCase().includes(search.toLowerCase())) match = false;
     if (filterProject && t.project?.toString() !== filterProject) match = false;
     if (filterState && t.state?.toString() !== filterState) match = false;
+    if (filterAssignee && t.assignee?.id?.toString() !== filterAssignee) match = false;
     return match;
   });
 
@@ -123,7 +120,6 @@ export default function TasksPage() {
         </button>
       </div>
 
-      {/* Create Task Form */}
       {showForm && (
         <div className="glass rounded-2xl border border-primary/30 p-6 animate-in fade-in slide-in-from-top-2 duration-300">
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Plus className="w-5 h-5 text-primary" /> Create Work Item</h3>
@@ -165,7 +161,6 @@ export default function TasksPage() {
         </div>
       )}
 
-      {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-4 top-3.5 text-text-muted" />
@@ -180,6 +175,10 @@ export default function TasksPage() {
             <option value="">All States</option>
             {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
+          <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="px-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none min-w-[150px]">
+            <option value="">All Employees</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
+          </select>
         </div>
         <label className="flex items-center gap-3 bg-surface border border-border px-5 py-2.5 rounded-xl cursor-pointer hover:border-primary transition-all">
           <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
@@ -191,7 +190,6 @@ export default function TasksPage() {
         </label>
       </div>
 
-      {/* Tasks List */}
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
       ) : (
@@ -205,8 +203,8 @@ export default function TasksPage() {
               </div>
             )}
             {filtered.map(task => (
-              <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`flex items-center gap-4 px-5 py-4 hover:bg-surface/30 transition-colors group cursor-pointer ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''}`}>
-                <div className="w-2 h-10 rounded-full bg-gradient-to-b from-primary to-[#8b5cf6] flex-shrink-0"></div>
+              <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`flex items-center gap-4 px-5 py-4 hover:bg-surface/30 transition-colors group cursor-pointer ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''} ${task.priority === 'urgent' ? 'bg-red-500/5' : ''}`}>
+                <div className={`w-2 h-10 rounded-full flex-shrink-0 ${task.priority === 'urgent' ? 'bg-gradient-to-b from-red-500 to-red-600 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-gradient-to-b from-primary to-[#8b5cf6]'}`}></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <code className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">{task.task_code}</code>

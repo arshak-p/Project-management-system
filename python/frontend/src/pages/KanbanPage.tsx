@@ -1,32 +1,37 @@
-import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Plus, Trash2, CircleDashed } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
+import { api } from '../api';
+import type { Task, TaskState } from '../api';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function KanjiBoardPage() {
-  const [tasks, setTasks] = useState([]);
-  const [states, setStates] = useState([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [states, setStates] = useState<TaskState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
-  const load = async () => {
-    setIsLoading(true);
+  const load = useCallback(async () => {
     try {
       const [t, s] = await Promise.all([api.getTasks(), api.getStates()]);
       setTasks(t.data);
       setStates(s.data);
-    } catch { /* error */ }
+    } catch (err) {
+      console.error(err);
+    }
     setIsLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
 
   const handleDelete = async (id: number) => {
     if (!confirm('Abort this work item permanently?')) return;
-    await api.deleteTask(id);
-    load();
+    try {
+      await api.deleteTask(id);
+      load();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   if (isLoading) return <div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" /></div>;
@@ -41,7 +46,7 @@ export default function KanjiBoardPage() {
       </motion.div>
 
       <div className="flex gap-8 overflow-x-auto pb-10 custom-scrollbar snap-x h-[calc(100vh-250px)]">
-        {states.map((state: any, idx: number) => (
+        {states.map((state, idx) => (
           <motion.div 
             key={state.slug}
             initial={{ opacity: 0, y: 20 }}
@@ -55,13 +60,13 @@ export default function KanjiBoardPage() {
                  <h3 className="font-extrabold text-sm uppercase tracking-widest">{state.name}</h3>
               </div>
               <span className="text-[10px] font-black bg-white/5 px-2 py-1 rounded-lg border border-white/10 opacity-60">
-                {tasks.filter((t: any) => t.state_slug === state.slug).length}
+                {tasks.filter(t => t.state_slug === state.slug).length}
               </span>
             </div>
 
             <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar pr-2">
                <AnimatePresence>
-                {tasks.filter((t: any) => t.state_slug === state.slug).map((task: any) => (
+                {tasks.filter(t => t.state_slug === state.slug).map((task) => (
                   <motion.div
                     key={task.id}
                     layout
@@ -70,7 +75,9 @@ export default function KanjiBoardPage() {
                     exit={{ opacity: 0, scale: 0.8 }}
                     whileHover={{ scale: 1.02 }}
                     onClick={() => setSelectedTaskId(task.id)}
-                    className="glass p-6 rounded-[1.5rem] border-white/5 hover:border-primary/30 group cursor-pointer relative overflow-hidden"
+                    className={`glass p-6 rounded-[1.5rem] border-white/5 hover:border-primary/30 group cursor-pointer relative overflow-hidden transition-all ${
+                      task.priority === 'urgent' ? 'border-red-500/40 bg-red-500/5 shadow-[0_0_15px_-5px_rgba(239,68,68,0.3)]' : ''
+                    }`}
                   >
                     <div className="flex flex-col gap-4">
                       <div className="flex justify-between items-start">

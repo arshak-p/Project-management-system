@@ -1,20 +1,48 @@
 """Activity logging hooks and profile bootstrap."""
 from django.conf import settings
-from django.db.models.signals import post_save
+from django.db import models
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
 from accounts.models import User
-from tms.notify import notify_user
+from tms.notify import notify_user, notify_roles
 
 from tms.models import ActivityLog, UserProfile, WorkItem, WorkItemComment, Project, Department, Cycle
 
 
 @receiver(post_save, sender=User)
-def ensure_user_profile(sender, instance: User, created: bool, **kwargs):
+def handle_user_save(sender, instance: User, created: bool, **kwargs):
     if created:
         UserProfile.objects.get_or_create(user=instance)
+    
+    # Notify PMs and Admins about new users or profile updates
+    actor = getattr(instance, "_activity_user", None)
+    title = "New Team Member" if created else "Profile Updated"
+    body = f"{instance.get_full_name() or instance.email} ({instance.role.replace('_', ' ').capitalize()})"
+    if not created:
+        body = f"Profile updated for {instance.get_full_name() or instance.email}"
+
+    notify_roles(
+        [User.Role.ADMIN, User.Role.PROJECT_MANAGER],
+        title=title,
+        body=body,
+        link="/team",
+        exclude_user=actor # Don't notify the person who made the change
+    )
+
+
+@receiver(pre_save, sender=WorkItem)
+def track_work_item_state(sender, instance: WorkItem, **kwargs):
+    if instance.pk:
+        try:
+            old_inst = WorkItem.objects.get(pk=instance.pk)
+            instance._old_state_id = old_inst.state_id
+        except WorkItem.DoesNotExist:
+            instance._old_state_id = None
+    else:
+        instance._old_state_id = None
 
 
 @receiver(post_save, sender=WorkItem)
@@ -59,6 +87,50 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                 body=notif_body,
                 link=f"/task/{instance.id}"
             )
+
+        # Notify Admins if a Project Manager makes a change
+        if actor.role == User.Role.PROJECT_MANAGER:
+            notify_roles(
+                [User.Role.ADMIN],
+                title=f"PM Action: {instance.task_code}",
+                body=f"Project Manager {actor.get_full_name() or actor.email} {action} task '{instance.title}'",
+                link=f"/task/{instance.id}",
+                exclude_user=actor
+            )
+
+        # New: Workflow Automation Notifications
+        if instance.state and getattr(instance, "_old_state_id", None) != instance.state_id:
+            if instance.state.slug == "team-head-review":
+                # Notify Department Head
+                if instance.department and instance.department.head:
+                    notify_user(
+                        instance.department.head.id,
+                        title=f"Review Required: {instance.task_code}",
+                        body=f"Task '{instance.title}' is ready for internal review.",
+                        link=f"/task/{instance.id}"
+                    )
+                # Notify PMs
+                notify_roles(
+                    [User.Role.PROJECT_MANAGER],
+                    title=f"Head Review Pending: {instance.task_code}",
+                    body=f"Task '{instance.title}' submitted to Head for review.",
+                    link=f"/task/{instance.id}"
+                )
+            elif instance.state.slug == "client-review":
+                 notify_roles(
+                    [User.Role.PROJECT_MANAGER, User.Role.ADMIN],
+                    title=f"Client Review Ready: {instance.task_code}",
+                    body=f"Task '{instance.title}' is ready for client presentation.",
+                    link=f"/task/{instance.id}"
+                )
+            elif instance.state.slug == "completed-launched":
+                 if instance.assignee:
+                     notify_user(
+                         instance.assignee.id,
+                         title="Task Launched! 🚀",
+                         body=f"Your task '{instance.title}' has been approved and completed.",
+                         link=f"/task/{instance.id}"
+                     )
 
 @receiver(post_save, sender=WorkItemComment)
 def log_comment_save(sender, instance: WorkItemComment, created: bool, **kwargs):
@@ -116,6 +188,15 @@ def log_project_save(sender, instance: Project, created: bool, **kwargs):
         project=instance,
         payload={"name": instance.name, "slug": instance.slug}
     )
+
+    if actor and actor.role == User.Role.PROJECT_MANAGER:
+        notify_roles(
+            [User.Role.ADMIN],
+            title=f"PM Project Action: {instance.name}",
+            body=f"Project Manager {actor.get_full_name() or actor.email} {action} project '{instance.name}'",
+            link="/projects",
+            exclude_user=actor
+        )
 
 @receiver(post_save, sender=Department)
 def log_department_save(sender, instance: Department, created: bool, **kwargs):

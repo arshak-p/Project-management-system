@@ -36,9 +36,8 @@ function App() {
       localStorage.setItem('refresh_token', refresh);
       setIsAuthenticated(true);
       
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      if (err.response?.status === 401) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
         setError("Invalid email or password.");
       } else {
         setError("Failed to connect to the backend server. Please make sure the Python server is running.");
