@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
 import type { AnalyticsSummary, Project, Activity } from '../api';
 import { motion } from 'framer-motion';
-import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight, Bell } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, Cell
@@ -13,6 +13,7 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
@@ -21,12 +22,14 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
     Promise.all([
       api.getAnalytics(), 
       api.getProjects(), 
-      api.getActivity()
+      api.getActivity(),
+      api.getNotifications()
     ])
-      .then(([a, p, act]) => {
+      .then(([a, p, act, n]) => {
         setAnalytics(a.data);
         setProjects(p.data);
         setRecentActivity(act.data.slice(0, 10));
+        setNotifications(n.data.filter((notif: any) => !notif.read).slice(0, 3));
       })
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
@@ -73,61 +76,119 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {notifications.length > 0 && (
+         <div className="fixed top-24 right-8 z-[100] flex flex-col gap-3 w-72 pointer-events-none">
+            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500 italic mb-1 px-4 drop-shadow-sm">Priority Alpha Alerts</h3>
+            {notifications.map(n => (
+              <motion.div 
+                key={n.id} 
+                initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                whileHover={{ scale: 1.02 }}
+                className="p-4 glass border border-amber-500/20 rounded-[1.5rem] flex items-center justify-between group hover:bg-amber-500/10 cursor-pointer transition-all shadow-2xl pointer-events-auto backdrop-blur-3xl"
+                onClick={() => onNavigate?.('notifications')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center animate-pulse">
+                    <Bell className="w-3.5 h-3.5 text-amber-500" />
+                  </div>
+                  <div className="flex-1 min-w-0 pr-2">
+                    <p className="text-[11px] font-black text-text group-hover:text-amber-500 transition-colors truncate block">
+                      {n.title}
+                    </p>
+                    <p className="text-[9px] font-bold text-text-muted opacity-60 truncate block mt-0.5">
+                      {n.body}
+                    </p>
+                  </div>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-amber-500"></div>
+              </motion.div>
+            ))}
+         </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div 
           whileHover={{ y: -5 }}
-          className="md:col-span-2 glass rounded-[3rem] p-10 relative overflow-hidden group border border-primary/10"
+          onClick={() => onNavigate?.('kanban')}
+          className="md:col-span-2 glass rounded-[3rem] p-10 relative overflow-hidden group border border-primary/10 flex flex-col md:flex-row gap-10 cursor-pointer"
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 blur-[100px] -mr-32 -mt-32"></div>
-          <div className="relative z-10 flex flex-col h-full justify-between">
-            <div className="flex justify-between items-start">
-               <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center shadow-glow">
-                 <TrendingUp className="w-6 h-6 text-white" />
-               </div>
-               <button onClick={() => onNavigate?.('kanban')} className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors">
-                  <ArrowUpRight className="w-5 h-5 text-white" />
-               </button>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 blur-[100px] -mr-32 -mt-32 opacity-20"></div>
+          
+          <div className="flex-1 relative z-10">
+            <div className="flex justify-between items-start mb-10">
+              <div className="p-5 bg-primary/20 rounded-[2rem] shadow-glow">
+                <TrendingUp className="w-8 h-8 text-primary" />
+              </div>
+              <div className="p-3 glass rounded-full opacity-40 group-hover:opacity-100 transition-all">
+                <ArrowUpRight className="w-5 h-5 text-text" />
+              </div>
             </div>
-            <div className="mt-8">
-              <h3 className="text-7xl font-black tracking-tighter mb-4 text-white">{analytics?.totals?.completed_or_launched ?? 0}</h3>
-              <p className="text-xl font-bold text-text">Tactical Units Launched</p>
-              <p className="text-xs text-text-muted mt-4 opacity-70 leading-relaxed font-medium">Successfully deployed operations across all designated project sectors.</p>
+            
+            <div className="space-y-2">
+              <motion.span 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-8xl font-black tracking-tighter text-text block"
+              >
+                {analytics?.totals?.completed_or_launched || 0}
+              </motion.span>
+              <h3 className="text-2xl font-black text-text-muted">Tactical Units Launched</h3>
+              <p className="text-xs text-text-muted/60 mt-4 leading-relaxed max-w-xs">
+                Successfully deployed operations across all designated project sectors.
+              </p>
             </div>
+          </div>
+
+          <div className="w-full md:w-64 flex flex-col gap-4 relative z-10">
+             <div className="glass p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden bento-item cursor-pointer" onClick={(e) => { e.stopPropagation(); onNavigate?.('tasks'); }}>
+                <div className="flex justify-between items-center mb-6">
+                   <div className="p-3 bg-indigo-500/10 rounded-2xl"><Briefcase className="w-6 h-6 text-indigo-400" /></div>
+                </div>
+                <div>
+                   <span className="text-4xl font-black text-text block">{analytics?.totals?.all || 0}</span>
+                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted/60">Global Task Volume</span>
+                </div>
+             </div>
+
+             <div className="glass p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden bento-item cursor-pointer" onClick={(e) => { e.stopPropagation(); onNavigate?.('projects'); }}>
+                <div className="flex justify-between items-center mb-6">
+                   <div className="p-3 bg-fuchsia-500/10 rounded-2xl"><Calendar className="w-6 h-6 text-fuchsia-400" /></div>
+                </div>
+                <div>
+                   <span className="text-4xl font-black text-text block">{projects.length}</span>
+                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted/60">Active Orbits</span>
+                </div>
+             </div>
           </div>
         </motion.div>
 
-        <div className="md:col-span-2 grid grid-cols-2 gap-6">
-          <div className="glass rounded-[2.5rem] p-8 flex flex-col justify-between hover:border-primary/30 transition-all group">
-             <Briefcase className="w-8 h-8 text-primary/40 group-hover:text-primary transition-colors" />
-             <div>
-                <h4 className="text-4xl font-black tracking-tighter text-white">{analytics?.totals?.all ?? 0}</h4>
-                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted mt-2">Global Task Volume</p>
-             </div>
-          </div>
-          <div className="glass rounded-[2.5rem] p-8 flex flex-col justify-between hover:border-[#d946ef]/30 transition-all group">
-             <Calendar className="w-8 h-8 text-[#d946ef]/40 group-hover:text-[#d946ef] transition-colors" />
-             <div>
-                <h4 className="text-4xl font-black tracking-tighter text-white">{projects.length}</h4>
-                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted mt-2">Active Orbits</p>
-             </div>
-          </div>
-          <div className="col-span-2 glass rounded-[2.5rem] p-8 flex items-center justify-between border-dashed border-white/10">
-             <div className="flex items-center gap-6">
-                <div className="w-12 h-12 bg-[#8b5cf6]/10 rounded-2xl flex items-center justify-center text-[#8b5cf6]">
-                   <CircleDashed className="w-6 h-6 animate-spin-slow" />
-                </div>
-                <div>
-                   <h4 className="text-3xl font-black tracking-tighter text-white">{analytics?.totals?.pending ?? 0}</h4>
-                   <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">Pending Deployment</p>
-                </div>
-             </div>
-             <div className="text-right">
-                <div className="h-1.5 w-32 bg-white/5 rounded-full overflow-hidden mb-2">
-                   <div className="h-full bg-gradient-to-r from-primary to-[#d946ef]" style={{ width: '68%' }}></div>
-                </div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-text-muted/40 italic">Resource Load Factor</p>
-             </div>
-          </div>
+        <div className="glass p-8 rounded-[3rem] border border-white/5 flex flex-col justify-center relative overflow-hidden bento-item cursor-pointer" onClick={() => onNavigate?.('tasks')}>
+            <div className="flex flex-col gap-10">
+               <div className="flex items-center gap-6">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                     <CircleDashed className="w-8 h-8 text-amber-400 animate-spin-slow" />
+                  </div>
+                  <div>
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-5xl font-black text-text">{analytics?.totals?.pending || 0}</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted/60">Pending</span>
+                    </div>
+                  </div>
+               </div>
+               
+               <div className="w-full">
+                  <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
+                     <div 
+                       className="h-full bg-gradient-to-r from-primary to-[#d946ef] shadow-glow" 
+                       style={{ width: `${Math.min(100, (analytics?.totals?.pending || 0) / (analytics?.totals?.all || 1) * 100)}%` }}
+                     />
+                  </div>
+                  <div className="flex justify-between mt-4">
+                     <span className="text-[9px] font-black text-text-muted uppercase tracking-[0.3em] italic opacity-40">Resource Load Factor</span>
+                  </div>
+               </div>
+            </div>
         </div>
       </div>
 
@@ -147,11 +208,29 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} />
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 900, fill: 'var(--text-muted)' }} 
+                  dy={10} 
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 900, fill: 'var(--text-muted)' }} 
+                />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1.5rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900 }}
-                  itemStyle={{ color: '#3b82f6' }}
+                  contentStyle={{ 
+                    backgroundColor: 'var(--surface)', 
+                    borderRadius: '1rem', 
+                    border: '1px solid var(--border)', 
+                    fontSize: '10px', 
+                    fontWeight: 900,
+                    color: 'var(--text)'
+                  }}
+                  itemStyle={{ color: 'var(--primary)' }}
+                  labelStyle={{ color: 'var(--text)', marginBottom: '4px' }}
                 />
                 <Area type="monotone" dataKey="units" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorUnits)" />
               </AreaChart>
@@ -166,10 +245,26 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
               <BarChart data={chartData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
                 <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8', width: 60 }} width={80} />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 9, fontWeight: 900, fill: 'var(--text-muted)', width: 60 }} 
+                  width={80} 
+                />
                 <Tooltip 
                   cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1.5rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900 }}
+                  contentStyle={{ 
+                    backgroundColor: 'var(--surface)', 
+                    borderRadius: '1rem', 
+                    border: '1px solid var(--border)', 
+                    fontSize: '10px', 
+                    fontWeight: 900,
+                    color: 'var(--text)'
+                  }}
+                  itemStyle={{ color: 'inherit' }}
+                  labelStyle={{ color: 'var(--text)', marginBottom: '4px' }}
                 />
                 <Bar dataKey="count" radius={[0, 10, 10, 0]} barSize={20}>
                   {chartData.map((_, index) => (

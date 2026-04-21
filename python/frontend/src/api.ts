@@ -61,6 +61,7 @@ export interface Task {
   module: number;
   priority: string;
   due_date: string | null;
+  scheduled_date: string | null;
   assignee: {
     id: number;
     email: string;

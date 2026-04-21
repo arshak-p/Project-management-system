@@ -271,6 +271,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "assignee",
             "assignee_id",
             "due_date",
+            "scheduled_date",
             "cycle",
             "department",
             "labels",

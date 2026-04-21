@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { 
   Users, Search, Target, TrendingUp, 
   ExternalLink, Briefcase,
-  ChevronRight
+  ChevronRight, X
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, Tooltip, ResponsiveContainer,
@@ -35,6 +35,9 @@ export default function TeamIntelligencePage() {
   }, []);
 
   const getRangeParams = useCallback(() => {
+    if (customRange.start && customRange.end) {
+      return { start: customRange.start, end: customRange.end };
+    }
     const now = new Date();
     let start = '';
     const end = now.toISOString().split('T')[0];
@@ -50,7 +53,7 @@ export default function TeamIntelligencePage() {
     }
 
     return { start, end };
-  }, [dateRange]);
+  }, [dateRange, customRange]);
 
   const loadMemberDetails = useCallback(async (userId: number) => {
     setIsDetailLoading(true);
@@ -109,18 +112,39 @@ export default function TeamIntelligencePage() {
           <h1 className="text-5xl font-black tracking-tighter text-white">Team Intelligence</h1>
           <p className="text-text-muted mt-2 font-bold tracking-widest uppercase text-[10px] opacity-60 italic">Operator Review // Tactical Performance Deep-Dive</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
            <div className="flex items-center gap-1 p-1 glass rounded-2xl border border-white/5">
               {(['daily', 'weekly', 'monthly'] as const).map(r => (
                 <button 
                   key={r}
-                  onClick={() => setDateRange(r)}
-                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${dateRange === r ? 'bg-primary text-white shadow-glow' : 'text-text-muted hover:text-white'}`}
+                  onClick={() => { setDateRange(r); setCustomRange({ start: '', end: '' }); }}
+                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${dateRange === r && !customRange.start ? 'bg-primary text-white shadow-glow' : 'text-text-muted hover:text-white'}`}
                 >
                   {r}
                 </button>
               ))}
            </div>
+
+           <div className="flex items-center gap-2 p-1 glass rounded-2xl border border-white/5">
+              <input 
+                type="date" 
+                value={customRange.start}
+                onChange={(e) => setCustomRange(p => ({ ...p, start: e.target.value }))}
+                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none border-r border-white/5" 
+              />
+              <input 
+                type="date" 
+                value={customRange.end}
+                onChange={(e) => setCustomRange(p => ({ ...p, end: e.target.value }))}
+                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none" 
+              />
+              {(customRange.start || customRange.end) && (
+                <button onClick={() => setCustomRange({ start: '', end: '' })} className="p-1.5 hover:bg-white/5 rounded-lg">
+                  <X className="w-3 h-3 text-text-muted" />
+                </button>
+              )}
+           </div>
+
            <div className="relative w-full md:w-64">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted/40" />
               <input

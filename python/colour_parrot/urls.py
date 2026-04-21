@@ -7,7 +7,7 @@ from django.urls import include, path, re_path
 from colour_parrot.spa_views import spa_catchall
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("cp-vault-99/", admin.site.urls),
     path("api/auth/", include("accounts.urls")),
     path("api/", include("tms.urls")),
 ]
@@ -15,7 +15,7 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-# React SPA: after API routes; does not capture /api, /admin, /static, /media
+# React SPA: after API routes; does not capture /api, /cp-vault-99, /static, /media
 urlpatterns += [
-    re_path(r"^(?!api|admin|static|media)(?P<path>.*)$", spa_catchall),
+    re_path(r"^(?!api|cp-vault-99|static|media)(?P<path>.*)$", spa_catchall),
 ]

@@ -79,6 +79,11 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   }, [onLogout, page]);
 
   useEffect(() => {
+    // Request permission for Desktop Notifications
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
     const hb = setInterval(() => {
        api.getNotifications().then(r => {
          const newData = r.data.filter((n: Notification) => !n.read);
@@ -86,6 +91,41 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
        });
     }, 30000);
     return () => clearInterval(hb);
+  }, []);
+
+  useEffect(() => {
+    // Real-time Notification Socket
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    const wsUrl = `ws://127.0.0.1:8000/ws/notifications/?token=${token}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        if (payload.type === 'notification') {
+          const { title, body } = payload.data;
+          
+          // Show Browser Notification
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(`CP: ${title}`, {
+              body,
+              icon: '/colour parrot-icon.webp'
+            });
+          }
+
+          // Increment unread count locally
+          setUnreadCount(prev => prev + 1);
+        }
+      } catch (err) {
+        console.error("Notification WS Error", err);
+      }
+    };
+
+    ws.onerror = () => console.warn("Notification Socket error. Retrying in background.");
+    
+    return () => ws.close();
   }, []);
 
   const isAdmin = me?.is_superuser || ADMIN_ROLES.includes(me?.role || '');
@@ -121,14 +161,14 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] lg:translate-x-0'}
       `}>
         <div className="p-10 flex items-center justify-between">
-          <button onClick={() => handleNav(isAdmin ? 'overview' : 'my_tasks')} className="flex items-center gap-5 group">
+          <button onClick={() => handleNav(isAdmin ? 'overview' : 'my_tasks')} className="flex items-center gap-6 group">
             <div className="relative">
-               <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full group-hover:bg-primary/40 transition-all"></div>
-               <img src="/colour parrot-icon.webp" alt="Logo" className="relative h-12 w-auto animate-float" />
+               <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full group-hover:bg-primary/50 transition-all"></div>
+               <img src="/colour parrot-icon.webp" alt="Logo" className="relative h-16 w-auto animate-float" />
             </div>
             <div className="text-left">
-              <p className="font-black text-xl tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#d946ef]">C-Parrot</p>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-text-muted mt-2 opacity-50">Management System</p>
+              <p className="font-black text-2xl tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#d946ef]">C-Parrot</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.4em] text-text-muted mt-3 opacity-60">Intelligence Suite</p>
             </div>
           </button>
         </div>

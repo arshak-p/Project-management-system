@@ -7,13 +7,14 @@ import {
   LayoutGrid, 
   ShieldCheck, 
   ChevronRight, BrainCircuit,
-  Trash2
+  Trash2, Clock
 } from 'lucide-react';
 
 interface DraftTask {
   title: string;
   project_id: string;
   due_date: string;
+  scheduled_date: string;
   priority: string;
 }
 
@@ -39,7 +40,8 @@ export default function StrategistPage() {
         setStates(s.data);
         setModules(m.data);
       })
-      .catch(err => console.error(err));
+      .catch(err => console.error(err))
+      .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export default function StrategistPage() {
       title: '', 
       project_id: projects[0]?.id.toString() || '', 
       due_date: new Date().toISOString().split('T')[0], 
+      scheduled_date: new Date().toISOString().split('T')[0],
       priority: 'medium' 
     }]);
   };
@@ -84,6 +87,7 @@ export default function StrategistPage() {
           module: targetModule,
           priority: draft.priority,
           due_date: draft.due_date,
+          scheduled_date: draft.scheduled_date,
           description: 'Strategically generated via Mission Control.'
         });
       }
@@ -218,11 +222,24 @@ export default function StrategistPage() {
                             <span className="text-text-muted/20 text-xs">|</span>
                             <input 
                               type="date" 
+                              title="Due Date"
                               value={draft.due_date}
                               onChange={(e) => updateDraft(idx, 'due_date', e.target.value)}
                               className="bg-transparent border-none outline-none text-[10px] font-black text-text-muted uppercase tracking-widest cursor-pointer"
                               style={{ colorScheme: 'dark' }}
                             />
+                            <span className="text-text-muted/20 text-xs">|</span>
+                            <div className="flex items-center gap-1">
+                               <Clock className="w-3.5 h-3.5 text-primary/50" />
+                               <input 
+                                 type="date" 
+                                 title="Scheduled Work Date"
+                                 value={draft.scheduled_date}
+                                 onChange={(e) => updateDraft(idx, 'scheduled_date', e.target.value)}
+                                 className="bg-transparent border-none outline-none text-[10px] font-black text-primary uppercase tracking-widest cursor-pointer"
+                                 style={{ colorScheme: 'dark' }}
+                               />
+                            </div>
                          </div>
                       </div>
                       

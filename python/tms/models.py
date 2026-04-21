@@ -204,6 +204,7 @@ class WorkItem(models.Model):
         on_delete=models.SET_NULL,
         related_name="work_items",
     )
+    scheduled_date = models.DateField(null=True, blank=True, help_text="Date when work is planned to start")
     labels = models.ManyToManyField(Label, blank=True, related_name="work_items")
     board_position = models.PositiveIntegerField(
         default=0,

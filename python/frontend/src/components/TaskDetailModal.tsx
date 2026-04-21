@@ -355,6 +355,20 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
               />
             </div>
 
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[#8b5cf6] uppercase tracking-wide flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" /> Scheduled Work Date
+              </label>
+              <input 
+                type="date"
+                value={task.scheduled_date || ''}
+                onChange={e => handleUpdateField('scheduled_date', e.target.value || null)}
+                className="w-full px-3 py-2 bg-primary/5 border border-primary/20 rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
+                style={{ colorScheme: 'dark' }}
+              />
+              <p className="text-[10px] text-text-muted leading-tight">When do you plan to work on this before the deadline?</p>
+            </div>
+
             <div className="space-y-1.5 pt-4 border-t border-border/50">
               <label className="text-xs font-bold text-text-muted uppercase tracking-wide">Created By</label>
               <div className="flex items-center gap-2 mt-1">

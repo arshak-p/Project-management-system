@@ -39,10 +39,13 @@ def track_work_item_state(sender, instance: WorkItem, **kwargs):
         try:
             old_inst = WorkItem.objects.get(pk=instance.pk)
             instance._old_state_id = old_inst.state_id
+            instance._old_assignee_id = old_inst.assignee_id
         except WorkItem.DoesNotExist:
             instance._old_state_id = None
+            instance._old_assignee_id = None
     else:
         instance._old_state_id = None
+        instance._old_assignee_id = None
 
 
 @receiver(post_save, sender=WorkItem)
@@ -64,6 +67,16 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
             "state_id": instance.state_id,
         },
     )
+
+    # --- Assignment Notification ---
+    if instance.assignee and (created or getattr(instance, "_old_assignee_id", None) != instance.assignee.id):
+        if not actor or actor.id != instance.assignee.id:
+            notify_user(
+                instance.assignee.id,
+                title=f"Task Assigned: {instance.task_code}",
+                body=f"You have been assigned to task: '{instance.title}'",
+                link=f"/task/{instance.id}"
+            )
 
     if not created and actor:
         # Determine notification title and body
@@ -88,6 +101,17 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                 link=f"/task/{instance.id}"
             )
 
+        # Notify Managers on "Important" updates
+        is_important = instance.priority in [WorkItem.Priority.URGENT, WorkItem.Priority.HIGH]
+        if is_important:
+            notify_roles(
+                [User.Role.PROJECT_MANAGER, User.Role.ADMIN],
+                title=f"CRITICAL Task Update: {instance.task_code}",
+                body=f"Important task '{instance.title}' was updated by {actor.get_full_name() or actor.email}",
+                link=f"/task/{instance.id}",
+                exclude_user=actor
+            )
+
         # Notify Admins if a Project Manager makes a change
         if actor.role == User.Role.PROJECT_MANAGER:
             notify_roles(
@@ -98,7 +122,7 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                 exclude_user=actor
             )
 
-        # New: Workflow Automation Notifications
+        # Workflow Automation Notifications
         if instance.state and getattr(instance, "_old_state_id", None) != instance.state_id:
             if instance.state.slug == "team-head-review":
                 # Notify Department Head
@@ -146,14 +170,23 @@ def log_comment_save(sender, instance: WorkItemComment, created: bool, **kwargs)
             body=f"{actor.first_name or actor.email}: {instance.body[:50]}...",
             link=f"/task/{wi.id}"
         )
-    # Notify task creator
-    if wi.created_by and wi.created_by.id != actor.id and (not wi.assignee or wi.assignee.id != wi.created_by.id):
-        notify_user(
-            wi.created_by.id,
-            title=f"New Comment on {wi.task_code}",
-            body=f"{actor.first_name or actor.email}: {instance.body[:50]}...",
-            link=f"/task/{wi.id}"
-        )
+
+    # --- Mentions Support ---
+    import re
+    mentions = re.findall(r'@(\S+)', instance.body)
+    if mentions:
+        for m in set(mentions):
+            # Try matching by email or first_name (case-insensitive)
+            target = User.objects.filter(
+                models.Q(email__iexact=m) | models.Q(first_name__iexact=m)
+            ).first()
+            if target and target.id != actor.id:
+                notify_user(
+                    target.id,
+                    title=f"You were mentioned: {wi.task_code}",
+                    body=f"{actor.first_name or actor.email} mentioned you: {instance.body[:50]}...",
+                    link=f"/task/{wi.id}"
+                )
 
     # Real-time WebSockets push for WhatsApp-like live comments
     channel_layer = get_channel_layer()
