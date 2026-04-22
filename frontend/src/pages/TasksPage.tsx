@@ -1,0 +1,245 @@
+import { useEffect, useState, useCallback } from 'react';
+import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp } from 'lucide-react';
+import TaskDetailModal from '../components/TaskDetailModal';
+import { api } from '../api';
+import type { Project, TaskState, WorkModule, User, Task } from '../api';
+
+const PRIORITY_COLORS: Record<string, string> = {
+  urgent: 'text-red-400 bg-red-400/10',
+  high: 'text-orange-400 bg-orange-400/10',
+  medium: 'text-blue-400 bg-blue-400/10',
+  low: 'text-slate-400 bg-slate-400/10',
+};
+const PRIORITY_ICONS: Record<string, React.ReactNode> = {
+  urgent: <AlertTriangle className="w-3 h-3" />,
+  high: <ArrowUp className="w-3 h-3" />,
+  medium: <Circle className="w-3 h-3" />,
+  low: <Circle className="w-3 h-3" />,
+};
+
+export default function TasksPage() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [states, setStates] = useState<TaskState[]>([]);
+  const [modules, setModules] = useState<WorkModule[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [filterProject, setFilterProject] = useState(localStorage.getItem('jump_project_filter') || '');
+  const [filterState, setFilterState] = useState('');
+  const [filterAssignee, setFilterAssignee] = useState('');
+  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', assignee: '' });
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+
+  const load = useCallback(() => {
+    Promise.all([
+      api.getTasks({ archived: showArchived }), 
+      api.getProjects(), 
+      api.getStates(), 
+      api.getModules(), 
+      api.getAssignableUsers().catch(() => ({ data: [] }))
+    ])
+      .then(([t, p, s, m, u]) => {
+        setTasks(t.data);
+        setProjects(p.data);
+        setStates(s.data);
+        setModules(m.data);
+        setUsers(u.data);
+      })
+      .catch((err) => console.error('Fetching issue on Tasks:', err))
+      .finally(() => setIsLoading(false));
+  }, [showArchived]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    localStorage.setItem('jump_project_filter', filterProject);
+  }, [filterProject]);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true); setError('');
+    try {
+      await api.createTask({
+        ...form,
+        project: Number(form.project),
+        state: Number(form.state),
+        module: Number(form.module),
+        assignee: form.assignee ? Number(form.assignee) : null,
+        due_date: form.due_date || null,
+      });
+      setShowForm(false);
+      setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', assignee: '' });
+      load();
+    } catch (err: unknown) {
+      const errorData = (err as { response?: { data?: unknown } })?.response?.data;
+      setError(JSON.stringify(errorData || 'Failed to create task'));
+    } finally { setSaving(false); }
+  };
+
+  const handleArchive = async (id: number) => {
+    if (!confirm('Archive this task to historical data?')) return;
+    await api.deleteTask(id);
+    load();
+  };
+
+  const handleRestore = async (id: number) => {
+    if (!confirm('Restore this task to active work items?')) return;
+    await api.updateTask(id, { is_active: true });
+    load();
+  };
+
+  const filtered = tasks.filter(t => {
+    let match = true;
+    if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !t.task_code?.toLowerCase().includes(search.toLowerCase())) match = false;
+    if (filterProject && t.project?.toString() !== filterProject) match = false;
+    if (filterState && t.state?.toString() !== filterState) match = false;
+    if (filterAssignee && t.assignee?.id?.toString() !== filterAssignee) match = false;
+    return match;
+  });
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {selectedTaskId && (
+        <TaskDetailModal 
+          taskId={selectedTaskId} 
+          onClose={() => { setSelectedTaskId(null); load(); }} 
+        />
+      )}
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Work Items</h1>
+          <p className="text-text-muted mt-1">Create, manage and track all tasks across clients.</p>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90 transition-opacity">
+          <Plus className="w-4 h-4" /> New Task
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="glass rounded-2xl border border-primary/30 p-6 animate-in fade-in slide-in-from-top-2 duration-300">
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Plus className="w-5 h-5 text-primary" /> Create Work Item</h3>
+          {error && <p className="text-error text-sm mb-4 p-3 bg-error/10 rounded-lg border border-error/20">{error}</p>}
+          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Task title *" required className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+            </div>
+            <select value={form.project} onChange={e => setForm({ ...form, project: e.target.value })} required className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none">
+              <option value="">Select Project *</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} required className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none">
+              <option value="">Select State *</option>
+              {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value })} required className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none">
+              <option value="">Select Module *</option>
+              {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+            <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none">
+              <option value="urgent">🔴 Urgent</option>
+              <option value="high">🟠 High</option>
+              <option value="medium">🔵 Medium</option>
+              <option value="low">⚫ Low</option>
+            </select>
+            <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none">
+              <option value="">Assign To (Optional)</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
+            </select>
+            <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" style={{ colorScheme: 'dark' }} />
+            <div className="md:col-span-2 flex gap-3 justify-end">
+              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-text-muted hover:text-text transition-colors">Cancel</button>
+              <button type="submit" disabled={saving} className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-60">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Create Task
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-4 top-3.5 text-text-muted" />
+          <input type="text" placeholder="Search tasks by title or code..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none transition-colors" />
+        </div>
+        <div className="flex gap-3">
+          <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="px-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none min-w-[150px]">
+            <option value="">All Projects</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <select value={filterState} onChange={e => setFilterState(e.target.value)} className="px-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none min-w-[150px]">
+            <option value="">All States</option>
+            {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="px-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none min-w-[150px]">
+            <option value="">All Employees</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
+          </select>
+        </div>
+        <label className="flex items-center gap-3 bg-surface border border-border px-5 py-2.5 rounded-xl cursor-pointer hover:border-primary transition-all">
+          <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
+          <span className="text-[10px] font-black uppercase tracking-widest">Archived</span>
+          <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
+          <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
+          </div>
+        </label>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+      ) : (
+        <div className="glass rounded-2xl border border-border overflow-hidden">
+          <div className="divide-y divide-border/40">
+            {filtered.length === 0 && (
+              <div className="p-12 text-center">
+                <CheckCircle2 className="w-12 h-12 text-text-muted mx-auto mb-4" />
+                <p className="font-bold text-lg">No tasks found</p>
+                <p className="text-text-muted text-sm">Create your first task to get started.</p>
+              </div>
+            )}
+            {filtered.map(task => (
+              <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`flex items-center gap-4 px-5 py-4 hover:bg-surface/30 transition-colors group cursor-pointer ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''} ${task.priority === 'urgent' ? 'bg-red-500/5' : ''}`}>
+                <div className={`w-2 h-10 rounded-full flex-shrink-0 ${task.priority === 'urgent' ? 'bg-gradient-to-b from-red-500 to-red-600 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-gradient-to-b from-primary to-[#8b5cf6]'}`}></div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <code className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">{task.task_code}</code>
+                    <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium capitalize ${PRIORITY_COLORS[task.priority] || 'text-text-muted'}`}>
+                      {PRIORITY_ICONS[task.priority]} {task.priority}
+                    </span>
+                  </div>
+                  <h4 className="font-semibold text-text text-sm truncate">{task.title}</h4>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
+                    {task.due_date && <span className="flex items-center gap-1">📅 Due {task.due_date}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-xs bg-surface border border-border px-3 py-1 rounded-full text-text-muted">State #{task.state}</span>
+                  {task.is_active ? (
+                    <button onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }} title="Archive Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-500 text-text-muted rounded-lg transition-all">
+                      <Database className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button onClick={(e) => { e.stopPropagation(); handleRestore(task.id); }} title="Restore Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-emerald-500/10 hover:text-emerald-500 text-text-muted rounded-lg transition-all">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          {filtered.length > 0 && (
+            <div className="px-5 py-3 border-t border-border/50 bg-surface/20 text-xs text-text-muted flex justify-between items-center">
+              <span>Showing {filtered.length} of {tasks.length} tasks</span>
+              <span>{tasks.filter(t => t.priority === 'urgent').length} urgent</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

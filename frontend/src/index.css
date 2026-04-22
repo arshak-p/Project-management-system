@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #10b981; /* Vibrant Emerald / Parrot Green */
+  --primary-glow: rgba(16, 185, 129, 0.4);
+  --background: #020617; 
+  --surface: #0b1120;   
+  --text: #f8fafc;
+  --text-muted: #64748b;
+  --border: rgba(255, 255, 255, 0.05);
+  --error: #ef4444;
+}
+
+[data-theme='light'] {
+  --background: #ffffff;
+  --surface: #f1f5f9;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --border: #cbd5e1;
+  --primary: #2563eb;
+}
+
+@theme {
+  --color-primary: var(--primary);
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-error: var(--error);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
+  background-attachment: fixed;
+  transition: background-color 0.3s ease;
+}
+
+/* Force high-contrast dropdowns */
+select option {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+[data-theme='light'] select option {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.glass, .premium-glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='light'] .glass {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.shadow-glow {
+  box-shadow: 0 10px 30px -5px var(--primary-glow);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.4);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Bento Grid Transitions */
+.bento-item {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.bento-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+}
