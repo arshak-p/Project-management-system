@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Briefcase, CheckCircle2, Users,
   LogOut, Bell, LayoutGrid, Menu,
   ClipboardList, UserCircle, ArrowLeft, Sun, Moon,
-  Clock3, CalendarRange, Activity, Map as MapIcon, BrainCircuit, ShieldCheck
+  Clock3, CalendarRange, Activity, Map as MapIcon, BrainCircuit, ShieldCheck, Download
 } from 'lucide-react';
 import OverviewPage from './pages/OverviewPage';
 import ProjectsPage from './pages/ProjectsPage';
@@ -24,8 +24,9 @@ import AgencyRoadmap from './pages/AgencyRoadmap';
 import TaskCalendarPage from './pages/TaskCalendarPage';
 import StrategistPage from './pages/StrategistPage';
 import TeamIntelligencePage from './pages/TeamIntelligencePage';
+import BackupsPage from './pages/BackupsPage';
 
-type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence';
+type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence' | 'backups';
 
 interface Notification {
   id: number;
@@ -41,11 +42,12 @@ const ADMIN_NAV = [
   { id: 'team', label: 'Team', icon: <Users className="w-5 h-5" /> },
   { id: 'timesheets', label: 'Timesheets', icon: <Clock3 className="w-5 h-5" /> },
   { id: 'activity', label: 'Activity Log', icon: <Activity className="w-5 h-5" /> },
-  { id: 'calendar', label: 'Tactical Calendar', icon: <CalendarRange className="w-5 h-5" /> },
-  { id: 'strategist', label: 'Strategic Planning', icon: <BrainCircuit className="w-5 h-5" /> },
-  { id: 'intelligence', label: 'Team Intelligence', icon: <ShieldCheck className="w-5 h-5" /> },
-  { id: 'job_titles', label: 'Job Designations', icon: <Briefcase className="w-5 h-5" /> },
+  { id: 'calendar', label: 'Task Calendar', icon: <CalendarRange className="w-5 h-5" /> },
+  { id: 'strategist', label: 'Planning', icon: <BrainCircuit className="w-5 h-5" /> },
+  { id: 'intelligence', label: 'Team Info', icon: <ShieldCheck className="w-5 h-5" /> },
+  { id: 'job_titles', label: 'Job Titles', icon: <Briefcase className="w-5 h-5" /> },
   { id: 'roadmap', label: 'Agency Roadmap', icon: <MapIcon className="w-5 h-5" /> },
+  { id: 'backups', label: 'Data Backups', icon: <Download className="w-5 h-5" /> },
 ];
 
 const USER_NAV = [
@@ -98,7 +100,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     const token = localStorage.getItem('access_token');
     if (!token) return;
 
-    const wsUrl = `ws://127.0.0.1:8000/ws/notifications/?token=${token}`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/notifications/?token=${token}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (e) => {
@@ -111,7 +114,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           if ("Notification" in window && Notification.permission === "granted") {
             new Notification(`CP: ${title}`, {
               body,
-              icon: '/colour parrot-icon.webp'
+              icon: '/colour parrot-icon.png'
             });
           }
 
@@ -145,7 +148,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   `;
 
   return (
-    <div className="h-screen bg-background text-text flex overflow-hidden font-inter">
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      className="h-screen bg-background text-text flex overflow-hidden font-inter"
+    >
        <AnimatePresence>
         {sidebarOpen && (
           <motion.div 
@@ -164,42 +172,61 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           <button onClick={() => handleNav(isAdmin ? 'overview' : 'my_tasks')} className="flex items-center gap-6 group">
             <div className="relative">
                <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full group-hover:bg-primary/50 transition-all"></div>
-               <img src="/colour parrot-icon.webp" alt="Logo" className="relative h-16 w-auto animate-float" />
+               <img src="/colour parrot-icon.png" alt="Logo" className="relative h-16 w-auto animate-float" />
             </div>
             <div className="text-left">
               <p className="font-black text-2xl tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#d946ef]">C-Parrot</p>
-              <p className="text-[11px] font-black uppercase tracking-[0.4em] text-text-muted mt-3 opacity-60">Intelligence Suite</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.4em] text-text-muted mt-3 opacity-60">Management</p>
             </div>
           </button>
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => (
-            <button key={item.id} onClick={() => handleNav(item.id as Page)} className={navItemClass(item.id)}>
+            <motion.button 
+              key={item.id} 
+              onClick={() => handleNav(item.id as Page)} 
+              className={navItemClass(item.id)}
+              whileHover={{ x: 4 }}
+              whileTap={{ scale: 0.98 }}
+            >
               {page === item.id && (
                 <motion.div 
                   layoutId="activeNav"
-                  className="absolute left-0 w-1.5 h-6 bg-primary rounded-r-full shadow-[0_0_10px_var(--primary)]"
+                  className="absolute left-0 w-1.5 h-6 bg-primary rounded-r-full shadow-[0_0_15px_var(--primary)]"
                 />
               )}
-              {item.icon}
+              <span className={`transition-colors duration-300 ${page === item.id ? 'text-primary' : 'group-hover:text-primary'}`}>
+                {item.icon}
+              </span>
               <span className="flex-1">{item.label}</span>
               {item.id === 'notifications' && unreadCount > 0 && (
                 <span className="bg-primary text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black shadow-glow">
                   {unreadCount}
                 </span>
               )}
-            </button>
+            </motion.button>
           ))}
         </nav>
 
-        <div className="p-4 mt-auto space-y-3">
-          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold text-text-muted hover:text-text hover:bg-white/5 transition-all">
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />} Mode Shift
-          </button>
-          <button onClick={onLogout} className="w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold text-error border border-error/10 hover:bg-error/10 transition-all">
-            <LogOut className="w-5 h-5" /> De-Authorize
-          </button>
+        <div className="p-4 mt-auto border-t border-white/5 bg-black/10 rounded-b-[2.5rem]">
+          <motion.button 
+            whileHover={{ x: 4 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} 
+            className="w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold text-text-muted hover:text-text hover:bg-white/5 transition-all mb-2"
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-primary" />} 
+            Dark / Light Mode
+          </motion.button>
+          <motion.button 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onLogout} 
+            className="w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold text-error bg-error/5 border border-error/10 hover:bg-error/10 transition-all shadow-sm"
+          >
+            <LogOut className="w-5 h-5" /> Sign Out
+          </motion.button>
         </div>
       </aside>
 
@@ -227,7 +254,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="flex items-center gap-6">
             {me && (
               <button onClick={() => handleNav('profile')} className="flex items-center gap-4 p-2 pl-6 glass rounded-full hover:border-primary/50 transition-all">
-                <p className="text-xs font-black tracking-tight uppercase opacity-60">{me.first_name || 'Operator'}</p>
+                <p className="text-xs font-black tracking-tight uppercase opacity-60">{me.first_name || 'User'}</p>
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-[#d946ef] flex items-center justify-center text-white text-xs font-black shadow-glow">
                   {me.first_name?.[0] || '?' }
                 </div>
@@ -262,12 +289,13 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                   {page === 'intelligence' && <TeamIntelligencePage />}
                   {page === 'job_titles' && <JobTitlesPage />}
                   {page === 'roadmap' && <AgencyRoadmap />}
+                  {page === 'backups' && <BackupsPage />}
                 </motion.div>
              </AnimatePresence>
           </div>
         </main>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

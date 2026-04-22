@@ -116,7 +116,7 @@ export default function ActivityPage() {
                                     <td className="px-8 py-6">
                                         <div className="max-w-xs">
                                             <p className="text-xs font-bold text-text-muted line-clamp-1 italic">
-                                                {(a.payload as any)?.name || (a.payload as any)?.title || (a.payload as any)?.task_code || `Record ID: ${a.entity_id}`}
+                                                {(a.payload as Record<string, string>)?.name || (a.payload as Record<string, string>)?.title || (a.payload as Record<string, string>)?.task_code || `Record ID: ${a.entity_id}`}
                                             </p>
                                             {a.project_name && (
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-primary/40 mt-1">{a.project_name}</p>

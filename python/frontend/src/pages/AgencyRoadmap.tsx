@@ -19,7 +19,7 @@ export default function AgencyRoadmap() {
     ]).then(([p, t, s]) => {
       setProjects(p.data);
       setTasks(t.data);
-      setStates(s.data.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0)));
+      setStates(s.data.sort((a: TaskState, b: TaskState) => (a.sort_order || 0) - (b.sort_order || 0)));
     }).finally(() => setIsLoading(false));
   }, []);
 

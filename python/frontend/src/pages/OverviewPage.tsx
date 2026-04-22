@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
-import type { AnalyticsSummary, Project, Activity } from '../api';
+import type { AnalyticsSummary, Project, Activity, Notification } from '../api';
 import { motion } from 'framer-motion';
 import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight, Bell } from 'lucide-react';
 import { 
@@ -13,7 +13,7 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
@@ -29,7 +29,7 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
         setAnalytics(a.data);
         setProjects(p.data);
         setRecentActivity(act.data.slice(0, 10));
-        setNotifications(n.data.filter((notif: any) => !notif.read).slice(0, 3));
+        setNotifications(n.data.filter((notif: Notification) => !notif.read).slice(0, 3));
       })
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));

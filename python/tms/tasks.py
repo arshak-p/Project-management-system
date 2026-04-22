@@ -35,3 +35,10 @@ def check_deadlines():
         )
         count += 1
     return f"Notified {count} users about upcoming deadlines."
+
+@shared_task
+def run_monthly_backup_task():
+    """Trigger the management command for monthly backups."""
+    from django.core.management import call_command
+    call_command('run_monthly_backup')
+    return "Monthly backup triggered successfully."

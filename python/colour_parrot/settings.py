@@ -19,7 +19,7 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = [
     h.strip()
-    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
     if h.strip()
 ]
 
@@ -215,3 +215,25 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+
+
+# --- Automated Backup Settings ---
+BACKUP_STORAGE_PATH = os.environ.get("BACKUP_STORAGE_PATH", os.path.join(MEDIA_ROOT, "backups"))
+# Path on the local computer where the admin wants a copy
+LOCAL_DOWNLOAD_PATH = os.environ.get("LOCAL_DOWNLOAD_PATH", "C:\\ColourParrotBackups")
+
+# Suggestion 4: Data Retention (in months)
+BACKUP_RETENTION_MONTHS = int(os.environ.get("BACKUP_RETENTION_MONTHS", "12"))
+
+# Suggestion 1: External Cloud Sync Webhook (for Zapier/Make.com integration)
+EXTERNAL_BACKUP_WEBHOOK = os.environ.get("EXTERNAL_BACKUP_WEBHOOK", "")
+
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    "run-monthly-backup-at-1st": {
+        "task": "tms.tasks.run_monthly_backup_task",
+        "schedule": crontab(day_of_month="1", hour=0, minute=0),
+    },
+}
+

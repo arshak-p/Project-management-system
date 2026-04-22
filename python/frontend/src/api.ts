@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const API_URL = 'http://127.0.0.1:8000/api';
+export const API_URL = '/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -42,6 +42,7 @@ export interface TaskState {
   id: number;
   name: string;
   slug: string;
+  sort_order?: number;
 }
 
 export interface WorkModule {
@@ -256,4 +257,6 @@ export const api = {
   createJobTitle: (data: object) => apiClient.post('/job-titles/', data),
   updateJobTitle: (id: number, data: object) => apiClient.patch(`/job-titles/${id}/`, data),
   deleteJobTitle: (id: number) => apiClient.delete(`/job-titles/${id}/`),
+  getBackups: () => apiClient.get('/backups/'),
+  approveAndDownloadBackup: (id: number) => apiClient.post(`/backups/${id}/approve-and-download/`, {}, { responseType: 'blob' }),
 };

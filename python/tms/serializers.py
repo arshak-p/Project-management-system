@@ -23,6 +23,7 @@ from tms.models import (
     WorkItem,
     WorkItemAttachment,
     WorkItemComment,
+    Backup,
 )
 from tms.notify import notify_user
 
@@ -334,6 +335,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         request = self.context["request"]
+        u_actor = validated_data.pop("_activity_user", request.user)
         labels = validated_data.pop("labels", [])
         project = validated_data["project"]
         seq, _ = ProjectTaskSequence.objects.select_for_update().get_or_create(
@@ -342,7 +344,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
         )
         code = seq.next_code()
         wi = WorkItem(task_code=code, created_by=request.user, **validated_data)
-        wi._activity_user = request.user
+        wi._activity_user = u_actor
         wi.save()
         if labels:
             wi.labels.set(labels)
@@ -382,3 +384,20 @@ class ProjectMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectMember
         fields = ("id", "project", "user", "created_at")
+
+
+class BackupSerializer(serializers.ModelSerializer):
+    approved_by_details = UserBriefSerializer(source="approved_by", read_only=True)
+
+    class Meta:
+        model = Backup
+        fields = (
+            "id",
+            "month",
+            "created_at",
+            "is_approved",
+            "approved_by",
+            "approved_by_details",
+            "approved_at"
+        )
+        read_only_fields = ("created_at", "approved_by", "approved_at", "is_approved")

@@ -296,7 +296,9 @@ class Notification(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
+
 class ActivityLog(models.Model):
+    # ... (existing fields)
     entity_type = models.CharField(max_length=64, db_index=True)
     entity_id = models.CharField(max_length=64, db_index=True)
     action = models.CharField(max_length=64)
@@ -318,4 +320,24 @@ class ActivityLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-created_at"]
+
+class Backup(models.Model):
+    month = models.CharField(max_length=7)  # YYYY-MM
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_approved = models.BooleanField(default=False)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_backups"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Backup {self.month}"
+

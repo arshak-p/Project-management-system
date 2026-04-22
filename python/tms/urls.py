@@ -20,6 +20,8 @@ router.register(r"time-logs", views.TimeLogViewSet, basename="timelog")
 router.register(r"notifications", views.NotificationViewSet, basename="notification")
 router.register(r"activity", views.ActivityLogViewSet, basename="activity")
 router.register(r"project-members", views.ProjectMemberViewSet, basename="projectmember")
+router.register(r"backups", views.BackupViewSet, basename="backup")
+
 
 urlpatterns = [
     path("", include(router.urls)),

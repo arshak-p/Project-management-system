@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import axios from 'axios';
 import { Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
 import Dashboard from './Dashboard';
@@ -63,10 +64,15 @@ function App() {
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary opacity-20 rounded-full blur-[120px]"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#8b5cf6] opacity-20 rounded-full blur-[120px]"></div>
       
-      <div className="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl relative z-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+      <motion.div 
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl relative z-10"
+      >
         <div className="text-center mb-8">
           <img 
-            src="/colour parrot-icon.webp" 
+            src="/colour parrot-icon.png" 
             alt="Colour Parrot Logo" 
             className="h-28 w-auto mx-auto mb-5 object-contain drop-shadow-[0_0_20px_rgba(59,130,246,0.2)]"
             onError={(e) => {
@@ -78,8 +84,8 @@ function App() {
           <div id="login-fallback-logo" className="hidden w-16 h-16 bg-gradient-to-br from-primary to-[#8b5cf6] rounded-2xl items-center justify-center mx-auto mb-5 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
             <span className="text-2xl font-black text-white">CP</span>
           </div>
-          <h1 className="text-3xl font-bold text-text mb-2">Colour Parrot TMS</h1>
-          <p className="text-text-muted">Sign in to your workspace</p>
+          <h1 className="text-3xl font-bold text-text mb-2">Colour Parrot</h1>
+          <p className="text-text-muted">Sign in to your account</p>
         </div>
 
         {error && (
@@ -133,10 +139,10 @@ function App() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Authenticating...
+                  Signing in...
                 </>
               ) : (
-                'Sign in securely'
+                'Sign In'
               )}
             </span>
           </button>
@@ -145,7 +151,7 @@ function App() {
         <div className="mt-8 text-center text-xs text-text-muted/60">
           Connected to local Python Database 🚀
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
