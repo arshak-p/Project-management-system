@@ -306,9 +306,9 @@ class WorkItemSerializer(serializers.ModelSerializer):
             
             # Specialist Restrictions
             if user.role == User.Role.SPECIALIST:
-                if state.slug not in ["in-progress", "team-head-review"]:
+                if state.slug not in ["pending", "in-progress", "team-head-review"]:
                     raise serializers.ValidationError(
-                        "Specialists are only permitted to move tasks to 'In Progress' or 'Team Head Review'. Final approval is required by a Manager."
+                        "Specialists are permitted to move tasks between 'Pending', 'In Progress', and 'Team Head Review'. Final approval to Client Review or Completed requires a Manager."
                     )
         
         return attrs

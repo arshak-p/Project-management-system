@@ -9,7 +9,7 @@ const STATE_COLORS: Record<string, { bg: string, text: string, shadow: string }>
   'pending': { bg: 'bg-slate-500/10', text: 'text-slate-400', shadow: 'shadow-slate-500/20' },
   'in-progress': { bg: 'bg-primary/10', text: 'text-primary', shadow: 'shadow-primary/20' },
   'team-head-review': { bg: 'bg-cyan-500/10', text: 'text-cyan-400', shadow: 'shadow-cyan-500/20' },
-  'client-review': { bg: 'bg-blue-500/10', text: 'text-blue-400', shadow: 'shadow-blue-500/20' },
+  'client-review': { bg: 'bg-blue-600/10', text: 'text-blue-500', shadow: 'shadow-blue-600/20' },
   're-edit': { bg: 'bg-red-500/10', text: 'text-red-400', shadow: 'shadow-red-500/20' },
   'completed-launched': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', shadow: 'shadow-emerald-500/20' },
 };
