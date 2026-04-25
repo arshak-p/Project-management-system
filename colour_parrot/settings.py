@@ -242,5 +242,13 @@ CELERY_BEAT_SCHEDULE = {
         "task": "tms.tasks.run_monthly_backup_task",
         "schedule": crontab(day_of_month="1", hour=0, minute=0),
     },
+    "daily-deadline-check": {
+        "task": "tms.tasks.check_deadlines",
+        "schedule": crontab(hour=9, minute=0),
+    },
+    "daily-start-date-check": {
+        "task": "tms.tasks.check_scheduled_tasks",
+        "schedule": crontab(hour=9, minute=15),
+    },
 }
 

@@ -209,6 +209,7 @@ class WorkItem(models.Model):
     board_position = models.PositiveIntegerField(
         default=0,
     )
+    timer_start = models.DateTimeField(null=True, blank=True, help_text="Timestamp when the last In Progress session started")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
