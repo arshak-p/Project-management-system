@@ -156,10 +156,7 @@ function App() {
             </span>
           </button>
         </form>
-        
-        <div className="mt-8 text-center text-xs text-text-muted/60">
-          Colour Parrot Workflow System 🦜
-        </div>
+
       </motion.div>
     </div>
   );
