@@ -16,7 +16,8 @@ STATES = [
     {"name": "In Progress",            "slug": "in-progress",          "sort_order": 2},
     {"name": "Team Head Review",       "slug": "team-head-review",     "sort_order": 3},
     {"name": "Client Review",          "slug": "client-review",        "sort_order": 4},
-    {"name": "Completed / Launched",   "slug": "completed-launched",   "sort_order": 5},
+    {"name": "Re-edit / Re-work",      "slug": "re-edit",              "sort_order": 5},
+    {"name": "Completed / Launched",   "slug": "completed-launched",   "sort_order": 6},
 ]
 
 MODULES = [

@@ -156,6 +156,14 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                          body=f"Your task '{instance.title}' has been approved and completed.",
                          link=f"/task/{instance.id}"
                      )
+            elif instance.state.slug == "re-edit":
+                 if instance.assignee:
+                     notify_user(
+                         instance.assignee.id,
+                         title="Re-work Required ⚠️",
+                         body=f"Task '{instance.title}' has been sent back for re-editing.",
+                         link=f"/task/{instance.id}"
+                     )
 
             # --- Automated Timer Logic ---
             if instance.state.slug == "in-progress":
