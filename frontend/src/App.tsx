@@ -39,10 +39,20 @@ function App() {
       setIsAuthenticated(true);
       
     } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
-        setError("Invalid email or password.");
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 401) {
+          setError("Invalid email or password.");
+        } else if (err.response?.status === 403) {
+          setError("Access blocked (CSRF). Please try again.");
+        } else if (err.response) {
+          setError(`Server error (${err.response.status}). Please try again.`);
+        } else if (err.code === 'ERR_NETWORK') {
+          setError("Cannot reach the server. It may be waking up — please wait 30 seconds and try again.");
+        } else {
+          setError("Connection error. Please check your internet and try again.");
+        }
       } else {
-        setError("Failed to connect to the backend server. Please make sure the Python server is running.");
+        setError("An unexpected error occurred. Please try again.");
       }
     } finally {
       setIsLoading(false);
