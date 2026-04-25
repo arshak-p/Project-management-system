@@ -10,9 +10,13 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 def create_admin():
-    email = input("Enter Admin Email: ")
-    password = input("Enter Admin Password: ")
+    email = os.environ.get('ADMIN_EMAIL')
+    password = os.environ.get('ADMIN_PASSWORD')
     
+    if not email or not password:
+        print("❌ Error: ADMIN_EMAIL or ADMIN_PASSWORD not set in Environment Variables.")
+        return
+
     if not User.objects.filter(email=email).exists():
         User.objects.create_superuser(email=email, password=password, first_name="Admin", last_name="User")
         print(f"✅ Superuser {email} created successfully!")
