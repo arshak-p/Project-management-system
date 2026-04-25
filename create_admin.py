@@ -18,7 +18,8 @@ def create_admin():
         return
 
     if not User.objects.filter(email=email).exists():
-        User.objects.create_superuser(email=email, password=password, first_name="Admin", last_name="User")
+        # Use email as username since it's required but email is the main login field
+        User.objects.create_superuser(username=email, email=email, password=password, first_name="Admin", last_name="User")
         print(f"✅ Superuser {email} created successfully!")
     else:
         print(f"ℹ️ User {email} already exists.")
