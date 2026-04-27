@@ -176,7 +176,7 @@ CORS_ALLOWED_ORIGINS = [
     o.strip()
     for o in os.environ.get(
         "CORS_ALLOWED_ORIGINS",
-        "https://c1r9rt-workflow.in,http://c1r9rt-workflow.in,https://www.c1r9rt-workflow.in,https://colour-parrot-mgtsystem.onrender.com,http://localhost:5173"
+        "https://c1r9rt-workflow.in,http://c1r9rt-workflow.in,https://www.c1r9rt-workflow.in,https://colour-parrot-mgtsystem.onrender.com,http://localhost:5173,http://127.0.0.1:5173"
     ).split(",")
     if o.strip()
 ]
@@ -185,7 +185,7 @@ CSRF_TRUSTED_ORIGINS = [
     o.strip()
     for o in os.environ.get(
         "CSRF_TRUSTED_ORIGINS",
-        "https://c1r9rt-workflow.in,http://c1r9rt-workflow.in,https://www.c1r9rt-workflow.in,https://colour-parrot-mgtsystem.onrender.com,http://localhost:5173"
+        "https://c1r9rt-workflow.in,http://c1r9rt-workflow.in,https://www.c1r9rt-workflow.in,https://colour-parrot-mgtsystem.onrender.com,http://localhost:5173,http://127.0.0.1:5173"
     ).split(",")
     if o.strip()
 ]

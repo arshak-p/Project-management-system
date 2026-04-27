@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-export const API_URL = 'https://colour-parrot-mgtsystem.onrender.com/api';
+import { API_URL } from './config';
 
 const apiClient = axios.create({
   baseURL: API_URL,

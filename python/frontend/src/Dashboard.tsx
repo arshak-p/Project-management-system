@@ -25,6 +25,7 @@ import TaskCalendarPage from './pages/TaskCalendarPage';
 import StrategistPage from './pages/StrategistPage';
 import TeamIntelligencePage from './pages/TeamIntelligencePage';
 import BackupsPage from './pages/BackupsPage';
+import { getWsUrl } from './config';
 
 type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence' | 'backups';
 
@@ -100,7 +101,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     const token = localStorage.getItem('access_token');
     if (!token) return;
 
-    const wsUrl = `wss://colour-parrot-mgtsystem.onrender.com/ws/notifications/?token=${token}`;
+    const wsUrl = getWsUrl('/ws/notifications/');
     const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (e) => {

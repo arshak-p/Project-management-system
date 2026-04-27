@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState } from '../api';
 import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download } from 'lucide-react';
+import { getWsUrl } from '../config';
+
 
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'text-red-400 bg-red-400/10 border-red-400/20',
@@ -56,7 +58,7 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
   }, [taskId, loadData]);
 
   useEffect(() => {
-    const wsUrl = `wss://colour-parrot-mgtsystem.onrender.com/ws/tasks/${taskId}/?token=${localStorage.getItem('access_token')}`;
+    const wsUrl = getWsUrl(`/ws/tasks/${taskId}/`);
     const ws = new WebSocket(wsUrl);
     
     ws.onmessage = (e) => {
