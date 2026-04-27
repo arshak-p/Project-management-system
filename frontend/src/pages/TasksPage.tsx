@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp, ShieldCheck } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
-import type { Project, TaskState, WorkModule, User, Task, JobTitle } from '../api';
+import type { Project, TaskState, WorkModule, User, Task } from '../api';
 
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'text-red-400 bg-red-400/10',
@@ -44,13 +44,12 @@ export default function TasksPage({ me }: { me: User | null }) {
       api.getAssignableUsers().catch(() => ({ data: [] })),
       api.getJobTitles().catch(() => ({ data: [] }))
     ])
-      .then(([t, p, s, m, u, jt]) => {
+      .then(([t, p, s, m, u]) => {
         setTasks(t.data);
         setProjects(p.data);
         setStates(s.data);
         setModules(m.data);
         setUsers(u.data);
-        setJobTitles(jt.data);
       })
       .catch((err) => console.error('Fetching issue on Tasks:', err))
       .finally(() => setIsLoading(false));
@@ -108,8 +107,6 @@ export default function TasksPage({ me }: { me: User | null }) {
     if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !t.task_code?.toLowerCase().includes(search.toLowerCase())) match = false;
     if (filterProject && t.project?.toString() !== filterProject) match = false;
     if (filterState && t.state?.toString() !== filterState) match = false;
-    if (filterModule && t.module?.toString() !== filterModule) match = false;
-    if (filterJobTitle && t.assignee?.title !== filterJobTitle) match = false;
     if (filterAssignee && t.assignee?.id?.toString() !== filterAssignee) match = false;
     return match;
   });
