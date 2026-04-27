@@ -209,6 +209,7 @@ class WorkItem(models.Model):
     board_position = models.PositiveIntegerField(
         default=0,
     )
+    timer_start = models.DateTimeField(null=True, blank=True, help_text="Timestamp when the last In Progress session started")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -298,7 +299,6 @@ class Notification(models.Model):
 
 
 class ActivityLog(models.Model):
-    # ... (existing fields)
     entity_type = models.CharField(max_length=64, db_index=True)
     entity_id = models.CharField(max_length=64, db_index=True)
     action = models.CharField(max_length=64)

@@ -56,7 +56,7 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
   }, [taskId, loadData]);
 
   useEffect(() => {
-    const wsUrl = `ws://127.0.0.1:8000/ws/tasks/${taskId}/?token=${localStorage.getItem('access_token')}`;
+    const wsUrl = `wss://colour-parrot-mgtsystem.onrender.com/ws/tasks/${taskId}/?token=${localStorage.getItem('access_token')}`;
     const ws = new WebSocket(wsUrl);
     
     ws.onmessage = (e) => {

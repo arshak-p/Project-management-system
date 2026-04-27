@@ -5,6 +5,15 @@ import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
 import type { Task, TaskState } from '../api';
 
+const STATE_COLORS: Record<string, { bg: string, text: string, shadow: string }> = {
+  'pending': { bg: 'bg-slate-500/10', text: 'text-slate-400', shadow: 'shadow-slate-500/20' },
+  'in-progress': { bg: 'bg-primary/10', text: 'text-primary', shadow: 'shadow-primary/20' },
+  'team-head-review': { bg: 'bg-cyan-500/10', text: 'text-cyan-400', shadow: 'shadow-cyan-500/20' },
+  'client-review': { bg: 'bg-blue-600/10', text: 'text-blue-500', shadow: 'shadow-blue-600/20' },
+  're-edit': { bg: 'bg-red-500/10', text: 'text-red-400', shadow: 'shadow-red-500/20' },
+  'completed-launched': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', shadow: 'shadow-emerald-500/20' },
+};
+
 export default function KanjiBoardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
@@ -46,62 +55,68 @@ export default function KanjiBoardPage() {
       </motion.div>
 
       <div className="flex gap-8 overflow-x-auto pb-10 custom-scrollbar snap-x h-[calc(100vh-250px)]">
-        {states.map((state, idx) => (
-          <motion.div 
-            key={state.slug}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="flex-shrink-0 w-80 flex flex-col snap-start"
-          >
-            <div className="flex items-center justify-between mb-6 px-4">
-              <div className="flex items-center gap-3">
-                 <div className="w-2 h-2 rounded-full bg-primary shadow-glow"></div>
-                 <h3 className="font-extrabold text-sm uppercase tracking-widest">{state.name}</h3>
+        {states.map((state, idx) => {
+          const colors = STATE_COLORS[state.slug] || STATE_COLORS['pending'];
+          return (
+            <motion.div 
+              key={state.slug}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              className="flex-shrink-0 w-80 flex flex-col snap-start"
+            >
+              <div className="flex items-center justify-between mb-6 px-4">
+                <div className="flex items-center gap-3">
+                   <div className={`w-2 h-2 rounded-full ${colors.text.replace('text-', 'bg-')} shadow-glow`}></div>
+                   <h3 className={`font-extrabold text-sm uppercase tracking-widest ${colors.text}`}>{state.name}</h3>
+                </div>
+                <span className="text-[10px] font-black bg-white/5 px-2 py-1 rounded-lg border border-white/10 opacity-60">
+                  {tasks.filter(t => t.state_slug === state.slug).length}
+                </span>
               </div>
-              <span className="text-[10px] font-black bg-white/5 px-2 py-1 rounded-lg border border-white/10 opacity-60">
-                {tasks.filter(t => t.state_slug === state.slug).length}
-              </span>
-            </div>
 
-            <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar pr-2">
-               <AnimatePresence>
-                {tasks.filter(t => t.state_slug === state.slug).map((task) => (
-                  <motion.div
-                    key={task.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() => setSelectedTaskId(task.id)}
-                    className={`glass p-6 rounded-[1.5rem] border-white/5 hover:border-primary/30 group cursor-pointer relative overflow-hidden transition-all ${
-                      task.priority === 'urgent' ? 'border-red-500/40 bg-red-500/5 shadow-[0_0_15px_-5px_rgba(239,68,68,0.3)]' : ''
-                    }`}
-                  >
-                    <div className="flex flex-col gap-4">
-                      <div className="flex justify-between items-start">
-                         <span className="text-[10px] font-black uppercase text-primary tracking-widest px-2 py-0.5 bg-primary/10 rounded-lg">
-                           {task.priority || 'Low'}
-                         </span>
-                         <button onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-error/10 text-error rounded-lg transition-all">
-                            <Trash2 className="w-3.5 h-3.5" />
-                         </button>
-                      </div>
-                      <h4 className="font-bold text-sm leading-relaxed">{task.title}</h4>
-                      <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/5 opacity-40 group-hover:opacity-100 transition-opacity">
-                         <div className="flex items-center gap-2">
-                            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-[8px] font-black text-white">
-                               {task.assignee_name?.[0] || '?'}
-                            </div>
-                            <span className="text-[10px] font-bold">{task.assignee_name || 'Unassigned'}</span>
-                         </div>
-                         <CircleDashed className="w-3.5 h-3.5 text-primary" />
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar pr-2">
+                 <AnimatePresence>
+                  {tasks.filter(t => t.state_slug === state.slug).map((task) => {
+                    const cardColors = STATE_COLORS[task.state_slug || ''] || colors;
+                    return (
+                      <motion.div
+                        key={task.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        whileHover={{ scale: 1.02 }}
+                        onClick={() => setSelectedTaskId(task.id)}
+                        className={`glass p-6 rounded-[1.5rem] border-white/5 hover:border-primary/30 group cursor-pointer relative overflow-hidden transition-all ${
+                          task.priority === 'urgent' ? 'border-red-500/40 bg-red-500/5 shadow-[0_0_15px_-5px_rgba(239,68,68,0.3)]' : ''
+                        } ${task.state_slug === 're-edit' ? 'border-red-500/30' : ''}`}
+                      >
+                        <div className="flex flex-col gap-4">
+                          <div className="flex justify-between items-start">
+                             <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${cardColors.bg} ${cardColors.text}`}>
+                               {task.priority || 'Low'}
+                             </span>
+                             <button onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-error/10 text-error rounded-lg transition-all">
+                                <Trash2 className="w-3.5 h-3.5" />
+                             </button>
+                          </div>
+                          <h4 className="font-bold text-sm leading-relaxed">{task.title}</h4>
+                          <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/5 opacity-40 group-hover:opacity-100 transition-opacity">
+                             <div className="flex items-center gap-2">
+                                <div className={`w-5 h-5 rounded-full ${cardColors.bg.replace('/10', '')} flex items-center justify-center text-[8px] font-black text-white`}>
+                                   {task.assignee?.first_name?.[0] || task.assignee?.email?.[0]?.toUpperCase() || '?'}
+                                </div>
+                                <span className="text-[10px] font-bold">{task.assignee?.first_name || task.assignee?.email || 'Unassigned'}</span>
+                             </div>
+                             <CircleDashed className={`w-3.5 h-3.5 ${cardColors.text}`} />
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+
               <motion.button 
                 whileHover={{ scale: 1.02 }} 
                 className="w-full py-4 border-2 border-dashed border-white/5 rounded-[1.5rem] flex items-center justify-center text-text-muted hover:text-primary hover:border-primary/20 hover:bg-primary/5 transition-all text-xs font-bold"
@@ -110,7 +125,7 @@ export default function KanjiBoardPage() {
               </motion.button>
             </div>
           </motion.div>
-        ))}
+        ); })}
       </div>
     </div>
   );

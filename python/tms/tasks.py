@@ -42,3 +42,28 @@ def run_monthly_backup_task():
     from django.core.management import call_command
     call_command('run_monthly_backup')
     return "Monthly backup triggered successfully."
+
+@shared_task
+def check_scheduled_tasks():
+    """Notifies PMs and Admins when a task is scheduled to start today."""
+    from datetime import date
+    from tms.models import WorkItem
+    from tms.notify import notify_roles
+    from accounts.models import User
+    
+    today = date.today()
+    starting_today = WorkItem.objects.filter(
+        scheduled_date=today,
+        is_active=True
+    ).exclude(state__slug__in=['completed-launched', 'archived', 'in-progress'])
+    
+    count = 0
+    for task in starting_today:
+        notify_roles(
+            roles=[User.Role.PROJECT_MANAGER, User.Role.ADMIN],
+            title=f"Task Start Date: {task.task_code}",
+            body=f"Task '{task.title}' is scheduled to start today.",
+            link=f"/task/{task.id}"
+        )
+        count += 1
+    return f"Notified managers about {count} starting tasks."

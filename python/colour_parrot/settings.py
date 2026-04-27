@@ -160,7 +160,6 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = True
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.environ.get("JWT_ACCESS_MINUTES", "60"))),
@@ -170,28 +169,35 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOWED_ORIGINS = [
-        o.strip()
-        for o in os.environ.get(
-            "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
-        ).split(",")
-        if o.strip()
-    ]
-    
+# --- CORS & CSRF (always applied) ---
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get(
+        "CORS_ALLOWED_ORIGINS",
+        "https://c1r9rt-workflow.in,http://c1r9rt-workflow.in,https://www.c1r9rt-workflow.in,https://colour-parrot-mgtsystem.onrender.com,http://localhost:5173"
+    ).split(",")
+    if o.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get(
+        "CSRF_TRUSTED_ORIGINS",
+        "https://c1r9rt-workflow.in,http://c1r9rt-workflow.in,https://www.c1r9rt-workflow.in,https://colour-parrot-mgtsystem.onrender.com,http://localhost:5173"
+    ).split(",")
+    if o.strip()
+]
+
+if not DEBUG:
     # Maximum Security Hardening for Production
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "false").lower() in ("1", "true", "yes")
-
-CORS_ALLOW_CREDENTIALS = True
 
 # --- Channels (real-time) ---
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")
@@ -234,6 +240,14 @@ CELERY_BEAT_SCHEDULE = {
     "run-monthly-backup-at-1st": {
         "task": "tms.tasks.run_monthly_backup_task",
         "schedule": crontab(day_of_month="1", hour=0, minute=0),
+    },
+    "daily-deadline-check": {
+        "task": "tms.tasks.check_deadlines",
+        "schedule": crontab(hour=9, minute=0),
+    },
+    "daily-start-date-check": {
+        "task": "tms.tasks.check_scheduled_tasks",
+        "schedule": crontab(hour=9, minute=15),
     },
 }
 

@@ -100,8 +100,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     const token = localStorage.getItem('access_token');
     if (!token) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/notifications/?token=${token}`;
+    const wsUrl = `wss://colour-parrot-mgtsystem.onrender.com/ws/notifications/?token=${token}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (e) => {

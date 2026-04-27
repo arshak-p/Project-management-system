@@ -34,3 +34,17 @@ Thumbs.db
 # Media and Static
 media/
 staticfiles/
+
+# Celery
+celerybeat-schedule
+celerybeat-schedule-shm
+celerybeat-schedule-wal
+celerybeat.pid
+
+# Database backups
+*.sql
+database_backups/
+
+# IDE
+.vscode/
+.idea/

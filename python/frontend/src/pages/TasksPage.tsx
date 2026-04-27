@@ -31,7 +31,7 @@ export default function TasksPage() {
   const [filterProject, setFilterProject] = useState(localStorage.getItem('jump_project_filter') || '');
   const [filterState, setFilterState] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
-  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', assignee: '' });
+  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -64,16 +64,18 @@ export default function TasksPage() {
     e.preventDefault();
     setSaving(true); setError('');
     try {
+      const { assignee: _assignee, ...formRest } = form;
       await api.createTask({
-        ...form,
+        ...formRest,
         project: Number(form.project),
         state: Number(form.state),
         module: Number(form.module),
-        assignee: form.assignee ? Number(form.assignee) : null,
+        assignee_id: form.assignee ? Number(form.assignee) : null,
         due_date: form.due_date || null,
+        scheduled_date: form.scheduled_date || null,
       });
       setShowForm(false);
-      setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', assignee: '' });
+      setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', assignee: '' });
       load();
     } catch (err: unknown) {
       const errorData = (err as { response?: { data?: unknown } })?.response?.data;
@@ -150,7 +152,14 @@ export default function TasksPage() {
               <option value="">Assign To (Optional)</option>
               {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
             </select>
-            <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" style={{ colorScheme: 'dark' }} />
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Planned Start</label>
+              <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" style={{ colorScheme: 'dark' }} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Final Deadline</label>
+              <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" style={{ colorScheme: 'dark' }} />
+            </div>
             <div className="md:col-span-2 flex gap-3 justify-end">
               <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-text-muted hover:text-text transition-colors">Cancel</button>
               <button type="submit" disabled={saving} className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-60">
@@ -214,7 +223,8 @@ export default function TasksPage() {
                   </div>
                   <h4 className="font-semibold text-text text-sm truncate">{task.title}</h4>
                   <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
-                    {task.due_date && <span className="flex items-center gap-1">📅 Due {task.due_date}</span>}
+                    {task.scheduled_date && <span className="flex items-center gap-1">📅 Starts {task.scheduled_date}</span>}
+                    {task.due_date && <span className="flex items-center gap-1">🚩 Due {task.due_date}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">

@@ -292,37 +292,30 @@ class WorkItemSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context["request"]
         user = request.user
-        instance: WorkItem | None = self.instance
-        if user.role != User.Role.CLIENT:
+        
+        # Admin and PM have full control
+        if user.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]:
             return attrs
-        if not instance:
-            raise serializers.ValidationError("Clients cannot create tasks via this API.")
-        state = attrs.get("state", instance.state)
-        if "state" in attrs and state.slug not in (
-            "client_review",
-            "approved",
-            "launched_completed",
-        ):
-            raise serializers.ValidationError(
-                "Clients may only work with client review, approved, or launched states."
-            )
+
+        state = attrs.get("state")
+        if state and "state" in attrs:
+            # Client Restrictions
+            if user.role == User.Role.CLIENT:
+                if state.slug not in ["client-review", "completed-launched"]:
+                    raise serializers.ValidationError("Clients may only move tasks to 'Client Review' or 'Completed'.")
+            
+            # Specialist Restrictions
+            if user.role == User.Role.SPECIALIST:
+                if state.slug not in ["pending", "in-progress", "team-head-review"]:
+                    raise serializers.ValidationError(
+                        "Specialists are permitted to move tasks between 'Pending', 'In Progress', and 'Team Head Review'. Final approval to Client Review or Completed requires a Manager."
+                    )
+        
         return attrs
 
     def update(self, instance, validated_data):
         request = self.context["request"]
         user = request.user
-        new_state = validated_data.get("state", instance.state)
-        old_state = instance.state
-        if user.role == User.Role.CLIENT:
-            allowed = {"state", "description"}
-            extra = set(validated_data.keys()) - allowed
-            if extra:
-                raise serializers.ValidationError("Clients may only update status and notes.")
-            if new_state and old_state.slug == "client_review":
-                if new_state.slug not in ("approved", "client_review"):
-                    raise serializers.ValidationError(
-                        "From client review, move only to approved or keep in review."
-                    )
         labels = validated_data.pop("labels", None)
         for k, v in validated_data.items():
             setattr(instance, k, v)

@@ -4,12 +4,13 @@ from django.db import models
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from channels.layers import get_channel_layer
+from django.utils import timezone
 from asgiref.sync import async_to_sync
 
 from accounts.models import User
 from tms.notify import notify_user, notify_roles
 
-from tms.models import ActivityLog, UserProfile, WorkItem, WorkItemComment, Project, Department, Cycle
+from tms.models import ActivityLog, UserProfile, WorkItem, WorkItemComment, Project, Department, Cycle, State, TimeLog
 
 
 @receiver(post_save, sender=User)
@@ -155,6 +156,44 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                          body=f"Your task '{instance.title}' has been approved and completed.",
                          link=f"/task/{instance.id}"
                      )
+            elif instance.state.slug == "re-edit":
+                 if instance.assignee:
+                     notify_user(
+                         instance.assignee.id,
+                         title="Re-work Required ⚠️",
+                         body=f"Task '{instance.title}' has been sent back for re-editing.",
+                         link=f"/task/{instance.id}"
+                     )
+
+            # --- Automated Timer Logic ---
+            if instance.state.slug == "in-progress":
+                # Start timer if not already running
+                if not instance.timer_start:
+                    WorkItem.objects.filter(pk=instance.pk).update(timer_start=timezone.now())
+            
+            # Check if we just LEFT in-progress
+            if getattr(instance, "_old_state_id", None):
+                try:
+                    old_state = State.objects.get(pk=instance._old_state_id)
+                    if old_state.slug == "in-progress" and instance.timer_start:
+                        # Calculate duration
+                        duration = timezone.now() - instance.timer_start
+                        minutes = int(duration.total_seconds() // 60)
+                        
+                        # Only log if at least 1 minute passed
+                        if minutes > 0:
+                            TimeLog.objects.create(
+                                work_item=instance,
+                                user=actor or instance.assignee or instance.created_by,
+                                minutes=minutes,
+                                note="Automated session",
+                                logged_at=timezone.now()
+                            )
+                        
+                        # Reset timer
+                        WorkItem.objects.filter(pk=instance.pk).update(timer_start=None)
+                except State.DoesNotExist:
+                    pass
 
 @receiver(post_save, sender=WorkItemComment)
 def log_comment_save(sender, instance: WorkItemComment, created: bool, **kwargs):
