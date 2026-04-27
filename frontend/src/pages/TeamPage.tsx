@@ -46,6 +46,7 @@ const defaultForm = {
   title: '',
   phone: '',
   date_joined: '',
+  date_of_birth: '',
 };
 
 export default function TeamPage({ me }: { me: User | null }) {
@@ -168,6 +169,7 @@ export default function TeamPage({ me }: { me: User | null }) {
       title: user.title || '',
       phone: user.phone || '',
       date_joined: user.date_joined ? new Date(user.date_joined).toISOString().split('T')[0] : '',
+      date_of_birth: user.date_of_birth ? new Date(user.date_of_birth).toISOString().split('T')[0] : '',
     });
     setShowModal(true);
   };
@@ -380,16 +382,32 @@ export default function TeamPage({ me }: { me: User | null }) {
                 </div>
               </div>
 
-              <div className="space-y-1.5 ">
-                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Official Joining Date</label>
-                <div className="relative">
-                  <CalendarRange className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
-                  <input 
-                    type="date" 
-                    value={form.date_joined} 
-                    onChange={e => setForm({ ...form, date_joined: e.target.value })} 
-                    className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
-                  />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Official Joining Date</label>
+                  <div className="relative">
+                    <CalendarRange className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
+                    <input 
+                      type="date" 
+                      value={form.date_joined} 
+                      onChange={e => setForm({ ...form, date_joined: e.target.value })} 
+                      className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
+                      style={{ colorScheme: 'dark' }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5 animate-in slide-in-from-right-2 duration-300">
+                  <label className="text-xs font-semibold text-[#ec4899] uppercase tracking-wide">Date of Birth</label>
+                  <div className="relative">
+                    <CalendarRange className="w-4 h-4 absolute left-3 top-3 text-[#ec4899]" />
+                    <input 
+                      type="date" 
+                      value={form.date_of_birth} 
+                      onChange={e => setForm({ ...form, date_of_birth: e.target.value })} 
+                      className="w-full pl-9 pr-3 py-2.5 bg-[#ec4899]/5 border border-[#ec4899]/20 rounded-xl text-sm focus:border-[#ec4899] outline-none" 
+                      style={{ colorScheme: 'dark' }}
+                    />
+                  </div>
                 </div>
               </div>
 

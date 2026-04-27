@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
 import { motion } from 'framer-motion';
-import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight, Bell } from 'lucide-react';
+import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight, Bell, Cake, PartyPopper, Gift } from 'lucide-react';
 import type { AnalyticsSummary, Project, Activity, Notification, User } from '../api';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -75,6 +75,44 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
            </div>
         </div>
       </div>
+      
+      {(() => {
+        const today = new Date();
+        const monthDay = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const isBday = me?.date_of_birth && me.date_of_birth.substring(5, 10) === monthDay;
+        
+        if (!isBday) return null;
+        
+        return (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="relative overflow-hidden group mb-10"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#d946ef] opacity-20 blur-3xl group-hover:opacity-30 transition-opacity"></div>
+            <div className="relative glass border-[#ec4899]/30 rounded-[2.5rem] p-8 lg:p-12 flex flex-col lg:flex-row items-center gap-8 shadow-2xl">
+              <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-[2rem] bg-gradient-to-br from-[#ec4899] to-[#d946ef] flex items-center justify-center shadow-glow-lg animate-bounce-slow relative">
+                 <Cake className="w-12 h-12 lg:w-16 lg:h-16 text-white" />
+                 <div className="absolute -top-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
+                    <PartyPopper className="w-4 h-4 text-[#ec4899]" />
+                 </div>
+              </div>
+              <div className="text-center lg:text-left flex-1">
+                 <h2 className="text-3xl lg:text-5xl font-black tracking-tighter text-white mb-2">Happy Birthday, {me?.first_name || 'Legend'}! 🎂</h2>
+                 <p className="text-sm lg:text-base text-text-muted font-bold max-w-2xl opacity-80">
+                   Today the Command Center celebrates you. Thank you for your incredible contribution to the Colour Parrot team. Have an amazing day filled with joy and success!
+                 </p>
+              </div>
+              <div className="flex gap-4">
+                 <div className="px-6 py-4 glass border-white/10 rounded-2xl flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ec4899]">Agency Status</span>
+                    <span className="text-lg font-black text-white">Guest of Honor</span>
+                 </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {notifications.length > 0 && (
          <div className="fixed top-24 right-8 z-[100] flex flex-col gap-3 w-72 pointer-events-none">
