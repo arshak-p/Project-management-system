@@ -104,11 +104,8 @@ export default function TimesheetsPage({ me }: { me: User | null }) {
       )}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
-          <h1 className="text-3xl lg:text-4xl font-black tracking-tighter flex items-center gap-3">
-            <Clock3 className="text-primary w-8 h-8 lg:w-10 lg:h-10" />
-            Reporting
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">Download professional activity reports for clients or payroll.</p>
+          <h1 className="text-3xl lg:text-5xl font-black tracking-tighter">Reporting Hub</h1>
+          <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mt-1 opacity-60 italic">Historical Logs // Performance Data</p>
         </div>
 
         <button 
@@ -121,20 +118,20 @@ export default function TimesheetsPage({ me }: { me: User | null }) {
         </button>
       </div>
 
-      <div className="flex flex-col gap-4 glass p-4 lg:p-6 rounded-2xl border border-border">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:flex items-end gap-4">
-          <div className="flex flex-col">
-            <label className="text-[10px] uppercase font-black tracking-widest text-text-muted px-1 mb-1">Team Member</label>
-            <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)} className="bg-surface/50 border border-border text-sm rounded-xl px-3 py-3 outline-none focus:border-primary min-w-[180px]">
+      <div className="flex flex-col gap-6 p-6 lg:p-8 glass border-white/5 rounded-[2.5rem] shadow-2xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:flex items-end gap-6">
+          <div className="flex flex-col flex-1">
+            <label className="text-[10px] uppercase font-black tracking-widest text-text-muted px-1 mb-1.5">Team Member</label>
+            <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)} className="bg-surface border border-border text-xs font-bold rounded-xl px-4 py-3.5 outline-none focus:border-primary min-w-[200px] shadow-sm cursor-pointer">
               <option value="all">Every Specialist</option>
               {Array.from(allUsersMap.entries()).map(([id, name]) => (
                 <option key={id} value={id}>{name}</option>
               ))}
             </select>
           </div>
-          <div className="flex flex-col">
-            <label className="text-[10px] uppercase font-black tracking-widest text-text-muted px-1 mb-1">Project / Client</label>
-            <select value={selectedProject} onChange={e => setSelectedProject(e.target.value)} className="bg-surface/50 border border-border text-sm rounded-xl px-3 py-3 outline-none focus:border-primary min-w-[180px]">
+          <div className="flex flex-col flex-1">
+            <label className="text-[10px] uppercase font-black tracking-widest text-text-muted px-1 mb-1.5">Project / Client</label>
+            <select value={selectedProject} onChange={e => setSelectedProject(e.target.value)} className="bg-surface border border-border text-xs font-bold rounded-xl px-4 py-3.5 outline-none focus:border-primary min-w-[200px] shadow-sm cursor-pointer">
               <option value="all">All Clients</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -142,12 +139,12 @@ export default function TimesheetsPage({ me }: { me: User | null }) {
             </select>
           </div>
           <div className="flex flex-col">
-            <label className="text-[10px] uppercase font-black tracking-widest text-text-muted px-1 mb-1">Start Date</label>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface/50 border border-border text-sm rounded-xl px-3 py-3 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+            <label className="text-[10px] uppercase font-black tracking-widest text-primary px-1 mb-1.5">Start Date</label>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface border border-border text-xs font-bold rounded-xl px-4 py-3.5 outline-none focus:border-primary shadow-sm" style={{ colorScheme: 'dark' }} />
           </div>
           <div className="flex flex-col">
-            <label className="text-[10px] uppercase font-black tracking-widest text-text-muted px-1 mb-1">End Date</label>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface/50 border border-border text-sm rounded-xl px-3 py-3 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+            <label className="text-[10px] uppercase font-black tracking-widest text-amber-500 px-1 mb-1.5">End Date</label>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface border border-border text-xs font-bold rounded-xl px-4 py-3.5 outline-none focus:border-primary shadow-sm" style={{ colorScheme: 'dark' }} />
           </div>
         </div>
         

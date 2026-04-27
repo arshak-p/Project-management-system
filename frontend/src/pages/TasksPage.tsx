@@ -31,6 +31,7 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [filterProject, setFilterProject] = useState(localStorage.getItem('jump_project_filter') || '');
   const [filterState, setFilterState] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
+  const [filterModule, setFilterModule] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', reference_link: '', assignee: '' });
@@ -110,6 +111,7 @@ export default function TasksPage({ me }: { me: User | null }) {
     if (filterProject && t.project?.toString() !== filterProject) match = false;
     if (filterState && t.state?.toString() !== filterState) match = false;
     if (filterAssignee && t.assignee?.id?.toString() !== filterAssignee) match = false;
+    if (filterModule && t.module?.id?.toString() !== filterModule) match = false;
     
     if (startDate || endDate) {
       const taskDate = (t.created_at || "").split("T")[0];
@@ -129,13 +131,16 @@ export default function TasksPage({ me }: { me: User | null }) {
           me={me}
         />
       )}
-      <div className="flex justify-between items-center flex-wrap gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
-          <h1 className="text-3xl font-bold">Work Items</h1>
-          <p className="text-text-muted mt-1">Create, manage and track all tasks across clients.</p>
+          <h1 className="text-3xl lg:text-5xl font-black tracking-tighter">Work Items</h1>
+          <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mt-1 opacity-60 italic">Live Task Engine // Agency Operations</p>
         </div>
         {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'team_head') && (
-          <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90 transition-opacity">
+          <button 
+            onClick={() => setShowForm(!showForm)} 
+            className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+          >
             <Plus className="w-4 h-4" /> New Task
           </button>
         )}
@@ -236,18 +241,18 @@ export default function TasksPage({ me }: { me: User | null }) {
       </div>
     )}
 
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="relative flex-1 group">
-            <Search className="w-5 h-5 absolute left-4 top-3.5 text-text-muted group-focus-within:text-primary transition-colors" />
-            <input type="text" placeholder="Search task ID, title or specialist..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-12 pr-4 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all shadow-sm placeholder:text-text-muted/40" />
+      <div className="flex flex-col gap-6 p-6 lg:p-8 glass border-white/5 rounded-[2.5rem] shadow-2xl animate-in fade-in zoom-in-95 duration-500">
+        <div className="flex flex-col lg:flex-row gap-6 items-center">
+          <div className="relative flex-1 group w-full">
+            <Search className="w-5 h-5 absolute left-4 top-4 text-text-muted group-focus-within:text-primary transition-colors" />
+            <input type="text" placeholder="Search task ID, title or specialist..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-surface border border-border rounded-2xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all shadow-sm placeholder:text-text-muted/40" />
           </div>
           
-          <div className="flex items-center gap-3">
-            <label className="flex items-center justify-between gap-6 bg-surface/50 border border-border/50 px-5 py-3 rounded-2xl cursor-pointer hover:border-primary/40 transition-all shadow-sm group">
+          <div className="flex items-center gap-4 w-full lg:w-auto">
+            <label className="flex items-center justify-between gap-4 bg-surface/50 border border-border/50 px-6 py-3.5 rounded-2xl cursor-pointer hover:border-primary/40 transition-all shadow-sm group">
               <div className="flex items-center gap-3">
                 <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'} group-hover:scale-110 transition-transform`} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text transition-colors">History</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text">Archives</span>
               </div>
               <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
               <div className={`w-9 h-5 rounded-full relative transition-all duration-300 ${showArchived ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'bg-white/10'}`}>
@@ -257,69 +262,74 @@ export default function TasksPage({ me }: { me: User | null }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black uppercase tracking-widest text-text-muted ml-1">Project</label>
-            <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="w-full px-4 py-3 bg-surface/50 border border-border/50 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all cursor-pointer">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Project</label>
+            <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="w-full px-4 py-3.5 bg-surface border border-border rounded-xl text-xs font-bold focus:border-primary outline-none transition-all cursor-pointer">
               <option value="">All Projects</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black uppercase tracking-widest text-text-muted ml-1">Current State</label>
-            <select value={filterState} onChange={e => setFilterState(e.target.value)} className="w-full px-4 py-3 bg-surface/50 border border-border/50 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all cursor-pointer">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Module / Scope</label>
+            <select value={filterModule} onChange={e => setFilterModule(e.target.value)} className="w-full px-4 py-3.5 bg-surface border border-border rounded-xl text-xs font-bold focus:border-primary outline-none transition-all cursor-pointer">
+              <option value="">All Modules</option>
+              {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">State</label>
+            <select value={filterState} onChange={e => setFilterState(e.target.value)} className="w-full px-4 py-3.5 bg-surface border border-border rounded-xl text-xs font-bold focus:border-primary outline-none transition-all cursor-pointer">
               <option value="">All States</option>
               {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
-          <div className="space-y-1.5 col-span-2 lg:col-span-1">
-            <label className="text-[9px] font-black uppercase tracking-widest text-text-muted ml-1">Specialist</label>
-            <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="w-full px-4 py-3 bg-surface/50 border border-border/50 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all cursor-pointer">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Specialist</label>
+            <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="w-full px-4 py-3.5 bg-surface border border-border rounded-xl text-xs font-bold focus:border-primary outline-none transition-all cursor-pointer">
               <option value="">All Employees</option>
               {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
             </select>
           </div>
         </div>
 
-        {/* Time Intelligence Filters */}
-        <div className="flex flex-col lg:flex-row items-center gap-3 glass p-4 rounded-xl border border-white/5">
-          <div className="grid grid-cols-2 lg:flex items-center gap-3 w-full">
+        <div className="flex flex-col lg:flex-row items-center gap-4 pt-4 border-t border-white/5">
+          <div className="grid grid-cols-2 lg:flex items-center gap-4 flex-1 w-full">
              <div className="flex flex-col flex-1">
-               <label className="text-[9px] font-black uppercase tracking-widest text-text-muted mb-1 ml-1">Start Date</label>
-               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface/50 border border-border rounded-lg px-3 py-2 text-xs outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+               <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-1 ml-1">Date Range Start</label>
+               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
              <div className="flex flex-col flex-1">
-               <label className="text-[9px] font-black uppercase tracking-widest text-text-muted mb-1 ml-1">End Date</label>
-               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface/50 border border-border rounded-lg px-3 py-2 text-xs outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+               <label className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-1 ml-1">Date Range End</label>
+               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
           </div>
-          <div className="flex items-center gap-2 w-full lg:w-auto">
+          <div className="flex items-center gap-3 w-full lg:w-auto self-end">
              <button 
                onClick={() => {
                  const d = new Date().toISOString().split('T')[0];
                  setStartDate(d); setEndDate(d);
                }}
-               className="flex-1 lg:flex-none px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest hover:border-primary/50 transition-all"
+               className="flex-1 lg:flex-none px-6 py-3.5 glass border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all"
              >
                Today
              </button>
              <button 
                onClick={() => {
-                 const end = new Date();
-                 const start = new Date();
-                 start.setDate(1);
-                 setStartDate(start.toISOString().split('T')[0]);
-                 setEndDate(end.toISOString().split('T')[0]);
+                 const d = new Date();
+                 const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+                 const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+                 setStartDate(start); setEndDate(end);
                }}
-               className="flex-1 lg:flex-none px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest hover:border-primary/50 transition-all"
+               className="flex-1 lg:flex-none px-6 py-3.5 glass border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all"
              >
-               This Month
+               Month
              </button>
              <button 
-               onClick={() => { setStartDate(''); setEndDate(''); }}
-               className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-text-muted hover:text-text"
+               onClick={() => { setStartDate(''); setEndDate(''); setFilterProject(''); setFilterState(''); setFilterAssignee(''); setFilterModule(''); setSearch(''); }}
+               className="flex-1 lg:flex-none px-6 py-3.5 bg-error/10 text-error border border-error/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-error/20 transition-all"
              >
-               Clear
+               Reset All
              </button>
           </div>
         </div>
