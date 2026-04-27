@@ -79,9 +79,15 @@ export default function TeamPage({ me }: { me: User | null }) {
     setError('');
     setSuccess('');
     try {
-      await api.sendCreationOTP(form.email);
+      const res = await api.sendCreationOTP(form.email);
       setShowOtpField(true);
-      setSuccess('Verification code sent to email!');
+      
+      // If the backend sent a fallback code (because mail failed)
+      if (res.data?.otp_fallback) {
+        setSuccess(`Manual Mode: ${res.data.detail}`);
+      } else {
+        setSuccess('Verification code sent to email!');
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to send verification code. Please try again.');
     } finally {
