@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
-import type { Project } from '../api';
-import { Plus, Database, Loader2, Globe, Layers, ChevronRight } from 'lucide-react';
+import { Plus, Database, Loader2, Globe, Layers, ChevronRight, Edit2 } from 'lucide-react';
+import type { Project, User } from '../api';
 
-export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
+export default function ProjectsPage({ onNavigate, me }: { onNavigate?: (page: string) => void, me: User | null }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', slug: '', description: '' });
+  const [form, setForm] = useState({ name: '', slug: '', description: '', color: '#6366f1' });
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showArchived, setShowArchived] = useState(false);
@@ -20,18 +21,29 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: strin
 
   useEffect(() => { load(); }, [load]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true); setError('');
     try {
-      await api.createProject(form);
+      if (editingId) {
+        await api.updateProject(editingId, form);
+      } else {
+        await api.createProject(form);
+      }
       setShowForm(false);
-      setForm({ name: '', slug: '', description: '' });
+      setEditingId(null);
+      setForm({ name: '', slug: '', description: '', color: '#6366f1' });
       load();
     } catch (err: unknown) {
        const errorData = (err as { response?: { data?: unknown } })?.response?.data;
-       setError(JSON.stringify(errorData || 'Failed to initialize project orbit.'));
+       setError(JSON.stringify(errorData || 'Failed to save project.'));
     } finally { setSaving(false); }
+  };
+
+  const startEdit = (p: Project) => {
+    setForm({ name: p.name, slug: p.slug, description: p.description || '', color: p.color });
+    setEditingId(p.id);
+    setShowForm(true);
   };
 
   const handleArchive = async (id: number, name: string) => {
@@ -83,12 +95,14 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: strin
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-6' : 'left-1'}`}></div>
             </div>
           </label>
-          <button 
-            onClick={() => setShowForm(!showForm)} 
-            className="flex items-center gap-3 px-6 py-3.5 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all"
-          >
-            <Plus className="w-4 h-4" /> New Project
-          </button>
+          {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+            <button 
+              onClick={() => setShowForm(!showForm)} 
+              className="flex items-center gap-3 px-6 py-3.5 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all"
+            >
+              <Plus className="w-4 h-4" /> New Project
+            </button>
+          )}
         </div>
       </div>
 
@@ -96,10 +110,10 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: strin
         <div className="bento-card p-8 border-primary/20 bg-primary/5 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex items-center gap-3 mb-6">
              <Layers className="w-5 h-5 text-primary" />
-             <h3 className="font-extrabold text-lg uppercase tracking-tight">New Project Details</h3>
+             <h3 className="font-extrabold text-lg uppercase tracking-tight">{editingId ? 'Edit Project Details' : 'New Project Details'}</h3>
           </div>
           {error && <p className="text-error text-xs font-bold mb-6 p-4 bg-error/10 border border-error/20 rounded-xl">{error}</p>}
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
                <label className="text-[10px] font-black uppercase text-text-muted/60 tracking-widest px-2">Project Name</label>
                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') })} placeholder="Project name..." required className="w-full px-5 py-3.5 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
@@ -112,10 +126,22 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: strin
                <label className="text-[10px] font-black uppercase text-text-muted/60 tracking-widest px-2">Description</label>
                <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Mission objective..." className="w-full px-5 py-3.5 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
             </div>
+            <div className="space-y-2">
+               <label className="text-[10px] font-black uppercase text-text-muted/60 tracking-widest px-2">Glow Color</label>
+               <div className="flex items-center gap-4 px-4 py-2.5 bg-surface border border-border rounded-2xl">
+                  <input 
+                    type="color" 
+                    value={form.color} 
+                    onChange={e => setForm({ ...form, color: e.target.value })} 
+                    className="w-10 h-10 rounded-lg bg-transparent cursor-pointer border-none" 
+                  />
+                  <span className="text-xs font-mono font-bold uppercase">{form.color}</span>
+               </div>
+            </div>
             <div className="md:col-span-3 flex gap-4 justify-end pt-4">
-              <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 text-xs font-bold text-text-muted hover:text-text italic transition-all">Abort Mission</button>
+              <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setForm({ name: '', slug: '', description: '', color: '#6366f1' }); }} className="px-6 py-3 text-xs font-bold text-text-muted hover:text-text italic transition-all">Abort Mission</button>
               <button type="submit" disabled={saving} className="flex items-center gap-3 px-8 py-3.5 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-105 disabled:opacity-50">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Create Project
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />)} {editingId ? 'Update Project' : 'Create Project'}
               </button>
             </div>
           </form>
@@ -138,19 +164,36 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: strin
             >
               <div className="p-8">
                 <div className="flex justify-between items-start mb-8">
-                  <div className={`w-14 h-14 rounded-2xl bg-indigo-500/5 text-indigo-500 flex items-center justify-center font-black text-2xl border border-indigo-500/20 shadow-lg shadow-indigo-500/5 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-500`}>
+                  <div 
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl border transition-all duration-500 group-hover:scale-110 group-hover:text-white`}
+                    style={{ 
+                      backgroundColor: `${p.color}10`, 
+                      color: p.color, 
+                      borderColor: `${p.color}30`,
+                      boxShadow: `0 10px 20px -5px ${p.color}20`
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = p.color}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${p.color}10`}
+                  >
                     {p.name.charAt(0)}
                   </div>
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
-                    {p.is_active ? (
-                      <button onClick={(e) => { e.stopPropagation(); handleArchive(p.id, p.name); }} title="Archive Project" className="p-3 bg-amber-500/5 text-amber-500 hover:bg-amber-500 hover:text-white rounded-xl transition-all"><Database className="w-4 h-4" /></button>
-                    ) : (
-                      <button onClick={(e) => { e.stopPropagation(); handleRestore(p.id, p.name); }} title="Restore Project" className="p-3 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-xl transition-all"><Plus className="w-4 h-4" /></button>
-                    )}
-                  </div>
+                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
+                      {p.is_active && (
+                        <button onClick={(e) => { e.stopPropagation(); startEdit(p); }} title="Edit Project" className="p-3 bg-primary/5 text-primary hover:bg-primary hover:text-white rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
+                      )}
+                      {p.is_active ? (
+                        <button onClick={(e) => { e.stopPropagation(); handleArchive(p.id, p.name); }} title="Archive Project" className="p-3 bg-amber-500/5 text-amber-500 hover:bg-amber-500 hover:text-white rounded-xl transition-all"><Database className="w-4 h-4" /></button>
+                      ) : (
+                        <button onClick={(e) => { e.stopPropagation(); handleRestore(p.id, p.name); }} title="Restore Project" className="p-3 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-xl transition-all"><Plus className="w-4 h-4" /></button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="mb-6">
-                   <h3 className="font-extrabold text-xl text-text tracking-tight group-hover:text-indigo-500 transition-colors">{p.name}</h3>
+                   <h3 className="font-extrabold text-xl text-text tracking-tight transition-colors" style={{ color: 'inherit' }}>
+                     <span className="group-hover:text-white transition-colors" style={{ color: p.color }}>{p.name}</span>
+                   </h3>
                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted/60 mt-1 block px-1">{p.slug}</span>
                 </div>
                 <p className="text-sm font-medium text-text-muted line-clamp-2 leading-relaxed h-10 mb-6">{p.description || 'Sector clearance: No briefing available.'}</p>
@@ -163,8 +206,8 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: strin
                 
                 <div className="pt-6 border-t border-border/50 flex items-center justify-between">
                    <div className="flex items-center gap-2 group/status">
-                      <div className={`w-2 h-2 rounded-full ${p.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></div>
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${p.is_active ? 'text-emerald-500/80' : 'text-amber-500/80'}`}>
+                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.is_active ? '#10b981' : '#f59e0b' }}></div>
+                       <span className={`text-[10px] font-black uppercase tracking-widest`} style={{ color: p.is_active ? '#10b981' : '#f59e0b' }}>
                         {p.is_active ? 'Active Orbit' : 'Archived Log'}
                       </span>
                    </div>
@@ -172,10 +215,14 @@ export default function ProjectsPage({ onNavigate }: { onNavigate?: (page: strin
                      onClick={(e) => { e.stopPropagation(); handleProjectClick(p.id); }}
                      className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-indigo-500 transition-all"
                    >
-                      Mission Logs <ChevronRight className="w-4 h-4" />
+                       Mission Logs <ChevronRight className="w-4 h-4" />
                    </button>
                 </div>
               </div>
+              <div 
+                className="absolute bottom-0 left-0 w-full h-1 opacity-20"
+                style={{ backgroundColor: p.color }}
+              ></div>
             </div>
           ))}
         </div>

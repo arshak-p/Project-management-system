@@ -1,10 +1,13 @@
+import random
+from django.conf import settings
+from django.core.mail import send_mail
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from accounts.models import User
+from accounts.models import User, EmailOTP
 from accounts.serializers import CustomTokenObtainPairSerializer
 from tms.permissions import IsAdminRole
 
@@ -64,10 +67,97 @@ class CreateUserView(APIView):
         user.set_password(password)
         user._activity_user = request.user
         user.save()
+
+        try:
+            send_mail(
+                subject='Welcome to Colour Parrot - Your Account is Ready!',
+                message=f'Hello {first_name},\n\nYour account on the Colour Parrot Task Management System has been created.\n\nLogin Email: {email}\n\nYou can now log in and start collaborating on your assigned projects.\n\nBest regards,\nThe Colour Parrot Team',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except:
+            pass # Continue even if mail fails
+
         return Response({
             'id': user.id,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,
             'role': user.role,
+            'is_verified': user.is_verified,
         }, status=status.HTTP_201_CREATED)
+
+from django.utils import timezone
+
+class RequestOTPView(APIView):
+    """Generate and send a 6-digit OTP to the user's email."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip()
+        if not email:
+            return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if user exists
+        if not User.objects.filter(email=email, is_active=True).exists():
+            return Response({'detail': 'No active account found with this email.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Generate 6-digit OTP
+        otp_code = f"{random.randint(100000, 999999)}"
+        
+        # Save OTP to database
+        EmailOTP.objects.create(email=email, otp=otp_code)
+
+        # Send Email (Fallback to console if SMTP not configured)
+        try:
+            send_mail(
+                subject='Colour Parrot Security Code',
+                message=f'Your secure login code is: {otp_code}. It will expire in 10 minutes.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            return Response({'detail': 'OTP sent successfully.'})
+        except Exception as e:
+            # For development/debug: if email fails, we return a success with a note
+            if settings.DEBUG:
+                return Response({'detail': f'OTP generated (DEBUG: {otp_code}) but email failed to send. Check console.'})
+            return Response({'detail': 'Failed to send OTP email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class VerifyOTPView(APIView):
+    """Verify OTP and issue JWT tokens."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip()
+        otp_code = request.data.get('otp', '').strip()
+
+        if not email or not otp_code:
+            return Response({'detail': 'Email and OTP are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_record = EmailOTP.objects.filter(email=email, otp=otp_code, is_used=False).first()
+
+        if not otp_record or not otp_record.is_valid():
+            return Response({'detail': 'Invalid or expired OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark OTP as used
+        otp_record.is_used = True
+        otp_record.save()
+
+        # Get user and issue tokens
+        user = User.objects.get(email=email)
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'role': user.role,
+                'first_name': user.first_name,
+            }
+        })

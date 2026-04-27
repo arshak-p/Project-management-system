@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Plus, Trash2, CircleDashed } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
-import type { Task, TaskState } from '../api';
+import type { Task, TaskState, User } from '../api';
 
 const STATE_COLORS: Record<string, { bg: string, text: string, shadow: string }> = {
   'pending': { bg: 'bg-slate-500/10', text: 'text-slate-400', shadow: 'shadow-slate-500/20' },
@@ -14,7 +14,7 @@ const STATE_COLORS: Record<string, { bg: string, text: string, shadow: string }>
   'completed-launched': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', shadow: 'shadow-emerald-500/20' },
 };
 
-export default function KanjiBoardPage() {
+export default function KanbanPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,7 +47,7 @@ export default function KanjiBoardPage() {
 
   return (
     <div className="space-y-10 pb-20">
-      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />}
+      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
 
       <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
         <h1 className="text-5xl font-black tracking-tighter">Kanban Board</h1>
@@ -105,9 +105,9 @@ export default function KanjiBoardPage() {
                           <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/5 opacity-40 group-hover:opacity-100 transition-opacity">
                              <div className="flex items-center gap-2">
                                 <div className={`w-5 h-5 rounded-full ${cardColors.bg.replace('/10', '')} flex items-center justify-center text-[8px] font-black text-white`}>
-                                   {task.assignee_name?.[0] || '?'}
+                                   {task.assignee?.first_name?.[0] || task.assignee?.email?.[0]?.toUpperCase() || '?'}
                                 </div>
-                                <span className="text-[10px] font-bold">{task.assignee_name || 'Unassigned'}</span>
+                                <span className="text-[10px] font-bold">{task.assignee?.first_name || task.assignee?.email || 'Unassigned'}</span>
                              </div>
                              <CircleDashed className={`w-3.5 h-3.5 ${cardColors.text}`} />
                           </div>

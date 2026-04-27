@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
-import type { Project, TaskState, WorkModule } from '../api';
+import type { Project, TaskState, WorkModule, User } from '../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Target, Zap, Plus, 
@@ -18,7 +18,7 @@ interface DraftTask {
   priority: string;
 }
 
-export default function StrategistPage() {
+export default function StrategistPage({ me: _me }: { me: User | null }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
   const [modules, setModules] = useState<WorkModule[]>([]);

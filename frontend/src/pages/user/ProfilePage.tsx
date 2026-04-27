@@ -11,7 +11,7 @@ const ROLE_LABELS: Record<string, string> = {
   client: '🏢 Client',
 };
 
-export default function ProfilePage() {
+export default function ProfilePage({ me: _me }: { me: User | null }) {
   const [me, setMe] = useState<User | null>(null);
   const [form, setForm] = useState({ first_name: '', last_name: '', title: '', phone: '' });
   const [isLoading, setIsLoading] = useState(true);

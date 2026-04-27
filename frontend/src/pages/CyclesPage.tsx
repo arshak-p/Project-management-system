@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import type { Cycle, Project } from '../api';
+import type { Cycle, Project, User } from '../api';
 import { Loader2, CalendarRange, Plus, ExternalLink, CalendarDays } from 'lucide-react';
 
-export default function CyclesPage() {
+export default function CyclesPage({ me: _me }: { me: User | null }) {
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);

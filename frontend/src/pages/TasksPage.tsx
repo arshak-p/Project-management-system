@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp } from 'lucide-react';
+import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp, ShieldCheck } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
 import type { Project, TaskState, WorkModule, User, Task } from '../api';
@@ -17,7 +17,7 @@ const PRIORITY_ICONS: Record<string, React.ReactNode> = {
   low: <Circle className="w-3 h-3" />,
 };
 
-export default function TasksPage() {
+export default function TasksPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
@@ -60,16 +60,23 @@ export default function TasksPage() {
     localStorage.setItem('jump_project_filter', filterProject);
   }, [filterProject]);
 
+  useEffect(() => {
+    if (showForm && states.length === 0) {
+      api.getStates().then(s => setStates(s.data));
+    }
+  }, [showForm, states.length]);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true); setError('');
     try {
+      const { ...formRest } = form;
       await api.createTask({
-        ...form,
+        ...formRest,
         project: Number(form.project),
         state: Number(form.state),
         module: Number(form.module),
-        assignee: form.assignee ? Number(form.assignee) : null,
+        assignee_id: form.assignee ? Number(form.assignee) : null,
         due_date: form.due_date || null,
         scheduled_date: form.scheduled_date || null,
       });
@@ -109,6 +116,7 @@ export default function TasksPage() {
         <TaskDetailModal 
           taskId={selectedTaskId} 
           onClose={() => { setSelectedTaskId(null); load(); }} 
+          me={me}
         />
       )}
       <div className="flex justify-between items-center flex-wrap gap-4">
@@ -116,9 +124,11 @@ export default function TasksPage() {
           <h1 className="text-3xl font-bold">Work Items</h1>
           <p className="text-text-muted mt-1">Create, manage and track all tasks across clients.</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90 transition-opacity">
-          <Plus className="w-4 h-4" /> New Task
-        </button>
+        {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'team_head') && (
+          <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90 transition-opacity">
+            <Plus className="w-4 h-4" /> New Task
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -211,14 +221,19 @@ export default function TasksPage() {
               </div>
             )}
             {filtered.map(task => (
-              <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`flex items-center gap-4 px-5 py-4 hover:bg-surface/30 transition-colors group cursor-pointer ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''} ${task.priority === 'urgent' ? 'bg-red-500/5' : ''}`}>
-                <div className={`w-2 h-10 rounded-full flex-shrink-0 ${task.priority === 'urgent' ? 'bg-gradient-to-b from-red-500 to-red-600 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-gradient-to-b from-primary to-[#8b5cf6]'}`}></div>
+              <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`flex items-center gap-4 px-5 py-4 hover:bg-surface/30 transition-all group cursor-pointer relative overflow-hidden ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''} ${task.priority === 'urgent' ? 'bg-red-500/5' : ''} ${task.state_slug === 'client-review' ? 'bg-[#8b5cf6]/5 border-l-4 border-l-[#8b5cf6]' : ''}`}>
+                <div className={`w-2 h-10 rounded-full flex-shrink-0 ${task.state_slug === 'client-review' ? 'bg-[#8b5cf6]' : task.priority === 'urgent' ? 'bg-gradient-to-b from-red-500 to-red-600 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-gradient-to-b from-primary to-[#8b5cf6]'}`}></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <code className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">{task.task_code}</code>
                     <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium capitalize ${PRIORITY_COLORS[task.priority] || 'text-text-muted'}`}>
                       {PRIORITY_ICONS[task.priority]} {task.priority}
                     </span>
+                    {task.is_client_approved && (
+                      <span className="flex items-center gap-1 text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)] animate-pulse">
+                        <ShieldCheck className="w-3 h-3" /> Approved
+                      </span>
+                    )}
                   </div>
                   <h4 className="font-semibold text-text text-sm truncate">{task.title}</h4>
                   <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
@@ -227,15 +242,31 @@ export default function TasksPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-xs bg-surface border border-border px-3 py-1 rounded-full text-text-muted">State #{task.state}</span>
-                  {task.is_active ? (
-                    <button onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }} title="Archive Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-500 text-text-muted rounded-lg transition-all">
-                      <Database className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button onClick={(e) => { e.stopPropagation(); handleRestore(task.id); }} title="Restore Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-emerald-500/10 hover:text-emerald-500 text-text-muted rounded-lg transition-all">
-                      <Plus className="w-4 h-4" />
-                    </button>
+                  {(() => {
+                    const stateObj = states.find(s => s.id === task.state);
+                    return (
+                      <span 
+                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border transition-all"
+                        style={{ 
+                          backgroundColor: `${stateObj?.color || '#94a3b8'}15`, 
+                          color: stateObj?.color || '#94a3b8', 
+                          borderColor: `${stateObj?.color || '#94a3b8'}30` 
+                        }}
+                      >
+                        {stateObj?.name || 'Unknown'}
+                      </span>
+                    );
+                  })()}
+                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+                    task.is_active ? (
+                      <button onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }} title="Archive Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-500 text-text-muted rounded-lg transition-all">
+                        <Database className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button onClick={(e) => { e.stopPropagation(); handleRestore(task.id); }} title="Restore Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-emerald-500/10 hover:text-emerald-500 text-text-muted rounded-lg transition-all">
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    )
                   )}
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import type { User } from '../api';
 import { motion } from 'framer-motion';
 import { Download, CheckCircle2, Clock, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -15,7 +16,7 @@ interface Backup {
   } | null;
 }
 
-export default function BackupsPage() {
+export default function BackupsPage({ me: _me }: { me: User | null }) {
   const [backups, setBackups] = useState<Backup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<number | null>(null);

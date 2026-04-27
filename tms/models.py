@@ -38,6 +38,7 @@ class Project(models.Model):
     name = models.CharField(max_length=160)
     slug = models.SlugField(max_length=80, unique=True)
     description = models.TextField(blank=True)
+    color = models.CharField(max_length=7, default="#6366f1")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True, db_index=True)
@@ -116,6 +117,7 @@ class State(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=64, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    color = models.CharField(max_length=7, default="#94a3b8")
     is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
@@ -222,6 +224,7 @@ class WorkItem(models.Model):
         default=0,
     )
     timer_start = models.DateTimeField(null=True, blank=True, help_text="Timestamp when the last In Progress session started")
+    is_client_approved = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

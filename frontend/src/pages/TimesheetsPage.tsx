@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
-import type { Task, Project, TimeLog } from '../api';
+import type { Task, Project, TimeLog, User } from '../api';
 import { Clock, Clock3, Download } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 
-export default function TimesheetsPage() {
+export default function TimesheetsPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [startDate, setStartDate] = useState('');
@@ -99,6 +99,7 @@ export default function TimesheetsPage() {
         <TaskDetailModal 
           taskId={selectedTaskId} 
           onClose={() => { setSelectedTaskId(null); load(); }} 
+          me={me}
         />
       )}
       <div className="flex justify-between items-center flex-wrap gap-4">

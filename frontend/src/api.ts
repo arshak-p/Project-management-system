@@ -1,6 +1,6 @@
 import axios from 'axios';
-
-export const API_URL = 'https://colour-parrot-mgtsystem.onrender.com/api';
+import { API_URL } from './config';
+export { API_URL };
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -36,12 +36,14 @@ export interface Project {
   description?: string;
   is_active: boolean;
   total_minutes?: number;
+  color: string;
 }
 
 export interface TaskState {
   id: number;
   name: string;
   slug: string;
+  color: string;
   sort_order?: number;
 }
 
@@ -81,6 +83,7 @@ export interface Task {
     first_name?: string;
   };
   is_active: boolean;
+  is_client_approved?: boolean;
 }
 
 export interface Activity {
@@ -217,36 +220,36 @@ apiClient.interceptors.response.use(
 export const api = {
   login: (email: string, password: string) =>
     axios.post(`${API_URL}/auth/login/`, { email, password }),
-  getMe: () => apiClient.get('/users/me/'),
-  getUsers: (params?: object) => apiClient.get('/users/', { params }),
-  getAssignableUsers: () => apiClient.get('/users/assignable/'),
-  getProjects: (params?: object) => apiClient.get('/projects/', { params }),
-  createProject: (data: object) => apiClient.post('/projects/', data),
-  updateProject: (id: number, data: object) => apiClient.patch(`/projects/${id}/`, data),
-  deleteProject: (id: number) => apiClient.delete(`/projects/${id}/`),
-  getTasks: (params?: object) => apiClient.get('/work-items/', { params }),
-  getTask: (id: number) => apiClient.get(`/work-items/${id}/`),
-  createTask: (data: object) => apiClient.post('/work-items/', data),
-  updateTask: (id: number, data: object) => apiClient.patch(`/work-items/${id}/`, data),
-  deleteTask: (id: number) => apiClient.delete(`/work-items/${id}/`),
-  recordView: (id: number) => apiClient.post(`/work-items/${id}/record-view/`),
-  getComments: (taskId: number) => apiClient.get(`/comments/?work_item=${taskId}`),
-  createComment: (data: object) => apiClient.post('/comments/', data),
-  getAttachments: (taskId: number) => apiClient.get(`/attachments/?work_item=${taskId}`),
-  createAttachment: (data: FormData) => apiClient.post('/attachments/', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  getTimeLogs: (taskId: number) => apiClient.get(`/time-logs/?work_item=${taskId}`),
-  createTimeLog: (data: object) => apiClient.post('/time-logs/', data),
-  getStates: () => apiClient.get('/states/'),
-  createState: (data: object) => apiClient.post('/states/', data),
-  getModules: () => apiClient.get('/modules/'),
-  getDepartments: () => apiClient.get('/departments/'),
-  getCycles: () => apiClient.get('/cycles/'),
-  createCycle: (data: object) => apiClient.post('/cycles/', data),
-  getAllTimeLogs: () => apiClient.get('/time-logs/'),
-  getAnalytics: (params?: object) => apiClient.get('/analytics/summary/', { params }),
-  getActivity: () => apiClient.get('/activity/'),
-  getNotifications: () => apiClient.get('/notifications/'),
-  markNotificationRead: (id: number) => apiClient.post(`/notifications/${id}/mark-read/`),
+  getMe: () => apiClient.get('users/me/'),
+  getUsers: (params?: object) => apiClient.get('users/', { params }),
+  getAssignableUsers: () => apiClient.get('users/assignable/'),
+  getProjects: (params?: object) => apiClient.get('projects/', { params }),
+  createProject: (data: object) => apiClient.post('projects/', data),
+  updateProject: (id: number, data: object) => apiClient.patch(`projects/${id}/`, data),
+  deleteProject: (id: number) => apiClient.delete(`projects/${id}/`),
+  getTasks: (params?: object) => apiClient.get('work-items/', { params }),
+  getTask: (id: number) => apiClient.get(`work-items/${id}/`),
+  createTask: (data: object) => apiClient.post('work-items/', data),
+  updateTask: (id: number, data: object) => apiClient.patch(`work-items/${id}/`, data),
+  deleteTask: (id: number) => apiClient.delete(`work-items/${id}/`),
+  recordView: (id: number) => apiClient.post(`work-items/${id}/record-view/`),
+  getComments: (taskId: number) => apiClient.get(`comments/?work_item=${taskId}`),
+  createComment: (data: object) => apiClient.post('comments/', data),
+  getAttachments: (taskId: number) => apiClient.get(`attachments/?work_item=${taskId}`),
+  createAttachment: (data: FormData) => apiClient.post('attachments/', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getTimeLogs: (taskId: number) => apiClient.get(`time-logs/?work_item=${taskId}`),
+  createTimeLog: (data: object) => apiClient.post('time-logs/', data),
+  getStates: () => apiClient.get('states/'),
+  createState: (data: object) => apiClient.post('states/', data),
+  getModules: () => apiClient.get('modules/'),
+  getDepartments: () => apiClient.get('departments/'),
+  getCycles: () => apiClient.get('cycles/'),
+  createCycle: (data: object) => apiClient.post('cycles/', data),
+  getAllTimeLogs: () => apiClient.get('time-logs/'),
+  getAnalytics: (params?: object) => apiClient.get('analytics/summary/', { params }),
+  getActivity: () => apiClient.get('activity/'),
+  getNotifications: () => apiClient.get('notifications/'),
+  markNotificationRead: (id: number) => apiClient.post(`notifications/${id}/mark-read/`),
   createUser: (data: object) =>
     apiClient.post('/auth/create-user/', data),
   updateUser: (id: number, data: object) =>

@@ -82,6 +82,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "password",
             "role",
             "title",
             "phone",
@@ -92,6 +93,13 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
         )
         read_only_fields = ("id",)
+        extra_kwargs = {"password": {"write_only": True, "required": False}}
+
+    def validate_password(self, value):
+        from django.contrib.auth.password_validation import validate_password
+        if value:
+            validate_password(value)
+        return value
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -102,10 +110,16 @@ class UserSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         u_actor = validated_data.pop("_activity_user", None)
+        password = validated_data.pop("password", None)
         dept_id = validated_data.pop("department_id", _UNSET)
         cp_id = validated_data.pop("client_project_id", _UNSET)
+        
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
+        
+        if password:
+            instance.set_password(password)
+            
         if u_actor: instance._activity_user = u_actor
         instance.save()
         if dept_id is not _UNSET or cp_id is not _UNSET:
@@ -123,7 +137,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ("id", "name", "slug", "description", "created_at", "updated_at", "is_active", "total_minutes")
+        fields = ("id", "name", "slug", "description", "color", "created_at", "updated_at", "is_active", "total_minutes")
 
     def create(self, validated_data):
         u = validated_data.pop('_activity_user', None)
@@ -150,7 +164,7 @@ class ModuleSerializer(serializers.ModelSerializer):
 class StateSerializer(serializers.ModelSerializer):
     class Meta:
         model = State
-        fields = ("id", "name", "slug", "sort_order", "is_active")
+        fields = ("id", "name", "slug", "color", "sort_order", "is_active")
 
 
 class LabelSerializer(serializers.ModelSerializer):
@@ -279,6 +293,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "is_active",
+            "is_client_approved",
             "total_minutes",
         )
         read_only_fields = ("task_code", "created_by", "created_at", "updated_at", "total_minutes")

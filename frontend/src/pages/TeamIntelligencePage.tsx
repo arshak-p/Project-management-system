@@ -15,7 +15,7 @@ import TaskDetailModal from '../components/TaskDetailModal';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e'];
 
-export default function TeamIntelligencePage() {
+export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [memberTasks, setMemberTasks] = useState<Task[]>([]);
@@ -105,7 +105,7 @@ export default function TeamIntelligencePage() {
 
   return (
     <div className="space-y-10 pb-20 font-inter max-w-7xl mx-auto">
-      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />}
+      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
       
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>

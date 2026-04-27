@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState } from '../api';
-import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download } from 'lucide-react';
+import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars } from 'lucide-react';
+import { getWsUrl } from '../config';
+
 
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'text-red-400 bg-red-400/10 border-red-400/20',
@@ -12,7 +14,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 type TabType = 'details' | 'comments' | 'refs' | 'time';
 
-export default function TaskDetailModal({ taskId, onClose }: { taskId: number; onClose: () => void }) {
+export default function TaskDetailModal({ taskId, onClose, me }: { taskId: number; onClose: () => void, me: User | null }) {
   const [task, setTask] = useState<Task | null>(null);
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
@@ -56,7 +58,7 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
   }, [taskId, loadData]);
 
   useEffect(() => {
-    const wsUrl = `wss://colour-parrot-mgtsystem.onrender.com/ws/tasks/${taskId}/?token=${localStorage.getItem('access_token')}`;
+    const wsUrl = getWsUrl(`/ws/tasks/${taskId}/`);
     const ws = new WebSocket(wsUrl);
     
     ws.onmessage = (e) => {
@@ -76,7 +78,7 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
     return () => ws.close();
   }, [taskId]);
 
-  const handleUpdateField = async (field: string, value: string | number | null) => {
+  const handleUpdateField = async (field: string, value: string | number | boolean | null) => {
     try {
       await api.updateTask(taskId, { [field]: value });
       loadData();
@@ -159,7 +161,14 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
                 {task.module_slug}
               </span>
             </div>
-            <h2 className="text-2xl font-bold text-text leading-tight">{task.title}</h2>
+            <h2 className="text-2xl font-bold text-text leading-tight flex items-center gap-3">
+              {task.title}
+              {task.is_client_approved && (
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-full text-xs font-black uppercase tracking-widest animate-in zoom-in duration-500">
+                  <ShieldCheck className="w-4 h-4" /> Client Approved
+                </div>
+              )}
+            </h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-surface rounded-xl text-text-muted hover:text-text transition-colors flex-shrink-0">
             <X className="w-5 h-5" />
@@ -322,11 +331,22 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: number; o
               <select 
                 value={task.state} 
                 onChange={e => handleUpdateField('state', Number(e.target.value))}
-                className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
+                className={`w-full px-3 py-2 bg-surface border rounded-xl text-sm outline-none transition-all ${task.state_slug === 'client-review' ? 'border-[#8b5cf6] shadow-[0_0_15px_rgba(139,92,246,0.2)]' : 'border-border focus:border-primary'}`}
               >
                 {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+
+            {task.state_slug === 'client-review' && !task.is_client_approved && (me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'team_head') && (
+              <div className="pt-2 animate-in slide-in-from-top-2">
+                <button 
+                  onClick={() => handleUpdateField('is_client_approved', true)}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-600/20 hover:scale-[1.02] transition-all"
+                >
+                  <Stars className="w-4 h-4" /> Approve for Client
+                </button>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-text-muted uppercase tracking-wide">Assignee</label>

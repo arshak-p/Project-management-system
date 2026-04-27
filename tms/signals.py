@@ -102,6 +102,53 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                 link=f"/task/{instance.id}"
             )
 
+    # --- Workflow Specific Notifications ---
+    if not created and actor and instance.state:
+        old_state_id = getattr(instance, "_old_state_id", None)
+        if old_state_id != instance.state.id:
+            slug = instance.state.slug
+            
+            # 1. Notify Team Heads for Review
+            if slug == 'team-head-review':
+                notify_roles(
+                    [User.Role.TEAM_HEAD, User.Role.PROJECT_MANAGER],
+                    title="Review Required",
+                    body=f"Task {instance.task_code} is ready for internal review.",
+                    link=f"/task/{instance.id}",
+                    exclude_user=actor
+                )
+            
+            # 2. Notify PMs for Client Review
+            elif slug == 'client-review':
+                notify_roles(
+                    [User.Role.PROJECT_MANAGER, User.Role.ADMIN],
+                    title="Ready for Client",
+                    body=f"Task {instance.task_code} is ready for client review (Purple Phase).",
+                    link=f"/task/{instance.id}",
+                    exclude_user=actor
+                )
+
+            # 3. Notify Completion
+            elif slug == 'completed-launched':
+                 notify_user(
+                    instance.created_by.id if instance.created_by else instance.assignee.id,
+                    title="Project Launched! 🚀",
+                    body=f"Task {instance.task_code} has been officially launched.",
+                    link=f"/task/{instance.id}"
+                )
+
+    # --- Client Approval Success Notification ---
+    if not created and actor and instance.is_client_approved:
+        # Check if it was just approved
+        # Note: In a production app we'd track the old boolean value, but for now we notify on save if true
+        if instance.assignee and actor.id != instance.assignee.id:
+            notify_user(
+                instance.assignee.id,
+                title="Client Approved! ✅",
+                body=f"Great job! The client has approved '{instance.title}'.",
+                link=f"/task/{instance.id}"
+            )
+
         # Notify Managers on "Important" updates
         is_important = instance.priority in [WorkItem.Priority.URGENT, WorkItem.Priority.HIGH]
         if is_important:

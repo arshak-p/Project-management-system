@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 
-export default function TaskCalendarPage() {
+export default function TaskCalendarPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
@@ -425,6 +425,7 @@ export default function TaskCalendarPage() {
         <TaskDetailModal 
           taskId={selectedTaskId} 
           onClose={() => { setSelectedTaskId(null); load(); }} 
+          me={me}
         />
       )}
     </div>

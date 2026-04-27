@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Plus, Trash2, Loader2, Briefcase, CheckCircle2, X } from 'lucide-react';
 import { api } from '../api';
-import type { JobTitle } from '../api';
+import type { JobTitle, User } from '../api';
 
-export default function JobTitlesPage() {
+export default function JobTitlesPage({ me: _me }: { me: User | null }) {
   const [titles, setTitles] = useState<JobTitle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);

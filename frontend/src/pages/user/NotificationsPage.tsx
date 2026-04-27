@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
-import type { Notification } from '../../api';
+import type { Notification, User } from '../../api';
 import { Bell, CheckCircle, Clock } from 'lucide-react';
 import TaskDetailModal from '../../components/TaskDetailModal';
 
-export default function NotificationsPage() {
+export default function NotificationsPage({ me }: { me: User | null }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -44,6 +44,7 @@ export default function NotificationsPage() {
         <TaskDetailModal 
           taskId={selectedTaskId} 
           onClose={() => { setSelectedTaskId(null); load(); }} 
+          me={me}
         />
       )}
       <div className="flex items-center justify-between">

@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
+from tms.notify import notify_user
 
 from tms import access
 from tms.models import (
@@ -98,7 +99,7 @@ class UserViewSet(SalesSafeViewSet):
         if self.action in ("list", "retrieve", "update", "partial_update"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         if self.action in ("create", "destroy"):
-            return [permissions.IsAuthenticated(), IsAdminRole()]
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         if self.action == "assignable":
             return [permissions.IsAuthenticated(), BlockSalesWrites()]
         if self.action == "me":
@@ -176,6 +177,29 @@ class ModuleViewSet(SalesSafeViewSet):
 class StateViewSet(SalesSafeViewSet):
     queryset = State.objects.filter(is_active=True)
     serializer_class = StateSerializer
+
+    def list(self, request, *args, **kwargs):
+        # SELF-SEEDING BRAIN: If empty, create the Elite Workflow states automatically
+        if not State.objects.exists():
+            DEFAULTS = [
+                ('backlog', 'Backlog', '#64748b', 0),
+                ('to-do', 'To Do', '#6366f1', 10),
+                ('in-progress', 'In Progress', '#3b82f6', 20),
+                ('team-head-review', 'Team Head Review', '#f59e0b', 40),
+                ('client-review', 'Client Review', '#8b5cf6', 50),
+                ('rework-revision', 'Rework / Revision', '#ef4444', 60),
+                ('completed-launched', 'Completed / Launched', '#10b981', 100),
+            ]
+            for slug, name, color, order in DEFAULTS:
+                State.objects.get_or_create(
+                    slug=slug,
+                    defaults={'name': name, 'color': color, 'sort_order': order, 'is_active': True}
+                )
+        
+        # Ensure all states are active if they exist but are hidden
+        State.objects.all().update(is_active=True)
+        
+        return super().list(request, *args, **kwargs)
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -282,8 +306,8 @@ class WorkItemViewSet(SalesSafeViewSet):
         u = request.user
         # Don't notify if the viewer is the creator or if there is no creator
         if item.created_by and u != item.created_by:
-            Notification.objects.create(
-                user=item.created_by,
+            notify_user(
+                user_id=item.created_by.id,
                 title="Task Viewed",
                 body=f"'{u.get_full_name() or u.email}' is currently viewing task: {item.task_code}",
                 link=f"/task/{item.id}"

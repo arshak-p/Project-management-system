@@ -49,7 +49,7 @@ const defaultForm = {
   date_joined: '',
 };
 
-export default function TeamPage() {
+export default function TeamPage({ me }: { me: User | null }) {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,19 +61,16 @@ export default function TeamPage() {
   const [success, setSuccess] = useState('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showArchived, setShowArchived] = useState(false);
-  const [me, setMe] = useState<User | null>(null);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
 
   const load = useCallback(() => {
     Promise.all([
       api.getUsers({ archived: showArchived }),
-      api.getMe(),
       api.getJobTitles()
     ])
-      .then(([r, m, j]) => {
-        setUsers(r.data);
-        setMe(m.data);
-        setJobTitles(j.data);
+      .then(([u, jt]) => {
+        setUsers(u.data);
+        setJobTitles(jt.data);
       })
       .catch(err => console.error('Fetching issue on Team Page:', err))
       .finally(() => setIsLoading(false));
@@ -219,15 +216,27 @@ export default function TeamPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Password <span className="text-error">*</span></label>
-                <div className="relative">
-                  <input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Min 8 characters" required className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-text-muted hover:text-text">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+              {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+                <div className="space-y-1.5 animate-in fade-in duration-300">
+                  <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                    {editingUser ? 'Reset Password (Optional)' : 'Initial Password'} <span className="text-error">{editingUser ? '' : '*'}</span>
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type={showPassword ? 'text' : 'password'} 
+                      autoComplete="new-password" 
+                      value={form.password} 
+                      onChange={e => setForm({ ...form, password: e.target.value })} 
+                      placeholder={editingUser ? "Leave blank to keep current" : "Min 8 characters"} 
+                      required={!editingUser} 
+                      className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-text-muted hover:text-text">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -308,7 +317,7 @@ export default function TeamPage() {
               <div className={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full transition-all ${showArchived ? 'left-5' : 'left-0.5'}`}></div>
             </div>
           </label>
-          {(me?.is_superuser || me?.role === 'admin') && (
+          {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
             <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90 transition-opacity">
               <Plus className="w-4 h-4" /> Add Member
             </button>
@@ -353,7 +362,7 @@ export default function TeamPage() {
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
-                  {(me?.is_superuser || me?.role === 'admin') && (
+                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
                     user.is_active ? (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleArchive(user.id); }} 

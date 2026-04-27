@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
-import type { AnalyticsSummary, Project, Activity, Notification } from '../api';
 import { motion } from 'framer-motion';
 import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight, Bell } from 'lucide-react';
+import type { AnalyticsSummary, Project, Activity, Notification, User } from '../api';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, Cell
 } from 'recharts';
 import TaskDetailModal from '../components/TaskDetailModal';
 
-export default function OverviewPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
+export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: string) => void, me: User | null }) {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
@@ -59,7 +59,7 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
 
   return (
     <div className="space-y-10 pb-24 font-inter">
-      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />}
+      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>

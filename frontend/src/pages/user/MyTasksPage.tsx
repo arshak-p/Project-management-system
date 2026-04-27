@@ -28,9 +28,8 @@ interface ProjectAnalytics {
   c: number;
 }
 
-export default function MyTasksPage() {
+export default function MyTasksPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [me, setMe] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'urgent' | 'due_today' | 'overdue'>('all');
   const [activeTab, setActiveTab] = useState<'tasks' | 'performance'>('tasks');
@@ -41,13 +40,11 @@ export default function MyTasksPage() {
     const personalFilter = localStorage.getItem('access_token') ? { personal: 'true' } : {};
     Promise.all([
       api.getTasks(), 
-      api.getMe(), 
       api.getAnalytics(personalFilter)
     ])
-      .then(([t, m, a]) => {
-        setMe(m.data);
+      .then(([t, a]) => {
         setAnalytics(a.data);
-        const myTasks = t.data.filter((task: Task) => (task.assignee === m.data.id || task.assignee?.id === m.data.id));
+        const myTasks = t.data.filter((task: Task) => (task.assignee?.id === me?.id));
         setTasks(myTasks);
       })
       .catch(err => console.error("Error fetching my tasks:", err))
@@ -95,6 +92,7 @@ export default function MyTasksPage() {
         <TaskDetailModal 
           taskId={selectedTaskId} 
           onClose={() => { setSelectedTaskId(null); load(); }} 
+          me={me}
         />
       )}
 

@@ -25,6 +25,7 @@ import TaskCalendarPage from './pages/TaskCalendarPage';
 import StrategistPage from './pages/StrategistPage';
 import TeamIntelligencePage from './pages/TeamIntelligencePage';
 import BackupsPage from './pages/BackupsPage';
+import { getWsUrl } from './config';
 
 type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence' | 'backups';
 
@@ -100,7 +101,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     const token = localStorage.getItem('access_token');
     if (!token) return;
 
-    const wsUrl = `wss://colour-parrot-mgtsystem.onrender.com/ws/notifications/?token=${token}`;
+    const wsUrl = getWsUrl('/ws/notifications/');
     const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (e) => {
@@ -143,7 +144,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     flex items-center gap-4 px-6 py-3.5 rounded-[1.25rem] text-sm font-bold transition-all duration-300 relative group mb-1
     ${page === id 
       ? 'bg-primary/10 text-primary shadow-sm border border-primary/20' 
-      : 'text-text-muted hover:text-text hover:bg-white/5'}
+      : 'text-text-muted hover:text-text hover:bg-[var(--nav-hover)]'}
   `;
 
   return (
@@ -272,23 +273,23 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                   exit={{ opacity: 0, scale: 0.98 }}
                   transition={{ duration: 0.4 }}
                 >
-                  {page === 'overview' && <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} />}
-                  {page === 'projects' && <ProjectsPage onNavigate={(p: string) => handleNav(p as Page)} />}
-                  {page === 'cycles' && <CyclesPage />}
-                  {page === 'tasks' && <TasksPage />}
-                  {page === 'kanban' && <KanjiBoardPage />}
-                  {page === 'team' && <TeamPage />}
-                  {page === 'timesheets' && <TimesheetsPage />}
-                  {page === 'my_tasks' && <MyTasksPage />}
-                  {page === 'notifications' && <NotificationsPage />}
-                  {page === 'profile' && <ProfilePage />}
-                  {page === 'activity' && <ActivityPage />}
-                  {page === 'calendar' && <TaskCalendarPage />}
-                  {page === 'strategist' && <StrategistPage />}
-                  {page === 'intelligence' && <TeamIntelligencePage />}
-                  {page === 'job_titles' && <JobTitlesPage />}
-                  {page === 'roadmap' && <AgencyRoadmap />}
-                  {page === 'backups' && <BackupsPage />}
+                  {page === 'overview' && <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />}
+                  {page === 'projects' && <ProjectsPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />}
+                  {page === 'cycles' && <CyclesPage me={me} />}
+                  {page === 'tasks' && <TasksPage me={me} />}
+                  {page === 'kanban' && <KanjiBoardPage me={me} />}
+                  {page === 'team' && <TeamPage me={me} />}
+                  {page === 'timesheets' && <TimesheetsPage me={me} />}
+                  {page === 'my_tasks' && <MyTasksPage me={me} />}
+                  {page === 'notifications' && <NotificationsPage me={me} />}
+                  {page === 'profile' && <ProfilePage me={me} />}
+                  {page === 'activity' && <ActivityPage me={me} />}
+                  {page === 'calendar' && <TaskCalendarPage me={me} />}
+                  {page === 'strategist' && <StrategistPage me={me} />}
+                  {page === 'intelligence' && <TeamIntelligencePage me={me} />}
+                  {page === 'job_titles' && <JobTitlesPage me={me} />}
+                  {page === 'roadmap' && <AgencyRoadmap me={me} />}
+                  {page === 'backups' && <BackupsPage me={me} />}
                 </motion.div>
              </AnimatePresence>
           </div>
