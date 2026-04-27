@@ -200,13 +200,20 @@ export default function TeamPage({ me }: { me: User | null }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Email Address <span className="text-error">*</span></label>
+                <div className="flex justify-between items-center px-1">
+                  <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Email Address <span className="text-error">*</span></label>
+                  {form.email && (
+                    <span className={`text-[10px] font-bold uppercase tracking-widest ${/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) ? 'text-emerald-500' : 'text-amber-500'}`}>
+                      {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) ? '✓ Valid Format' : '⚠ Invalid Email'}
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
+                  <Mail className={`w-4 h-4 absolute left-3 top-3 transition-colors ${form.email ? (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) ? 'text-emerald-500' : 'text-amber-500') : 'text-text-muted'}`} />
                   <input 
                     type="email"
                     autoComplete="off"
-                    className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none transition-all" 
+                    className={`w-full pl-10 pr-4 py-2 bg-surface border rounded-xl text-sm outline-none transition-all ${form.email ? (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) ? 'border-emerald-500/30 focus:border-emerald-500' : 'border-amber-500/30 focus:border-amber-500') : 'border-border focus:border-primary'}`} 
                     placeholder="name@agency.com" 
                     value={form.email} 
                     onChange={e => setForm({ ...form, email: e.target.value })} 
