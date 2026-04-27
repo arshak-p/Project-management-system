@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { api } from './api';
 import type { User } from './api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,26 +6,29 @@ import {
   LayoutDashboard, Briefcase, CheckCircle2, Users,
   LogOut, Bell, LayoutGrid, Menu,
   ClipboardList, UserCircle, ArrowLeft, Sun, Moon,
-  Clock3, CalendarRange, Activity, Map as MapIcon, BrainCircuit, ShieldCheck, Download, Layers
+  Clock3, CalendarRange, Activity, Map as MapIcon, BrainCircuit, ShieldCheck, Download, Layers,
+  Loader2
 } from 'lucide-react';
-import OverviewPage from './pages/OverviewPage';
-import ProjectsPage from './pages/ProjectsPage';
-import TasksPage from './pages/TasksPage';
-import TeamPage from './pages/TeamPage';
-import KanjiBoardPage from './pages/KanbanPage';
-import MyTasksPage from './pages/user/MyTasksPage';
-import NotificationsPage from './pages/user/NotificationsPage';
-import ProfilePage from './pages/user/ProfilePage';
-import TimesheetsPage from './pages/TimesheetsPage';
-import CyclesPage from './pages/CyclesPage';
-import ActivityPage from './pages/ActivityPage';
-import JobTitlesPage from './pages/JobTitlesPage';
-import AgencyRoadmap from './pages/AgencyRoadmap';
-import TaskCalendarPage from './pages/TaskCalendarPage';
-import StrategistPage from './pages/StrategistPage';
-import TeamIntelligencePage from './pages/TeamIntelligencePage';
-import BackupsPage from './pages/BackupsPage';
-import ModulesPage from './pages/ModulesPage';
+
+// Lazy Load Pages for Performance
+const OverviewPage = lazy(() => import('./pages/OverviewPage'));
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
+const TasksPage = lazy(() => import('./pages/TasksPage'));
+const TeamPage = lazy(() => import('./pages/TeamPage'));
+const KanbanPage = lazy(() => import('./pages/KanbanPage'));
+const MyTasksPage = lazy(() => import('./pages/user/MyTasksPage'));
+const NotificationsPage = lazy(() => import('./pages/user/NotificationsPage'));
+const ProfilePage = lazy(() => import('./pages/user/ProfilePage'));
+const TimesheetsPage = lazy(() => import('./pages/TimesheetsPage'));
+const CyclesPage = lazy(() => import('./pages/CyclesPage'));
+const ActivityPage = lazy(() => import('./pages/ActivityPage'));
+const JobTitlesPage = lazy(() => import('./pages/JobTitlesPage'));
+const AgencyRoadmap = lazy(() => import('./pages/AgencyRoadmap'));
+const TaskCalendarPage = lazy(() => import('./pages/TaskCalendarPage'));
+const StrategistPage = lazy(() => import('./pages/StrategistPage'));
+const TeamIntelligencePage = lazy(() => import('./pages/TeamIntelligencePage'));
+const BackupsPage = lazy(() => import('./pages/BackupsPage'));
+const ModulesPage = lazy(() => import('./pages/ModulesPage'));
 import { getWsUrl } from './config';
 
 type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence' | 'backups' | 'modules';
@@ -275,24 +278,34 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                   exit={{ opacity: 0, scale: 0.98 }}
                   transition={{ duration: 0.4 }}
                 >
-                  {page === 'overview' && <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />}
-                  {page === 'projects' && <ProjectsPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />}
-                  {page === 'cycles' && <CyclesPage me={me} />}
-                  {page === 'tasks' && <TasksPage me={me} />}
-                  {page === 'kanban' && <KanjiBoardPage me={me} />}
-                  {page === 'team' && <TeamPage me={me} />}
-                  {page === 'timesheets' && <TimesheetsPage me={me} />}
-                  {page === 'my_tasks' && <MyTasksPage me={me} />}
-                  {page === 'notifications' && <NotificationsPage me={me} />}
-                  {page === 'profile' && <ProfilePage me={me} />}
-                  {page === 'activity' && <ActivityPage me={me} />}
-                  {page === 'calendar' && <TaskCalendarPage me={me} />}
-                  {page === 'strategist' && <StrategistPage me={me} />}
-                  {page === 'intelligence' && <TeamIntelligencePage me={me} />}
-                  {page === 'job_titles' && <JobTitlesPage me={me} />}
-                  { page === 'roadmap' && <AgencyRoadmap me={me} /> }
-                  { page === 'backups' && <BackupsPage me={me} /> }
-                  { page === 'modules' && <ModulesPage me={me} /> }
+                  <Suspense fallback={
+                    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse"></div>
+                        <Loader2 className="w-10 h-10 text-primary animate-spin relative" />
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-text-muted opacity-40">Loading Intelligence...</p>
+                    </div>
+                  }>
+                    {page === 'overview' && <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />}
+                    {page === 'projects' && <ProjectsPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />}
+                    {page === 'cycles' && <CyclesPage me={me} />}
+                    {page === 'tasks' && <TasksPage me={me} />}
+                    {page === 'kanban' && <KanbanPage me={me} />}
+                    {page === 'team' && <TeamPage me={me} />}
+                    {page === 'timesheets' && <TimesheetsPage me={me} />}
+                    {page === 'my_tasks' && <MyTasksPage me={me} />}
+                    {page === 'notifications' && <NotificationsPage me={me} />}
+                    {page === 'profile' && <ProfilePage me={me} />}
+                    {page === 'activity' && <ActivityPage me={me} />}
+                    {page === 'calendar' && <TaskCalendarPage me={me} />}
+                    {page === 'strategist' && <StrategistPage me={me} />}
+                    {page === 'intelligence' && <TeamIntelligencePage me={me} />}
+                    {page === 'job_titles' && <JobTitlesPage me={me} />}
+                    { page === 'roadmap' && <AgencyRoadmap me={me} /> }
+                    { page === 'backups' && <BackupsPage me={me} /> }
+                    { page === 'modules' && <ModulesPage me={me} /> }
+                  </Suspense>
                 </motion.div>
              </AnimatePresence>
           </div>
