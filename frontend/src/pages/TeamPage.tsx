@@ -146,8 +146,8 @@ export default function TeamPage({ me }: { me: User | null }) {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="glass w-full max-w-lg rounded-2xl border border-primary/30 shadow-[0_25px_50px_-10px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center lg:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="glass w-full lg:max-w-lg h-full lg:h-auto lg:rounded-2xl border border-primary/30 shadow-[0_25px_50px_-10px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200 overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-border/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-primary to-[#8b5cf6] rounded-xl flex items-center justify-center">
@@ -307,22 +307,22 @@ export default function TeamPage({ me }: { me: User | null }) {
         </div>
       )}
 
-      <div className="flex justify-between items-center flex-wrap gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold">Team Directory</h1>
-          <p className="text-text-muted mt-1">{users.length} member{users.length !== 1 ? 's' : ''} across all departments.</p>
+          <h1 className="text-3xl font-black tracking-tighter">Team Directory</h1>
+          <p className="text-sm text-text-muted mt-1">{users.length} member{users.length !== 1 ? 's' : ''} across all departments.</p>
         </div>
-        <div className="flex gap-4 items-center">
-          <label className="flex items-center gap-3 glass px-5 py-2.5 rounded-xl cursor-pointer hover:bg-white/5 transition-all text-xs font-bold">
+        <div className="flex flex-wrap items-center gap-3 lg:gap-4">
+          <label className="flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 glass px-5 py-3 rounded-2xl cursor-pointer hover:bg-white/5 transition-all text-xs font-bold">
             <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
             <span className="uppercase tracking-widest text-[10px]">Archives</span>
             <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
-            <div className={`w-9 h-4.5 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
-              <div className={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full transition-all ${showArchived ? 'left-5' : 'left-0.5'}`}></div>
+            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+              <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
             </div>
           </label>
           {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
-            <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90 transition-opacity">
+            <button onClick={() => setShowModal(true)} className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
               <Plus className="w-4 h-4" /> Add Member
             </button>
           )}

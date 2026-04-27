@@ -186,42 +186,24 @@ export default function TasksPage({ me }: { me: User | null }) {
         </div>
       )}
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-4 top-3.5 text-text-muted" />
           <input type="text" placeholder="Search tasks..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none transition-colors" />
         </div>
-        
-        <div className="flex items-center gap-3 overflow-x-auto pb-2 px-1 no-scrollbar lg:flex-wrap">
-          <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="flex-shrink-0 px-4 py-3 bg-surface border border-border rounded-xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none min-w-[140px]">
+        <div className="grid grid-cols-2 lg:flex gap-2 lg:gap-3">
+          <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="px-3 py-3 bg-surface border border-border rounded-xl text-[11px] lg:text-sm font-bold focus:border-primary outline-none lg:min-w-[150px]">
             <option value="">All Projects</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <select value={filterState} onChange={e => setFilterState(e.target.value)} className="flex-shrink-0 px-4 py-3 bg-surface border border-border rounded-xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none min-w-[140px]">
+          <select value={filterState} onChange={e => setFilterState(e.target.value)} className="px-3 py-3 bg-surface border border-border rounded-xl text-[11px] lg:text-sm font-bold focus:border-primary outline-none lg:min-w-[150px]">
             <option value="">All States</option>
             {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <select value={filterModule} onChange={e => setFilterModule(e.target.value)} className="flex-shrink-0 px-4 py-3 bg-surface border border-border rounded-xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none min-w-[140px]">
-            <option value="">All Modules</option>
-            {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-          <select value={filterJobTitle} onChange={e => setFilterJobTitle(e.target.value)} className="flex-shrink-0 px-4 py-3 bg-surface border border-border rounded-xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none min-w-[140px]">
-            <option value="">All Job Titles</option>
-            {jobTitles.map(jt => <option key={jt.id} value={jt.name}>{jt.name}</option>)}
-          </select>
-          <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="flex-shrink-0 px-4 py-3 bg-surface border border-border rounded-xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none min-w-[140px]">
+          <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="col-span-2 lg:col-auto px-3 py-3 bg-surface border border-border rounded-xl text-[11px] lg:text-sm font-bold focus:border-primary outline-none lg:min-w-[150px]">
             <option value="">All Employees</option>
             {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
           </select>
-          
-          <label className="flex-shrink-0 flex items-center gap-3 bg-surface border border-border px-5 py-3 rounded-xl cursor-pointer hover:border-primary transition-all">
-            <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
-            <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Archived</span>
-            <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
-            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
-              <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
-            </div>
-          </label>
         </div>
       </div>
 
@@ -234,49 +216,54 @@ export default function TasksPage({ me }: { me: User | null }) {
               <div className="p-12 text-center">
                 <CheckCircle2 className="w-12 h-12 text-text-muted mx-auto mb-4" />
                 <p className="font-bold text-lg">No tasks found</p>
-                <p className="text-text-muted text-sm">Create your first task to get started.</p>
               </div>
             )}
             {filtered.map(task => (
-              <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`flex items-center gap-4 px-5 py-4 hover:bg-surface/30 transition-all group cursor-pointer relative overflow-hidden ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''} ${task.priority === 'urgent' ? 'bg-red-500/5' : ''} ${task.state_slug === 'client-review' ? 'bg-[#8b5cf6]/5 border-l-4 border-l-[#8b5cf6]' : ''}`}>
-                <div className={`w-2 h-10 rounded-full flex-shrink-0 ${task.state_slug === 'client-review' ? 'bg-[#8b5cf6]' : task.priority === 'urgent' ? 'bg-gradient-to-b from-red-500 to-red-600 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-gradient-to-b from-primary to-[#8b5cf6]'}`}></div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <code className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">{task.task_code}</code>
-                    <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium capitalize ${PRIORITY_COLORS[task.priority] || 'text-text-muted'}`}>
+              <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`flex flex-col md:flex-row md:items-center gap-3 md:gap-4 px-5 py-4 hover:bg-surface/30 transition-all group cursor-pointer relative overflow-hidden ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''} ${task.priority === 'urgent' ? 'bg-red-500/5 border-l-2 border-red-500' : ''} ${task.state_slug === 'client-review' ? 'bg-[#8b5cf6]/5 border-l-4 border-l-[#8b5cf6]' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-1.5 h-8 rounded-full flex-shrink-0 hidden md:block ${task.state_slug === 'client-review' ? 'bg-[#8b5cf6]' : task.priority === 'urgent' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-primary'}`}></div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <code className="text-[10px] font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">{task.task_code}</code>
+                    <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${PRIORITY_COLORS[task.priority] || 'text-text-muted'}`}>
                       {PRIORITY_ICONS[task.priority]} {task.priority}
                     </span>
                     {task.is_client_approved && (
-                      <span className="flex items-center gap-1 text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)] animate-pulse">
+                      <span className="flex items-center gap-1 text-[9px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-emerald-500/20">
                         <ShieldCheck className="w-3 h-3" /> Approved
                       </span>
                     )}
                   </div>
-                  <h4 className="font-semibold text-text text-sm mb-1">{task.title}</h4>
-                  <div className="flex items-center gap-3 text-[10px] text-text-muted flex-wrap">
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-text text-sm md:text-base mb-1 truncate">{task.title}</h4>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] md:text-xs text-text-muted">
                     {(() => {
                       const proj = projects.find(p => p.id === Number(task.project));
                       return proj ? (
-                        <span className="font-black uppercase tracking-tight flex items-center gap-1.5" style={{ color: proj.color }}>
-                          <div className="w-1 h-1 rounded-full" style={{ backgroundColor: proj.color }}></div>
+                        <span className="font-bold flex items-center gap-1.5" style={{ color: proj.color }}>
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: proj.color }}></div>
                           {proj.name}
                         </span>
                       ) : null;
                     })()}
-                    {task.scheduled_date && <span className="flex items-center gap-1">📅 {task.scheduled_date}</span>}
-                    {task.due_date && <span className="flex items-center gap-1">🚩 {task.due_date}</span>}
+                    {task.due_date && <span className="flex items-center gap-1 opacity-60">🚩 {task.due_date}</span>}
+                    <span className="md:hidden font-black text-primary/60 uppercase tracking-widest ml-auto">
+                      {states.find(s => s.id === task.state)?.name}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+
+                <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                   {(() => {
                     const stateObj = states.find(s => s.id === task.state);
                     return (
                       <span 
                         className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border transition-all"
                         style={{ 
-                          backgroundColor: `${stateObj?.color || '#94a3b8'}15`, 
-                          color: stateObj?.color || '#94a3b8', 
-                          borderColor: `${stateObj?.color || '#94a3b8'}30` 
+                          borderColor: `${stateObj?.color || '#3b82f6'}40`,
+                          color: stateObj?.color || '#3b82f6',
+                          backgroundColor: `${stateObj?.color || '#3b82f6'}10`
                         }}
                       >
                         {stateObj?.name || 'Unknown'}

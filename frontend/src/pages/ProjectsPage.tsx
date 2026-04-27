@@ -81,24 +81,24 @@ export default function ProjectsPage({ onNavigate, me }: { onNavigate?: (page: s
 
   return (
     <div className="space-y-10 pb-20 font-inter">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight">Projects</h1>
-          <p className="text-text-muted mt-2 font-medium">Manage and monitor all active client projects.</p>
+          <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight">Projects</h1>
+          <p className="text-sm lg:text-base text-text-muted mt-2 font-medium">Manage and monitor all active client projects.</p>
         </div>
-        <div className="flex gap-4 items-center">
-          <label className="flex items-center gap-3 glass px-5 py-3 rounded-2xl cursor-pointer hover:bg-white/5 transition-all">
+        <div className="flex flex-wrap items-center gap-3 lg:gap-4">
+          <label className="flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 glass px-5 py-3 rounded-2xl cursor-pointer hover:bg-white/5 transition-all">
             <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Show Archived</span>
+            <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Archives</span>
             <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
-            <div className={`w-10 h-5 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
-              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-6' : 'left-1'}`}></div>
+            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+              <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
             </div>
           </label>
           {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
             <button 
               onClick={() => setShowForm(!showForm)} 
-              className="flex items-center gap-3 px-6 py-3.5 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all"
+              className="flex-1 lg:flex-none flex items-center justify-center gap-3 px-6 py-3.5 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
             >
               <Plus className="w-4 h-4" /> New Project
             </button>

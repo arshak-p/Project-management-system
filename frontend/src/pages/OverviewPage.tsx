@@ -63,15 +63,15 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-5xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary via-[#8b5cf6] to-[#d946ef]">
+          <h1 className="text-3xl lg:text-5xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary via-[#8b5cf6] to-[#d946ef]">
             Command Center
           </h1>
-          <p className="text-text-muted mt-2 font-bold tracking-widest uppercase text-[10px] opacity-60 italic">Real-time Analytics // Active Operations</p>
+          <p className="text-[9px] lg:text-[10px] text-text-muted mt-2 font-bold tracking-widest uppercase opacity-60 italic">Real-time Analytics // Active Operations</p>
         </div>
         <div className="flex items-center gap-3">
-           <div className="px-5 py-3 glass rounded-2xl border border-white/5 flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white">System Health: Optimal</span>
+           <div className="px-4 lg:px-5 py-2.5 lg:py-3 glass rounded-xl lg:rounded-2xl border border-white/5 flex items-center gap-3">
+              <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">System Optimal</span>
            </div>
         </div>
       </div>
@@ -111,14 +111,14 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
         <motion.div 
           whileHover={{ y: -5 }}
           onClick={() => onNavigate?.('kanban')}
-          className="md:col-span-2 glass rounded-[3rem] p-10 relative overflow-hidden group border border-primary/10 flex flex-col md:flex-row gap-10 cursor-pointer"
+          className="md:col-span-2 glass rounded-[2rem] lg:rounded-[3rem] p-6 lg:p-10 relative overflow-hidden group border border-primary/10 flex flex-col md:flex-row gap-6 lg:gap-10 cursor-pointer"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 blur-[100px] -mr-32 -mt-32 opacity-20"></div>
           
           <div className="flex-1 relative z-10">
-            <div className="flex justify-between items-start mb-10">
-              <div className="p-5 bg-primary/20 rounded-[2rem] shadow-glow">
-                <TrendingUp className="w-8 h-8 text-primary" />
+            <div className="flex justify-between items-start mb-6 lg:mb-10">
+              <div className="p-4 lg:p-5 bg-primary/20 rounded-2xl lg:rounded-[2rem] shadow-glow">
+                <TrendingUp className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
               </div>
               <div className="p-3 glass rounded-full opacity-40 group-hover:opacity-100 transition-all">
                 <ArrowUpRight className="w-5 h-5 text-text" />
@@ -129,12 +129,12 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
               <motion.span 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-8xl font-black tracking-tighter text-text block"
+                className="text-6xl lg:text-8xl font-black tracking-tighter text-text block"
               >
                 {analytics?.totals?.completed_or_launched || 0}
               </motion.span>
-              <h3 className="text-2xl font-black text-text-muted">Tactical Units Launched</h3>
-              <p className="text-xs text-text-muted/60 mt-4 leading-relaxed max-w-xs">
+              <h3 className="text-xl lg:text-2xl font-black text-text-muted">Tactical Units Launched</h3>
+              <p className="text-[10px] lg:text-xs text-text-muted/60 mt-4 leading-relaxed max-w-xs">
                 Successfully deployed operations across all designated project sectors.
               </p>
             </div>

@@ -147,8 +147,8 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
   const totalTime = timeLogs.reduce((acc, tl) => acc + tl.minutes, 0);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="glass w-full max-w-4xl h-[90vh] rounded-2xl border border-primary/30 shadow-[0_25px_50px_-10px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center lg:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="glass w-full lg:max-w-4xl h-full lg:h-[90vh] lg:rounded-2xl border border-primary/30 shadow-[0_25px_50px_-10px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
         
         <div className="flex items-start justify-between p-6 border-b border-border/50 bg-surface/30">
           <div className="flex-1 min-w-0 pr-4">
@@ -178,7 +178,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
         <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
           
           <div className="flex-1 flex flex-col border-r border-border/50 bg-background/50">
-            <div className="flex px-6 border-b border-border/50 pt-2 shrink-0">
+            <div className="flex px-4 lg:px-6 border-b border-border/50 pt-2 shrink-0 overflow-x-auto no-scrollbar">
               {[
                 { id: 'details', label: 'Details', icon: <AlignLeft className="w-4 h-4" /> },
                 { id: 'comments', label: 'Comments', icon: <MessageSquare className="w-4 h-4" />, count: comments.length },
@@ -188,12 +188,12 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                 <button
                   key={t.id}
                   onClick={() => setActiveTab(t.id as TabType)}
-                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                     activeTab === t.id ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text hover:border-border'
                   }`}
                 >
                   {t.icon} {t.label}
-                  {t.count !== undefined && <span className="ml-1 text-xs bg-surface/50 px-1.5 py-0.5 rounded-full">{t.count}</span>}
+                  {t.count !== undefined && <span className="ml-1 text-[10px] bg-surface/50 px-1.5 py-0.5 rounded-full">{t.count}</span>}
                 </button>
               ))}
             </div>
