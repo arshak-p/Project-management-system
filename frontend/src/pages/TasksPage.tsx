@@ -23,7 +23,6 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [states, setStates] = useState<TaskState[]>([]);
   const [modules, setModules] = useState<WorkModule[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -31,8 +30,6 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [error, setError] = useState('');
   const [filterProject, setFilterProject] = useState(localStorage.getItem('jump_project_filter') || '');
   const [filterState, setFilterState] = useState('');
-  const [filterModule, setFilterModule] = useState('');
-  const [filterJobTitle, setFilterJobTitle] = useState(me?.role === 'team_head' ? (me?.title || '') : '');
   const [filterAssignee, setFilterAssignee] = useState('');
   const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -186,10 +183,22 @@ export default function TasksPage({ me }: { me: User | null }) {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-4 top-3.5 text-text-muted" />
-          <input type="text" placeholder="Search tasks..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none transition-colors" />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-4 top-3.5 text-text-muted" />
+            <input type="text" placeholder="Search tasks..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none transition-colors" />
+          </div>
+          <label className="flex items-center justify-between gap-3 bg-surface border border-border px-5 py-3 rounded-xl cursor-pointer hover:border-primary transition-all">
+            <div className="flex items-center gap-3">
+              <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Show Archived</span>
+            </div>
+            <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
+            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+              <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
+            </div>
+          </label>
         </div>
         <div className="grid grid-cols-2 lg:flex gap-2 lg:gap-3">
           <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="px-3 py-3 bg-surface border border-border rounded-xl text-[11px] lg:text-sm font-bold focus:border-primary outline-none lg:min-w-[150px]">
