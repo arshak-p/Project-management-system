@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 
 class Department(models.Model):
     name = models.CharField(max_length=120, unique=True)
@@ -235,11 +235,12 @@ class WorkItem(models.Model):
 
     @classmethod
     def allocate_task_code(cls, project: Project) -> str:
-        seq, _ = ProjectTaskSequence.objects.select_for_update().get_or_create(
-            project=project,
-            defaults={"last_number": 0},
-        )
-        return seq.next_code()
+        with transaction.atomic():
+            seq, _ = ProjectTaskSequence.objects.select_for_update().get_or_create(
+                project=project,
+                defaults={"last_number": 0},
+            )
+            return seq.next_code()
 
     def save(self, *args, **kwargs):
         if not self.task_code:
