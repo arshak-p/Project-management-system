@@ -237,8 +237,17 @@ export default function TasksPage({ me }: { me: User | null }) {
                   </div>
                   <h4 className="font-semibold text-text text-sm truncate">{task.title}</h4>
                   <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
-                    {task.scheduled_date && <span className="flex items-center gap-1">📅 Starts {task.scheduled_date}</span>}
-                    {task.due_date && <span className="flex items-center gap-1">🚩 Due {task.due_date}</span>}
+                    {(() => {
+                      const proj = projects.find(p => p.id === Number(task.project));
+                      return proj ? (
+                        <span className="font-bold flex items-center gap-1.5" style={{ color: proj.color }}>
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: proj.color }}></div>
+                          {proj.name}
+                        </span>
+                      ) : null;
+                    })()}
+                    {task.scheduled_date && <span className="flex items-center gap-1 border-l border-border pl-3 ml-1">📅 {task.scheduled_date}</span>}
+                    {task.due_date && <span className="flex items-center gap-1 border-l border-border pl-3">🚩 {task.due_date}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">

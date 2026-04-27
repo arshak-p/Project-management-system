@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Plus, Trash2, CircleDashed } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
-import type { Task, TaskState, User } from '../api';
+import type { Task, TaskState, User, Project } from '../api';
 
 const STATE_COLORS: Record<string, { bg: string, text: string, shadow: string }> = {
   'pending': { bg: 'bg-slate-500/10', text: 'text-slate-400', shadow: 'shadow-slate-500/20' },
@@ -17,14 +17,16 @@ const STATE_COLORS: Record<string, { bg: string, text: string, shadow: string }>
 export default function KanbanPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [t, s] = await Promise.all([api.getTasks(), api.getStates()]);
+      const [t, s, p] = await Promise.all([api.getTasks(), api.getStates(), api.getProjects()]);
       setTasks(t.data);
       setStates(s.data);
+      setProjects(p.data);
     } catch (err) {
       console.error(err);
     }
@@ -101,7 +103,18 @@ export default function KanbanPage({ me }: { me: User | null }) {
                                 <Trash2 className="w-3.5 h-3.5" />
                              </button>
                           </div>
-                          <h4 className="font-bold text-sm leading-relaxed">{task.title}</h4>
+                          <div className="flex flex-col gap-1.5">
+                             {(() => {
+                               const proj = projects.find(p => p.id === Number(task.project));
+                               return proj ? (
+                                 <span className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1" style={{ color: proj.color }}>
+                                   <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: proj.color }}></div>
+                                   {proj.name}
+                                 </span>
+                               ) : null;
+                             })()}
+                             <h4 className="font-bold text-sm leading-relaxed">{task.title}</h4>
+                          </div>
                           <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/5 opacity-40 group-hover:opacity-100 transition-opacity">
                              <div className="flex items-center gap-2">
                                 <div className={`w-5 h-5 rounded-full ${cardColors.bg.replace('/10', '')} flex items-center justify-center text-[8px] font-black text-white`}>
