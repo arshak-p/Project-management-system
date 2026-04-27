@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState } from '../api';
-import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars } from 'lucide-react';
+import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars, Link2 } from 'lucide-react';
 import { getWsUrl } from '../config';
 
 
@@ -24,7 +24,6 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
   
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('details');
-  const [uploading, setUploading] = useState(false);
 
   const [newComment, setNewComment] = useState('');
   const [addingComment, setAddingComment] = useState(false);
@@ -114,25 +113,6 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
       setActiveTab('time');
     } finally {
       setAddingTime(false);
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('work_item', taskId.toString());
-    formData.append('file', file);
-    try {
-      await api.createAttachment(formData);
-      const aRes = await api.getAttachments(taskId);
-      setAttachments(aRes.data);
-      setActiveTab('refs');
-    } catch (err) {
-      console.error('Upload failed', err);
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -281,20 +261,26 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
 
               {activeTab === 'refs' && (
                 <div className="flex flex-col h-full">
-                  <div className="mb-6 flex items-center justify-between glass p-4 rounded-xl border border-border">
-                    <div>
-                      <p className="text-xs text-text-muted font-bold uppercase tracking-wide">Project References</p>
-                      <p className="text-sm text-text mt-0.5">Attach branding files, social assets, and briefs.</p>
+                  <div className="mb-6 flex flex-col md:flex-row items-center gap-4 glass p-4 rounded-2xl border border-border/50">
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xs uppercase tracking-widest text-primary flex items-center gap-2">
+                        <Link2 className="w-3.5 h-3.5" /> Project Reference Link
+                      </h4>
+                      <p className="text-[10px] text-text-muted mt-1 leading-relaxed">Paste cloud storage links, brand guides, or asset briefs here.</p>
                     </div>
-                    <label className="px-4 py-2 bg-primary text-white text-sm font-bold rounded-xl cursor-pointer hover:opacity-90 transition-opacity flex items-center gap-2">
-                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                      Upload File
-                      <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
-                    </label>
+                    <div className="w-full md:w-auto min-w-[300px] flex gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="https://drive.google.com/..." 
+                        value={task.reference_link || ''}
+                        onChange={e => handleUpdateField('reference_link', e.target.value)}
+                        className="flex-1 px-4 py-2 bg-surface border border-border rounded-xl text-xs focus:border-primary outline-none transition-all shadow-sm"
+                      />
+                    </div>
                   </div>
                   
                   <div className="flex-1 overflow-y-auto space-y-3 mb-6">
-                    {attachments.length === 0 && (
+                    {attachments.length === 0 && !task.reference_link && (
                       <div className="text-center py-12 px-6 glass rounded-2xl border border-border/50 border-dashed">
                         <Paperclip className="w-10 h-10 mx-auto text-text-muted mb-3 opacity-50" />
                         <h4 className="font-bold text-lg mb-1">No references yet</h4>
@@ -302,8 +288,20 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                       </div>
                     )}
                     <div className="grid grid-cols-1 gap-3">
+                      {task.reference_link && (
+                        <a href={task.reference_link} target="_blank" rel="noopener noreferrer" className="glass p-3 rounded-xl border border-primary/30 bg-primary/5 hover:border-primary transition-colors flex items-center gap-4 group">
+                          <div className="p-3 bg-primary/20 text-primary rounded-xl shrink-0 group-hover:scale-105 transition-transform">
+                            <Stars className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-sm text-text truncate">Reference Link</h4>
+                            <p className="text-xs text-text-muted mt-0.5 truncate">{task.reference_link}</p>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors shrink-0 mx-2" />
+                        </a>
+                      )}
                       {attachments.map(a => (
-                        <a href={a.file} target="_blank" rel="noreferrer" key={a.id} className="glass p-3 rounded-xl border border-border hover:border-primary/50 transition-colors flex items-center gap-4 group">
+                        <a href={a.file} target="_blank" rel="noopener noreferrer" key={a.id} className="glass p-3 rounded-xl border border-border hover:border-primary/50 transition-colors flex items-center gap-4 group">
                           <div className="p-3 bg-primary/10 text-primary rounded-xl shrink-0 group-hover:scale-105 transition-transform">
                             <FileIcon className="w-6 h-6" />
                           </div>
@@ -324,14 +322,16 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
             </div>
           </div>
 
-          <div className="w-full lg:w-72 bg-surface/20 lg:shrink-0 p-6 overflow-y-auto space-y-6 border-t lg:border-t-0 border-border/50">
+          <div className="w-full lg:w-72 bg-surface/10 lg:shrink-0 p-6 overflow-y-auto space-y-6 border-t lg:border-t-0 border-border/50 flex flex-col gap-6">
             
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wide">Status / Workflow</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1 h-3 bg-primary rounded-full"></div> Status / Workflow
+              </label>
               <select 
                 value={task.state} 
                 onChange={e => handleUpdateField('state', Number(e.target.value))}
-                className={`w-full px-3 py-2 bg-surface border rounded-xl text-sm outline-none transition-all ${task.state_slug === 'client-review' ? 'border-[#8b5cf6] shadow-[0_0_15px_rgba(139,92,246,0.2)]' : 'border-border focus:border-primary'}`}
+                className={`w-full px-3 py-2.5 bg-surface border rounded-xl text-sm outline-none transition-all shadow-sm ${task.state_slug === 'client-review' ? 'border-[#8b5cf6] shadow-[0_0_15px_rgba(139,92,246,0.1)]' : 'border-border focus:border-primary'}`}
               >
                 {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -341,66 +341,81 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               <div className="pt-2 animate-in slide-in-from-top-2">
                 <button 
                   onClick={() => handleUpdateField('is_client_approved', true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-600/20 hover:scale-[1.02] transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-600/20 hover:scale-[1.02] transition-all"
                 >
                   <Stars className="w-4 h-4" /> Mark Client Approved
                 </button>
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wide">Assignee</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1 h-3 bg-blue-500 rounded-full"></div> Assignee
+              </label>
               <select 
                 value={task.assignee?.id || ''} 
                 onChange={e => handleUpdateField('assignee_id', e.target.value ? Number(e.target.value) : null)}
                 disabled={users.length === 0}
-                className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors disabled:opacity-50"
+                className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors disabled:opacity-50"
               >
                 <option value="">Unassigned</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
               </select>
-              {users.length === 0 && task.assignee && (
-                <p className="text-xs mt-1 text-primary">{task.assignee.first_name || task.assignee.email}</p>
-              )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wide">Due Date</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1 h-3 bg-amber-500 rounded-full"></div> Final Deadline
+              </label>
               <input 
                 type="date"
                 value={task.due_date || ''}
                 onChange={e => handleUpdateField('due_date', e.target.value || null)}
-                className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
+                className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
                 style={{ colorScheme: 'dark' }}
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#8b5cf6] uppercase tracking-wide flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" /> Scheduled Work Date
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-widest flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5" /> Work Schedule
               </label>
               <input 
                 type="date"
                 value={task.scheduled_date || ''}
                 onChange={e => handleUpdateField('scheduled_date', e.target.value || null)}
-                className="w-full px-3 py-2 bg-primary/5 border border-primary/20 rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
+                className="w-full px-3 py-2.5 bg-primary/5 border border-primary/20 rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
                 style={{ colorScheme: 'dark' }}
               />
-              <p className="text-[10px] text-text-muted leading-tight">When do you plan to work on this before the deadline?</p>
+              <p className="text-[9px] text-text-muted leading-tight pl-1 italic">Internal planning date.</p>
             </div>
 
-            <div className="space-y-1.5 pt-4 border-t border-border/50">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wide">Created By</label>
-              <div className="flex items-center gap-2 mt-1">
-                <User2 className="w-4 h-4 text-text-muted" />
-                <span className="text-sm font-medium">{task.created_by?.first_name || 'System User'}</span>
-              </div>
+            <div className="pt-4 border-t border-border/50 space-y-2">
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                <Paperclip className="w-3.5 h-3.5" /> Reference Link
+              </label>
+              <input 
+                type="text"
+                value={task.reference_link || ''}
+                onChange={e => handleUpdateField('reference_link', e.target.value || null)}
+                placeholder="https://..."
+                className="w-full px-3 py-2.5 bg-surface/50 border border-border rounded-xl text-xs focus:border-primary outline-none hover:border-primary/50 transition-colors"
+              />
             </div>
 
+            <div className="pt-4 border-t border-border/50 space-y-1">
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Ownership</label>
+              <div className="flex items-center gap-2 mt-1 px-1">
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                   <User2 className="w-3 h-3 text-primary" />
+                </div>
+                <span className="text-xs font-bold text-text">{task.created_by?.first_name || 'System'}</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
   );
 }
 

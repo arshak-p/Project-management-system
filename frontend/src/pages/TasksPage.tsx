@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp, ShieldCheck } from 'lucide-react';
+import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp, ShieldCheck, X } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
 import type { Project, TaskState, WorkModule, User, Task } from '../api';
@@ -33,7 +33,7 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [filterAssignee, setFilterAssignee] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', assignee: '' });
+  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', reference_link: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -82,9 +82,10 @@ export default function TasksPage({ me }: { me: User | null }) {
         assignee_id: form.assignee ? Number(form.assignee) : null,
         due_date: form.due_date || null,
         scheduled_date: form.scheduled_date || null,
+        reference_link: form.reference_link || null,
       });
       setShowForm(false);
-      setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', assignee: '' });
+      setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', reference_link: '', assignee: '' });
       load();
     } catch (err: unknown) {
       const errorData = (err as { response?: { data?: unknown } })?.response?.data;
@@ -141,84 +142,139 @@ export default function TasksPage({ me }: { me: User | null }) {
         )}
       </div>
 
-      {showForm && (
-        <div className="glass rounded-2xl border border-primary/30 p-6 animate-in fade-in slide-in-from-top-2 duration-300">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Plus className="w-5 h-5 text-primary" /> Create Work Item</h3>
-          {error && <p className="text-error text-sm mb-4 p-3 bg-error/10 rounded-lg border border-error/20">{error}</p>}
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Task title *" required className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+        <div className="glass rounded-2xl border border-primary/20 p-8 animate-in fade-in slide-in-from-top-4 duration-500 shadow-2xl">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tighter italic">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Plus className="w-5 h-5 text-primary" />
+              </div>
+              Create Work Item
+            </h3>
+            <button onClick={() => setShowForm(false)} className="text-text-muted hover:text-text transition-colors"><X className="w-6 h-6" /></button>
+          </div>
+
+          {error && <p className="text-error text-sm mb-6 p-4 bg-error/10 rounded-xl border border-error/20 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5" /> {error}
+          </p>}
+
+          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="md:col-span-12 space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Task Title</label>
+              <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="What needs to be done? *" required className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-base focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-text-muted/30" />
             </div>
-            <select value={form.project} onChange={e => setForm({ ...form, project: e.target.value })} required className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none">
-              <option value="">Select Project *</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <select value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} required className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none">
-              <option value="">Select State *</option>
-              {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value })} required className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none">
-              <option value="">Select Module *</option>
-              {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
-            <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none">
-              <option value="urgent">🔴 Urgent</option>
-              <option value="high">🟠 High</option>
-              <option value="medium">🔵 Medium</option>
-              <option value="low">⚫ Low</option>
-            </select>
-            <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none">
-              <option value="">Assign To (Optional)</option>
-              {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
-            </select>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Planned Start</label>
-              <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" style={{ colorScheme: 'dark' }} />
+
+            <div className="md:col-span-6 space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Select Project</label>
+              <select value={form.project} onChange={e => setForm({ ...form, project: e.target.value })} required className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all cursor-pointer">
+                <option value="">Select Project *</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Final Deadline</label>
-              <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" style={{ colorScheme: 'dark' }} />
+
+            <div className="md:col-span-6 space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Module / Scope</label>
+              <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value })} required className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all cursor-pointer">
+                <option value="">Select Module *</option>
+                {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
             </div>
-            <div className="md:col-span-2 flex gap-3 justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-text-muted hover:text-text transition-colors">Cancel</button>
-              <button type="submit" disabled={saving} className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-60">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Create Task
-              </button>
+
+            <div className="md:col-span-4 space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Workflow State</label>
+              <select value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} required className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all cursor-pointer">
+                <option value="">Select State *</option>
+                {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+
+            <div className="md:col-span-4 space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Priority Level</label>
+              <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all cursor-pointer">
+                <option value="urgent">🔴 Urgent</option>
+                <option value="high">🟠 High</option>
+                <option value="medium">🔵 Medium</option>
+                <option value="low">⚫ Low</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-4 space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Assign Specialist</label>
+              <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all cursor-pointer">
+                <option value="">Unassigned (Optional)</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
+              </select>
+            </div>
+
+            <div className="md:col-span-12 space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Reference Link (Optional)</label>
+              <input value={form.reference_link} onChange={e => setForm({ ...form, reference_link: e.target.value })} placeholder="https://cloud-storage.com/assets..." className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all placeholder:text-text-muted/30" />
+            </div>
+
+            <div className="md:col-span-6 space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8b5cf6] ml-1">Planned Start</label>
+              <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} className="w-full px-5 py-3.5 bg-[#8b5cf6]/5 border border-[#8b5cf6]/20 rounded-2xl text-sm focus:border-[#8b5cf6] outline-none transition-all" style={{ colorScheme: 'dark' }} />
+            </div>
+
+            <div className="md:col-span-6 space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Final Deadline</label>
+              <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-5 py-3.5 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-sm focus:border-amber-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
+            </div>
+
+            <div className="md:col-span-12 flex flex-col md:flex-row gap-4 justify-between items-center pt-6 mt-6 border-t border-border/30">
+              <p className="text-[10px] text-text-muted max-w-xs leading-relaxed">Fields marked with <span className="text-primary">*</span> are required to maintain workflow integrity.</p>
+              <div className="flex gap-4 w-full md:w-auto">
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 md:flex-none px-8 py-3.5 text-sm font-bold uppercase tracking-widest text-text-muted hover:text-text hover:bg-white/5 rounded-2xl transition-all">Cancel</button>
+                <button type="submit" disabled={saving} className="flex-1 md:flex-none flex items-center justify-center gap-3 px-10 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all">
+                  {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />} Create Task
+                </button>
+              </div>
             </div>
           </form>
         </div>
-      )}
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-4 top-3.5 text-text-muted" />
-            <input type="text" placeholder="Search tasks..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none transition-colors" />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="relative flex-1 group">
+            <Search className="w-5 h-5 absolute left-4 top-3.5 text-text-muted group-focus-within:text-primary transition-colors" />
+            <input type="text" placeholder="Search task ID, title or specialist..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-12 pr-4 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all shadow-sm placeholder:text-text-muted/40" />
           </div>
-          <label className="flex items-center justify-between gap-3 bg-surface border border-border px-5 py-3 rounded-xl cursor-pointer hover:border-primary transition-all">
-            <div className="flex items-center gap-3">
-              <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Show Archived</span>
-            </div>
-            <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
-            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
-              <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
-            </div>
-          </label>
+          
+          <div className="flex items-center gap-3">
+            <label className="flex items-center justify-between gap-6 bg-surface/50 border border-border/50 px-5 py-3 rounded-2xl cursor-pointer hover:border-primary/40 transition-all shadow-sm group">
+              <div className="flex items-center gap-3">
+                <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'} group-hover:scale-110 transition-transform`} />
+                <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text transition-colors">History</span>
+              </div>
+              <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
+              <div className={`w-9 h-5 rounded-full relative transition-all duration-300 ${showArchived ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'bg-white/10'}`}>
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${showArchived ? 'left-5' : 'left-1'}`}></div>
+              </div>
+            </label>
+          </div>
         </div>
-        <div className="grid grid-cols-2 lg:flex gap-2 lg:gap-3">
-          <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="px-3 py-3 bg-surface border border-border rounded-xl text-[11px] lg:text-sm font-bold focus:border-primary outline-none lg:min-w-[150px]">
-            <option value="">All Projects</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <select value={filterState} onChange={e => setFilterState(e.target.value)} className="px-3 py-3 bg-surface border border-border rounded-xl text-[11px] lg:text-sm font-bold focus:border-primary outline-none lg:min-w-[150px]">
-            <option value="">All States</option>
-            {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="col-span-2 lg:col-auto px-3 py-3 bg-surface border border-border rounded-xl text-[11px] lg:text-sm font-bold focus:border-primary outline-none lg:min-w-[150px]">
-            <option value="">All Employees</option>
-            {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
-          </select>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-widest text-text-muted ml-1">Project</label>
+            <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="w-full px-4 py-3 bg-surface/50 border border-border/50 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all cursor-pointer">
+              <option value="">All Projects</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-widest text-text-muted ml-1">Current State</label>
+            <select value={filterState} onChange={e => setFilterState(e.target.value)} className="w-full px-4 py-3 bg-surface/50 border border-border/50 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all cursor-pointer">
+              <option value="">All States</option>
+              {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5 col-span-2 lg:col-span-1">
+            <label className="text-[9px] font-black uppercase tracking-widest text-text-muted ml-1">Specialist</label>
+            <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="w-full px-4 py-3 bg-surface/50 border border-border/50 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all cursor-pointer">
+              <option value="">All Employees</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
+            </select>
+          </div>
         </div>
 
         {/* Time Intelligence Filters */}
@@ -281,7 +337,15 @@ export default function TasksPage({ me }: { me: User | null }) {
                 <div className="flex items-center gap-3">
                   <div className={`w-1.5 h-8 rounded-full flex-shrink-0 hidden md:block ${task.state_slug === 'client-review' ? 'bg-[#8b5cf6]' : task.priority === 'urgent' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-primary'}`}></div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <code className="text-[10px] font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">{task.task_code}</code>
+                    <code className="text-[10px] font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 shrink-0">{task.task_code}</code>
+                    {(() => {
+                      const mod = modules.find(m => m.id === task.module);
+                      return mod ? (
+                        <span className="text-[10px] font-black uppercase tracking-[0.1em] bg-surface border border-border px-2 py-0.5 rounded text-primary shadow-sm shrink-0">
+                          {mod.name}
+                        </span>
+                      ) : null;
+                    })()}
                     <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${PRIORITY_COLORS[task.priority] || 'text-text-muted'}`}>
                       {PRIORITY_ICONS[task.priority]} {task.priority}
                     </span>

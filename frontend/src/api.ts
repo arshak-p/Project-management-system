@@ -65,6 +65,7 @@ export interface Task {
   priority: string;
   due_date: string | null;
   scheduled_date: string | null;
+  reference_link?: string;
   assignee: {
     id: number;
     email: string;
