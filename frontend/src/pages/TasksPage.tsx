@@ -43,8 +43,7 @@ export default function TasksPage({ me }: { me: User | null }) {
       api.getProjects(), 
       api.getStates(), 
       api.getModules(), 
-      api.getAssignableUsers().catch(() => ({ data: [] })),
-      api.getJobTitles().catch(() => ({ data: [] }))
+      api.getAssignableUsers().catch(() => ({ data: [] }))
     ])
       .then(([t, p, s, m, u]) => {
         setTasks(t.data);
