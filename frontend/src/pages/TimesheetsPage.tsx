@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import type { Task, Project, TimeLog, User } from '../api';
-import { Clock, Clock3, Download } from 'lucide-react';
+import { Clock, Download } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 
 export default function TimesheetsPage({ me }: { me: User | null }) {

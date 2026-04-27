@@ -111,7 +111,7 @@ export default function TasksPage({ me }: { me: User | null }) {
     if (filterProject && t.project?.toString() !== filterProject) match = false;
     if (filterState && t.state?.toString() !== filterState) match = false;
     if (filterAssignee && t.assignee?.id?.toString() !== filterAssignee) match = false;
-    if (filterModule && t.module?.id?.toString() !== filterModule) match = false;
+    if (filterModule && t.module?.toString() !== filterModule) match = false;
     
     if (startDate || endDate) {
       const taskDate = (t.created_at || "").split("T")[0];
