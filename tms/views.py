@@ -448,7 +448,7 @@ class AnalyticsSummaryView(APIView):
 
     def get(self, request):
         u = request.user
-        wis = access.work_items_for_user(u)
+        wis = access.work_items_for_user(u, lightweight=True)
         
         # Performance/Personal toggle
         is_personal = request.query_params.get("personal") == "true"

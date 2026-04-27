@@ -237,6 +237,24 @@ EXTERNAL_BACKUP_WEBHOOK = os.environ.get("EXTERNAL_BACKUP_WEBHOOK", "")
 
 from celery.schedules import crontab
 
+# --- Email Hub (SMTP) ---
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() in ("1", "true", "yes")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+
+# Robust default from email to prevent crashes
+if EMAIL_HOST_USER:
+    DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", f"Colour Parrot <{EMAIL_HOST_USER}>")
+else:
+    DEFAULT_FROM_EMAIL = "Colour Parrot <noreply@c1r9rt-workflow.in>"
+
+# Console fallback for local development OR production without SMTP credentials
+if not EMAIL_HOST_USER or os.environ.get("EMAIL_BACKEND_CONSOLE", "false").lower() == "true":
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 CELERY_BEAT_SCHEDULE = {
     "run-monthly-backup-at-1st": {
         "task": "tms.tasks.run_monthly_backup_task",
@@ -249,6 +267,10 @@ CELERY_BEAT_SCHEDULE = {
     "daily-start-date-check": {
         "task": "tms.tasks.check_scheduled_tasks",
         "schedule": crontab(hour=9, minute=15),
+    },
+    "daily-birthday-check": {
+        "task": "tms.tasks.check_birthdays",
+        "schedule": crontab(hour=9, minute=0),
     },
 }
 

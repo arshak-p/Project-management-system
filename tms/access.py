@@ -11,20 +11,23 @@ def user_client_project_id(user: User) -> int | None:
     profile = getattr(user, "tms_profile", None)
     return profile.client_project_id if profile else None
 
-def work_items_for_user(user: User, include_archived: bool = False) -> QuerySet[WorkItem]:
+def work_items_for_user(user: User, include_archived: bool = False, lightweight: bool = False) -> QuerySet[WorkItem]:
     qs = WorkItem.objects.all()
     if not include_archived:
         qs = qs.filter(is_active=True)
 
-    base: QuerySet = qs.select_related(
-        "project",
-        "state",
-        "module",
-        "assignee",
-        "cycle",
-        "department",
-        "created_by",
-    ).prefetch_related("labels")
+    if lightweight:
+        base = qs
+    else:
+        base = qs.select_related(
+            "project",
+            "state",
+            "module",
+            "assignee",
+            "cycle",
+            "department",
+            "created_by",
+        ).prefetch_related("labels")
 
     if not user.is_authenticated:
         return base.none()

@@ -219,6 +219,7 @@ class WorkItem(models.Model):
         related_name="work_items",
     )
     scheduled_date = models.DateField(null=True, blank=True, help_text="Date when work is planned to start")
+    reference_link = models.URLField(max_length=500, null=True, blank=True)
     labels = models.ManyToManyField(Label, blank=True, related_name="work_items")
     board_position = models.PositiveIntegerField(
         default=0,

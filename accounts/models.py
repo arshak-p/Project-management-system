@@ -33,6 +33,7 @@ class User(AbstractUser):
     avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
     title = models.CharField(max_length=120, blank=True)
     phone = models.CharField(max_length=32, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"

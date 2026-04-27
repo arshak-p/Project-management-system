@@ -67,3 +67,38 @@ def check_scheduled_tasks():
         )
         count += 1
     return f"Notified managers about {count} starting tasks."
+@shared_task
+def check_birthdays():
+    """Scans for user birthdays today and notifies the individual and the entire team."""
+    from datetime import date
+    from accounts.models import User
+    from tms.notify import notify_user, notify_all
+    
+    today = date.today()
+    
+    # Find users whose DOB month-day matches today
+    birthday_users = User.objects.filter(
+        date_of_birth__month=today.month,
+        date_of_birth__day=today.day,
+        is_active=True
+    )
+    
+    count = 0
+    for user in birthday_users:
+        # 1. Notify the birthday person
+        notify_user(
+            user.id,
+            title="Happy Birthday! 🎂",
+            body=f"Hello {user.first_name}, the entire Colour Parrot team wishes you an incredible birthday! Enjoy your special day!",
+            link="/profile"
+        )
+        
+        # 2. Notify everyone else
+        notify_all(
+            title=f"It's {user.first_name}'s Birthday! 🥳",
+            body=f"Today is {user.get_full_name()}'s birthday! Let's all celebrate and send our best wishes!",
+            exclude_user_id=user.id
+        )
+        count += 1
+    
+    return f"Processed {count} birthdays today."
