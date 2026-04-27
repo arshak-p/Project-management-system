@@ -31,6 +31,8 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [filterProject, setFilterProject] = useState(localStorage.getItem('jump_project_filter') || '');
   const [filterState, setFilterState] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -108,6 +110,13 @@ export default function TasksPage({ me }: { me: User | null }) {
     if (filterProject && t.project?.toString() !== filterProject) match = false;
     if (filterState && t.state?.toString() !== filterState) match = false;
     if (filterAssignee && t.assignee?.id?.toString() !== filterAssignee) match = false;
+    
+    if (startDate || endDate) {
+      const taskDate = (t.created_at || "").split("T")[0];
+      if (startDate && taskDate < startDate) match = false;
+      if (endDate && taskDate > endDate) match = false;
+    }
+    
     return match;
   });
 
@@ -210,6 +219,49 @@ export default function TasksPage({ me }: { me: User | null }) {
             <option value="">All Employees</option>
             {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
           </select>
+        </div>
+
+        {/* Time Intelligence Filters */}
+        <div className="flex flex-col lg:flex-row items-center gap-3 glass p-4 rounded-xl border border-white/5">
+          <div className="grid grid-cols-2 lg:flex items-center gap-3 w-full">
+             <div className="flex flex-col flex-1">
+               <label className="text-[9px] font-black uppercase tracking-widest text-text-muted mb-1 ml-1">Start Date</label>
+               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface/50 border border-border rounded-lg px-3 py-2 text-xs outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+             </div>
+             <div className="flex flex-col flex-1">
+               <label className="text-[9px] font-black uppercase tracking-widest text-text-muted mb-1 ml-1">End Date</label>
+               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface/50 border border-border rounded-lg px-3 py-2 text-xs outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+             </div>
+          </div>
+          <div className="flex items-center gap-2 w-full lg:w-auto">
+             <button 
+               onClick={() => {
+                 const d = new Date().toISOString().split('T')[0];
+                 setStartDate(d); setEndDate(d);
+               }}
+               className="flex-1 lg:flex-none px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest hover:border-primary/50 transition-all"
+             >
+               Today
+             </button>
+             <button 
+               onClick={() => {
+                 const end = new Date();
+                 const start = new Date();
+                 start.setDate(1);
+                 setStartDate(start.toISOString().split('T')[0]);
+                 setEndDate(end.toISOString().split('T')[0]);
+               }}
+               className="flex-1 lg:flex-none px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest hover:border-primary/50 transition-all"
+             >
+               This Month
+             </button>
+             <button 
+               onClick={() => { setStartDate(''); setEndDate(''); }}
+               className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-text-muted hover:text-text"
+             >
+               Clear
+             </button>
+          </div>
         </div>
       </div>
 
