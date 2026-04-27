@@ -1,4 +1,4 @@
-"""Serializers for TMS API — nested reads, validated writes, client approval rules."""
+"""Serializers for TMS API - nested reads, validated writes, client approval rules."""
 from django.db import transaction
 from rest_framework import serializers
 
@@ -119,7 +119,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    total_minutes = serializers.SerializerMethodField()
+    total_minutes = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Project
@@ -139,9 +139,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         if u: instance._activity_user = u
         instance.save()
         return instance
-
-    def get_total_minutes(self, obj):
-        return sum(log.minutes for log in TimeLog.objects.filter(work_item__project=obj))
 
 
 class ModuleSerializer(serializers.ModelSerializer):

@@ -136,7 +136,8 @@ class ProjectViewSet(SalesSafeViewSet):
 
     def get_queryset(self):
         include_archived = self.request.query_params.get("archived") == "true"
-        return access.projects_for_user(self.request.user, include_archived=include_archived)
+        qs = access.projects_for_user(self.request.user, include_archived=include_archived)
+        return qs.annotate(total_minutes=Sum("work_items__time_logs__minutes"))
 
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
@@ -279,8 +280,8 @@ class WorkItemViewSet(SalesSafeViewSet):
     def record_view(self, request, pk=None):
         item = self.get_object()
         u = request.user
-        # Don't notify if the viewer is the creator or the PM themselves
-        if u != item.created_by:
+        # Don't notify if the viewer is the creator or if there is no creator
+        if item.created_by and u != item.created_by:
             Notification.objects.create(
                 user=item.created_by,
                 title="Task Viewed",
@@ -693,7 +694,8 @@ class BackupViewSet(viewsets.ModelViewSet):
                     proc = subprocess.run(d_cmd, env=env, capture_output=True, text=True)
                     if proc.returncode == 0:
                         zip_file.writestr("DATABASE_SAFE_BACKUP/colour_parrot_dump.sql", proc.stdout)
-            except: pass
+            except Exception as db_err:
+                    zip_file.writestr("DATABASE_BACKUP_ERROR.txt", str(db_err))
 
         buffer.seek(0)
         response = HttpResponse(buffer.getvalue(), content_type='application/zip')
