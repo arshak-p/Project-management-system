@@ -24,6 +24,7 @@ export interface User {
   title?: string;
   phone?: string;
   date_joined?: string;
+  date_of_birth?: string;
   is_active?: boolean;
   is_superuser?: boolean;
   is_staff?: boolean;
