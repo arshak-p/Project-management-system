@@ -136,7 +136,8 @@ class ProjectViewSet(SalesSafeViewSet):
 
     def get_queryset(self):
         include_archived = self.request.query_params.get("archived") == "true"
-        return access.projects_for_user(self.request.user, include_archived=include_archived)
+        qs = access.projects_for_user(self.request.user, include_archived=include_archived)
+        return qs.annotate(total_minutes=Sum("work_items__time_logs__minutes"))
 
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
