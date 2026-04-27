@@ -142,7 +142,10 @@ export default function TasksPage({ me }: { me: User | null }) {
         )}
       </div>
 
-        <div className="glass rounded-2xl border border-primary/20 p-8 animate-in fade-in slide-in-from-top-4 duration-500 shadow-2xl">
+      {showForm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 lg:p-10 animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowForm(false)}></div>
+          <div className="glass w-full max-w-5xl rounded-[2.5rem] border-primary/20 p-6 lg:p-10 shadow-2xl relative z-10 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
           <div className="flex items-center justify-between mb-8">
             <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tighter italic">
               <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
@@ -231,6 +234,8 @@ export default function TasksPage({ me }: { me: User | null }) {
             </div>
           </form>
         </div>
+      </div>
+    )}
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col lg:flex-row gap-4">
