@@ -267,4 +267,6 @@ export const api = {
   deleteJobTitle: (id: number) => apiClient.delete(`/job-titles/${id}/`),
   getBackups: () => apiClient.get('/backups/'),
   approveAndDownloadBackup: (id: number) => apiClient.post(`/backups/${id}/approve-and-download/`, {}, { responseType: 'blob' }),
+  sendCreationOTP: (email: string) => apiClient.post('/auth/send-creation-otp/', { email }),
+  verifyCreationOTP: (email: string, otp: string) => apiClient.post('/auth/verify-creation-otp/', { email, otp }),
 };

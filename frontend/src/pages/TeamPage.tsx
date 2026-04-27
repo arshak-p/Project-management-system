@@ -62,6 +62,50 @@ export default function TeamPage({ me }: { me: User | null }) {
   const [showArchived, setShowArchived] = useState(false);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
 
+  // OTP States
+  const [otp, setOtp] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [showOtpField, setShowOtpField] = useState(false);
+
+  const handleSendOtp = async () => {
+    if (!form.email) {
+      setError('Please provide an email address first.');
+      return;
+    }
+    setIsSendingOtp(true);
+    setError('');
+    setSuccess('');
+    try {
+      await api.sendCreationOTP(form.email);
+      setShowOtpField(true);
+      setSuccess('Verification code sent to email!');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to send verification code. Please try again.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp) {
+      setError('Please enter the 6-digit code.');
+      return;
+    }
+    setIsVerifyingOtp(true);
+    setError('');
+    try {
+      await api.verifyCreationOTP(form.email, otp);
+      setIsEmailVerified(true);
+      setSuccess('Email address verified successfully!');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Invalid or expired code. Please check and try again.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
   const load = useCallback(() => {
     Promise.all([
       api.getUsers({ archived: showArchived }),
@@ -84,6 +128,12 @@ export default function TeamPage({ me }: { me: User | null }) {
       setError('Please provide a valid email address.');
       return;
     }
+
+    if (!editingUser && !isEmailVerified) {
+      setError('Please verify the email address before creating a new member.');
+      return;
+    }
+
     setSaving(true); setError(''); setSuccess('');
     try {
       if (editingUser) {
@@ -95,6 +145,9 @@ export default function TeamPage({ me }: { me: User | null }) {
       }
       setForm(defaultForm);
       setEditingUser(null);
+      setIsEmailVerified(false);
+      setShowOtpField(false);
+      setOtp('');
       load();
       setTimeout(() => { setShowModal(false); setSuccess(''); }, 1500);
     } catch (err: unknown) {
@@ -207,25 +260,66 @@ export default function TeamPage({ me }: { me: User | null }) {
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center px-1">
                   <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Email Address <span className="text-error">*</span></label>
-                  {form.email && (
+                  {isEmailVerified ? (
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">
+                      ✓ Email Verified
+                    </span>
+                  ) : form.email && (
                     <span className={`text-[10px] font-bold uppercase tracking-widest ${/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email) ? 'text-emerald-500' : 'text-amber-500'}`}>
                       {/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email) ? '✓ Valid Format' : '⚠ Invalid Email'}
                     </span>
                   )}
                 </div>
-                <div className="relative">
-                  <Mail className={`w-4 h-4 absolute left-3 top-3 transition-colors ${form.email ? (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email) ? 'text-emerald-500' : 'text-amber-500') : 'text-text-muted'}`} />
-                  <input 
-                    type="email"
-                    autoComplete="off"
-                    className={`w-full pl-10 pr-4 py-2 bg-surface border rounded-xl text-sm outline-none transition-all ${form.email ? (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email) ? 'border-emerald-500/30 focus:border-emerald-500' : 'border-amber-500/30 focus:border-amber-500 ring-2 ring-amber-500/10') : 'border-border focus:border-primary'}`} 
-                    placeholder="name@agency.com" 
-                    value={form.email} 
-                    onChange={e => setForm({ ...form, email: e.target.value })} 
-                    required 
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Mail className={`w-4 h-4 absolute left-3 top-3 transition-colors ${form.email ? (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email) ? 'text-emerald-500' : 'text-amber-500') : 'text-text-muted'}`} />
+                    <input 
+                      type="email"
+                      autoComplete="off"
+                      disabled={isEmailVerified || !!editingUser}
+                      className={`w-full pl-10 pr-4 py-2.5 bg-surface border rounded-xl text-sm outline-none transition-all ${isEmailVerified ? 'border-emerald-500/50 opacity-70' : form.email ? (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email) ? 'border-emerald-500/30 focus:border-emerald-500' : 'border-amber-500/30 focus:border-amber-500 ring-2 ring-amber-500/10') : 'border-border focus:border-primary'}`} 
+                      placeholder="name@agency.com" 
+                      value={form.email} 
+                      onChange={e => setForm({ ...form, email: e.target.value })} 
+                      required 
+                    />
+                  </div>
+                  {!editingUser && !isEmailVerified && (
+                    <button 
+                      type="button"
+                      disabled={isSendingOtp || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email)}
+                      onClick={handleSendOtp}
+                      className="px-4 py-2 bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-widest rounded-xl hover:bg-primary/20 transition-all disabled:opacity-50"
+                    >
+                      {isSendingOtp ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send Code'}
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {!editingUser && showOtpField && !isEmailVerified && (
+                <div className="space-y-1.5 p-4 bg-primary/5 border border-primary/10 rounded-2xl animate-in slide-in-from-top-2 duration-300">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Enter Verification Code</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      maxLength={6}
+                      placeholder="6-digit key"
+                      value={otp}
+                      onChange={e => setOtp(e.target.value)}
+                      className="flex-1 bg-surface border border-primary/20 rounded-xl px-4 py-2 text-center font-mono text-lg tracking-[0.5em] focus:border-primary outline-none"
+                    />
+                    <button 
+                      type="button"
+                      disabled={isVerifyingOtp || otp.length < 6}
+                      onClick={handleVerifyOtp}
+                      className="px-6 py-2 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {isVerifyingOtp ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
                 <div className="space-y-1.5 animate-in fade-in duration-300">
