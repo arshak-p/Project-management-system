@@ -149,97 +149,113 @@ export default function TasksPage({ me }: { me: User | null }) {
       {showForm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 lg:p-10 animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowForm(false)}></div>
-          <div className="glass w-full max-w-5xl rounded-[2.5rem] border-primary/20 p-6 lg:p-10 shadow-2xl relative z-10 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tighter italic">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Plus className="w-5 h-5 text-primary" />
-              </div>
-              Create Work Item
-            </h3>
-            <button onClick={() => setShowForm(false)} className="text-text-muted hover:text-text transition-colors"><X className="w-6 h-6" /></button>
-          </div>
-
-          {error && <p className="text-error text-sm mb-6 p-4 bg-error/10 rounded-xl border border-error/20 flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5" /> {error}
-          </p>}
-
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div className="md:col-span-12 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Task Title</label>
-              <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="What needs to be done? *" required className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-base focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-text-muted/30" />
+          <div className="glass w-full max-w-5xl rounded-[2.5rem] border-primary/20 shadow-2xl relative z-10 animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 lg:p-10 border-b border-white/5">
+              <h3 className="font-black text-xl lg:text-2xl flex items-center gap-3 uppercase tracking-tighter italic">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <Plus className="w-6 h-6 text-primary" />
+                </div>
+                Create Work Item
+              </h3>
+              <button onClick={() => setShowForm(false)} className="p-2 text-text-muted hover:text-text hover:bg-white/5 rounded-xl transition-all"><X className="w-7 h-7" /></button>
             </div>
 
-            <div className="md:col-span-6 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Select Project</label>
-              <select value={form.project} onChange={e => setForm({ ...form, project: e.target.value })} required className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all cursor-pointer">
-                <option value="">Select Project *</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+            {/* Modal Body - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar">
+              {error && <p className="text-error text-sm mb-8 p-5 bg-error/10 rounded-2xl border border-error/20 flex items-center gap-4">
+                <AlertTriangle className="w-6 h-6" /> {error}
+              </p>}
+
+              <form id="create-task-form" onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-10">
+                <div className="md:col-span-12 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Task Title</label>
+                  <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="What needs to be done? *" required className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-base focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-text-muted/30 font-bold" />
+                </div>
+
+                <div className="md:col-span-6 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Select Project</label>
+                  <select value={form.project} onChange={e => setForm({ ...form, project: e.target.value })} required className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all cursor-pointer">
+                    <option value="">Select Project *</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="md:col-span-6 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Module / Scope</label>
+                  <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value })} required className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all cursor-pointer">
+                    <option value="">Select Module *</option>
+                    {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="md:col-span-4 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Workflow State</label>
+                  <select value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} required className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all cursor-pointer">
+                    <option value="">Select State *</option>
+                    {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="md:col-span-4 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Priority Level</label>
+                  <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all cursor-pointer">
+                    <option value="urgent">🔴 Urgent</option>
+                    <option value="high">🟠 High</option>
+                    <option value="medium">🔵 Medium</option>
+                    <option value="low">⚫ Low</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-4 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Assign Specialist</label>
+                  <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all cursor-pointer">
+                    <option value="">Unassigned (Optional)</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
+                  </select>
+                </div>
+
+                <div className="md:col-span-12 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Reference Link (Optional)</label>
+                  <input value={form.reference_link} onChange={e => setForm({ ...form, reference_link: e.target.value })} placeholder="https://cloud-storage.com/assets..." className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all placeholder:text-text-muted/30" />
+                </div>
+
+                <div className="md:col-span-6 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8b5cf6] ml-1">Planned Start</label>
+                  <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} className="w-full px-6 py-4 bg-[#8b5cf6]/5 border border-[#8b5cf6]/20 rounded-2xl text-sm font-bold focus:border-[#8b5cf6] outline-none transition-all" style={{ colorScheme: 'dark' }} />
+                </div>
+
+                <div className="md:col-span-6 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Final Deadline</label>
+                  <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-sm font-bold focus:border-amber-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
+                </div>
+              </form>
             </div>
 
-            <div className="md:col-span-6 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Module / Scope</label>
-              <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value })} required className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all cursor-pointer">
-                <option value="">Select Module *</option>
-                {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-            </div>
-
-            <div className="md:col-span-4 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Workflow State</label>
-              <select value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} required className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all cursor-pointer">
-                <option value="">Select State *</option>
-                {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-
-            <div className="md:col-span-4 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Priority Level</label>
-              <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all cursor-pointer">
-                <option value="urgent">🔴 Urgent</option>
-                <option value="high">🟠 High</option>
-                <option value="medium">🔵 Medium</option>
-                <option value="low">⚫ Low</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-4 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Assign Specialist</label>
-              <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all cursor-pointer">
-                <option value="">Unassigned (Optional)</option>
-                {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
-              </select>
-            </div>
-
-            <div className="md:col-span-12 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Reference Link (Optional)</label>
-              <input value={form.reference_link} onChange={e => setForm({ ...form, reference_link: e.target.value })} placeholder="https://cloud-storage.com/assets..." className="w-full px-5 py-3.5 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all placeholder:text-text-muted/30" />
-            </div>
-
-            <div className="md:col-span-6 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8b5cf6] ml-1">Planned Start</label>
-              <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} className="w-full px-5 py-3.5 bg-[#8b5cf6]/5 border border-[#8b5cf6]/20 rounded-2xl text-sm focus:border-[#8b5cf6] outline-none transition-all" style={{ colorScheme: 'dark' }} />
-            </div>
-
-            <div className="md:col-span-6 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Final Deadline</label>
-              <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-5 py-3.5 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-sm focus:border-amber-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
-            </div>
-
-            <div className="md:col-span-12 flex flex-col md:flex-row gap-4 justify-between items-center pt-6 mt-6 border-t border-border/30">
-              <p className="text-[10px] text-text-muted max-w-xs leading-relaxed">Fields marked with <span className="text-primary">*</span> are required to maintain workflow integrity.</p>
-              <div className="flex gap-4 w-full md:w-auto">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 md:flex-none px-8 py-3.5 text-sm font-bold uppercase tracking-widest text-text-muted hover:text-text hover:bg-white/5 rounded-2xl transition-all">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 md:flex-none flex items-center justify-center gap-3 px-10 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all">
-                  {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />} Create Task
+            {/* Modal Footer - Sticky */}
+            <div className="p-6 lg:p-8 bg-black/20 border-t border-white/5 flex flex-col md:flex-row gap-4 justify-between items-center backdrop-blur-xl">
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest opacity-40 italic hidden md:block">Drafting New Operational Task</p>
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="flex-1 md:flex-none px-10 py-4 glass border border-white/10 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-white/5 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  form="create-task-form"
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 md:flex-none px-10 py-4 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {saving ? 'Creating...' : 'Create Task'}
                 </button>
               </div>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
       <div className="flex flex-col gap-6 p-6 lg:p-8 glass border-white/5 rounded-[2.5rem] shadow-2xl animate-in fade-in zoom-in-95 duration-500">
         <div className="flex flex-col lg:flex-row gap-6 items-center">
