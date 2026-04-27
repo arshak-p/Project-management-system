@@ -14,11 +14,10 @@ const ROLE_COLORS: Record<string, string> = {
 
 const ROLES = [
   { value: 'specialist', label: '👤 Specialist / Creator' },
-  { value: 'project_manager', label: '🎯 Project Manager' },
   { value: 'team_head', label: '⭐ Team Head' },
+  { value: 'project_manager', label: '🎯 Project Manager' },
   { value: 'admin', label: '🔴 Admin' },
   { value: 'sales_manager', label: '💰 Sales Manager' },
-  { value: 'client', label: '🏢 Client' },
 ];
 
 function getInitials(user: { first_name?: string; last_name?: string; email: string }) {
@@ -249,24 +248,22 @@ export default function TeamPage({ me }: { me: User | null }) {
                   </div>
                 </div>
 
-                {form.role === 'specialist' && (
-                  <div className="space-y-1.5 animate-in slide-in-from-right-2 duration-300">
-                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Job Title</label>
-                    <div className="relative">
-                      <Briefcase className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
-                      <select 
-                        value={form.title} 
-                        onChange={e => setForm({ ...form, title: e.target.value })} 
-                        className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none appearance-none"
-                      >
-                        <option value="">Select Designation</option>
-                        {jobTitles.map(jt => (
-                          <option key={jt.id} value={jt.name}>{jt.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                <div className="space-y-1.5 animate-in slide-in-from-right-2 duration-300">
+                  <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Job Title / Designation</label>
+                  <div className="relative">
+                    <Briefcase className="w-4 h-4 absolute left-3 top-3 text-text-muted" />
+                    <select 
+                      value={form.title} 
+                      onChange={e => setForm({ ...form, title: e.target.value })} 
+                      className="w-full pl-9 pr-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none appearance-none"
+                    >
+                      <option value="">Select Designation</option>
+                      {jobTitles.map(jt => (
+                        <option key={jt.id} value={jt.name}>{jt.name}</option>
+                      ))}
+                    </select>
                   </div>
-                )}
+                </div>
               </div>
 
               <div className="space-y-1.5">

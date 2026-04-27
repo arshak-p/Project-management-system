@@ -175,7 +175,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
           </button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
           
           <div className="flex-1 flex flex-col border-r border-border/50 bg-background/50">
             <div className="flex px-6 border-b border-border/50 pt-2 shrink-0">
@@ -324,7 +324,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
             </div>
           </div>
 
-          <div className="w-72 bg-surface/20 shrink-0 p-6 overflow-y-auto space-y-6">
+          <div className="w-full lg:w-72 bg-surface/20 lg:shrink-0 p-6 overflow-y-auto space-y-6 border-t lg:border-t-0 border-border/50">
             
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-text-muted uppercase tracking-wide">Status / Workflow</label>
@@ -343,7 +343,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                   onClick={() => handleUpdateField('is_client_approved', true)}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-600/20 hover:scale-[1.02] transition-all"
                 >
-                  <Stars className="w-4 h-4" /> Approve for Client
+                  <Stars className="w-4 h-4" /> Mark Client Approved
                 </button>
               </div>
             )}

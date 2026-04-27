@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Plus, Trash2, CircleDashed } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
-import type { Task, TaskState, User, Project } from '../api';
+import type { Task, TaskState, User, Project, WorkModule } from '../api';
 
 const STATE_COLORS: Record<string, { bg: string, text: string, shadow: string }> = {
   'pending': { bg: 'bg-slate-500/10', text: 'text-slate-400', shadow: 'shadow-slate-500/20' },
@@ -18,15 +18,22 @@ export default function KanbanPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [modules, setModules] = useState<WorkModule[]>([]);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filterProject, setFilterProject] = useState('');
+  const [filterModule, setFilterModule] = useState('');
+  const [filterJobTitle, setFilterJobTitle] = useState(me?.role === 'team_head' ? (me?.title || '') : '');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [t, s, p] = await Promise.all([api.getTasks(), api.getStates(), api.getProjects()]);
+      const [t, s, p, m, jt] = await Promise.all([api.getTasks(), api.getStates(), api.getProjects(), api.getModules(), api.getJobTitles()]);
       setTasks(t.data);
       setStates(s.data);
       setProjects(p.data);
+      setModules(m.data);
+      setJobTitles(jt.data);
     } catch (err) {
       console.error(err);
     }
@@ -51,21 +58,56 @@ export default function KanbanPage({ me }: { me: User | null }) {
     <div className="space-y-10 pb-20">
       {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
 
-      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-        <h1 className="text-5xl font-black tracking-tighter">Kanban Board</h1>
-        <p className="text-text-muted mt-2 font-bold uppercase tracking-[0.2em] text-[10px] opacity-60">Active Task Flow</p>
+      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex justify-between items-end">
+        <div>
+          <h1 className="text-5xl font-black tracking-tighter">Kanban Board</h1>
+          <p className="text-text-muted mt-2 font-bold uppercase tracking-[0.2em] text-[10px] opacity-60">Active Task Flow</p>
+        </div>
+        <div className="flex gap-4">
+          <select 
+            value={filterProject} 
+            onChange={e => setFilterProject(e.target.value)}
+            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all"
+          >
+            <option value="">All Projects</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <select 
+            value={filterModule} 
+            onChange={e => setFilterModule(e.target.value)}
+            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all"
+          >
+            <option value="">All Modules</option>
+            {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+          <select 
+            value={filterJobTitle} 
+            onChange={e => setFilterJobTitle(e.target.value)}
+            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all"
+          >
+            <option value="">All Job Titles</option>
+            {jobTitles.map(jt => <option key={jt.id} value={jt.name}>{jt.name}</option>)}
+          </select>
+        </div>
       </motion.div>
 
       <div className="flex gap-8 overflow-x-auto pb-10 custom-scrollbar snap-x h-[calc(100vh-250px)]">
         {states.map((state, idx) => {
+          const columnTasks = tasks.filter(t => {
+            if (t.state_slug !== state.slug) return false;
+            if (filterProject && t.project?.toString() !== filterProject) return false;
+            if (filterModule && t.module?.toString() !== filterModule) return false;
+            if (filterJobTitle && t.assignee?.title !== filterJobTitle) return false;
+            return true;
+          });
           const colors = STATE_COLORS[state.slug] || STATE_COLORS['pending'];
           return (
             <motion.div 
-              key={state.slug}
+              key={state.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1 }}
-              className="flex-shrink-0 w-80 flex flex-col snap-start"
+              className="flex-shrink-0 w-[280px] lg:w-80 flex flex-col snap-center"
             >
               <div className="flex items-center justify-between mb-6 px-4">
                 <div className="flex items-center gap-3">
@@ -73,13 +115,13 @@ export default function KanbanPage({ me }: { me: User | null }) {
                    <h3 className={`font-extrabold text-sm uppercase tracking-widest ${colors.text}`}>{state.name}</h3>
                 </div>
                 <span className="text-[10px] font-black bg-white/5 px-2 py-1 rounded-lg border border-white/10 opacity-60">
-                  {tasks.filter(t => t.state_slug === state.slug).length}
+                  {columnTasks.length}
                 </span>
               </div>
 
               <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar pr-2">
                  <AnimatePresence>
-                  {tasks.filter(t => t.state_slug === state.slug).map((task) => {
+                  {columnTasks.map((task) => {
                     const cardColors = STATE_COLORS[task.state_slug || ''] || colors;
                     return (
                       <motion.div

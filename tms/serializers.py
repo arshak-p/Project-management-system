@@ -305,8 +305,8 @@ class WorkItemSerializer(serializers.ModelSerializer):
         request = self.context["request"]
         user = request.user
         
-        # Admin and PM have full control
-        if user.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]:
+        # Admin, PM and Team Heads have management control
+        if user.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD]:
             return attrs
 
         state = attrs.get("state")

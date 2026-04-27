@@ -23,6 +23,7 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [states, setStates] = useState<TaskState[]>([]);
   const [modules, setModules] = useState<WorkModule[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -30,6 +31,8 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [error, setError] = useState('');
   const [filterProject, setFilterProject] = useState(localStorage.getItem('jump_project_filter') || '');
   const [filterState, setFilterState] = useState('');
+  const [filterModule, setFilterModule] = useState('');
+  const [filterJobTitle, setFilterJobTitle] = useState(me?.role === 'team_head' ? (me?.title || '') : '');
   const [filterAssignee, setFilterAssignee] = useState('');
   const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -41,14 +44,16 @@ export default function TasksPage({ me }: { me: User | null }) {
       api.getProjects(), 
       api.getStates(), 
       api.getModules(), 
-      api.getAssignableUsers().catch(() => ({ data: [] }))
+      api.getAssignableUsers().catch(() => ({ data: [] })),
+      api.getJobTitles().catch(() => ({ data: [] }))
     ])
-      .then(([t, p, s, m, u]) => {
+      .then(([t, p, s, m, u, jt]) => {
         setTasks(t.data);
         setProjects(p.data);
         setStates(s.data);
         setModules(m.data);
         setUsers(u.data);
+        setJobTitles(jt.data);
       })
       .catch((err) => console.error('Fetching issue on Tasks:', err))
       .finally(() => setIsLoading(false));
@@ -106,6 +111,8 @@ export default function TasksPage({ me }: { me: User | null }) {
     if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !t.task_code?.toLowerCase().includes(search.toLowerCase())) match = false;
     if (filterProject && t.project?.toString() !== filterProject) match = false;
     if (filterState && t.state?.toString() !== filterState) match = false;
+    if (filterModule && t.module?.toString() !== filterModule) match = false;
+    if (filterJobTitle && t.assignee?.title !== filterJobTitle) match = false;
     if (filterAssignee && t.assignee?.id?.toString() !== filterAssignee) match = false;
     return match;
   });
@@ -179,33 +186,43 @@ export default function TasksPage({ me }: { me: User | null }) {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row gap-3">
+      <div className="flex flex-col gap-4">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-4 top-3.5 text-text-muted" />
-          <input type="text" placeholder="Search tasks by title or code..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none transition-colors" />
+          <input type="text" placeholder="Search tasks..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none transition-colors" />
         </div>
-        <div className="flex gap-3">
-          <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="px-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none min-w-[150px]">
+        
+        <div className="flex items-center gap-3 overflow-x-auto pb-2 px-1 no-scrollbar lg:flex-wrap">
+          <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="flex-shrink-0 px-4 py-3 bg-surface border border-border rounded-xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none min-w-[140px]">
             <option value="">All Projects</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <select value={filterState} onChange={e => setFilterState(e.target.value)} className="px-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none min-w-[150px]">
+          <select value={filterState} onChange={e => setFilterState(e.target.value)} className="flex-shrink-0 px-4 py-3 bg-surface border border-border rounded-xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none min-w-[140px]">
             <option value="">All States</option>
             {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="px-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none min-w-[150px]">
+          <select value={filterModule} onChange={e => setFilterModule(e.target.value)} className="flex-shrink-0 px-4 py-3 bg-surface border border-border rounded-xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none min-w-[140px]">
+            <option value="">All Modules</option>
+            {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+          <select value={filterJobTitle} onChange={e => setFilterJobTitle(e.target.value)} className="flex-shrink-0 px-4 py-3 bg-surface border border-border rounded-xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none min-w-[140px]">
+            <option value="">All Job Titles</option>
+            {jobTitles.map(jt => <option key={jt.id} value={jt.name}>{jt.name}</option>)}
+          </select>
+          <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="flex-shrink-0 px-4 py-3 bg-surface border border-border rounded-xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none min-w-[140px]">
             <option value="">All Employees</option>
             {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
           </select>
+          
+          <label className="flex-shrink-0 flex items-center gap-3 bg-surface border border-border px-5 py-3 rounded-xl cursor-pointer hover:border-primary transition-all">
+            <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
+            <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Archived</span>
+            <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
+            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+              <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
+            </div>
+          </label>
         </div>
-        <label className="flex items-center gap-3 bg-surface border border-border px-5 py-2.5 rounded-xl cursor-pointer hover:border-primary transition-all">
-          <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Archived</span>
-          <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
-          <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
-            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
-          </div>
-        </label>
       </div>
 
       {isLoading ? (
@@ -235,19 +252,19 @@ export default function TasksPage({ me }: { me: User | null }) {
                       </span>
                     )}
                   </div>
-                  <h4 className="font-semibold text-text text-sm truncate">{task.title}</h4>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
+                  <h4 className="font-semibold text-text text-sm mb-1">{task.title}</h4>
+                  <div className="flex items-center gap-3 text-[10px] text-text-muted flex-wrap">
                     {(() => {
                       const proj = projects.find(p => p.id === Number(task.project));
                       return proj ? (
-                        <span className="font-bold flex items-center gap-1.5" style={{ color: proj.color }}>
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: proj.color }}></div>
+                        <span className="font-black uppercase tracking-tight flex items-center gap-1.5" style={{ color: proj.color }}>
+                          <div className="w-1 h-1 rounded-full" style={{ backgroundColor: proj.color }}></div>
                           {proj.name}
                         </span>
                       ) : null;
                     })()}
-                    {task.scheduled_date && <span className="flex items-center gap-1 border-l border-border pl-3 ml-1">📅 {task.scheduled_date}</span>}
-                    {task.due_date && <span className="flex items-center gap-1 border-l border-border pl-3">🚩 {task.due_date}</span>}
+                    {task.scheduled_date && <span className="flex items-center gap-1">📅 {task.scheduled_date}</span>}
+                    {task.due_date && <span className="flex items-center gap-1">🚩 {task.due_date}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">

@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Briefcase, CheckCircle2, Users,
   LogOut, Bell, LayoutGrid, Menu,
   ClipboardList, UserCircle, ArrowLeft, Sun, Moon,
-  Clock3, CalendarRange, Activity, Map as MapIcon, BrainCircuit, ShieldCheck, Download
+  Clock3, CalendarRange, Activity, Map as MapIcon, BrainCircuit, ShieldCheck, Download, Layers
 } from 'lucide-react';
 import OverviewPage from './pages/OverviewPage';
 import ProjectsPage from './pages/ProjectsPage';
@@ -25,9 +25,10 @@ import TaskCalendarPage from './pages/TaskCalendarPage';
 import StrategistPage from './pages/StrategistPage';
 import TeamIntelligencePage from './pages/TeamIntelligencePage';
 import BackupsPage from './pages/BackupsPage';
+import ModulesPage from './pages/ModulesPage';
 import { getWsUrl } from './config';
 
-type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence' | 'backups';
+type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence' | 'backups' | 'modules';
 
 interface Notification {
   id: number;
@@ -47,6 +48,7 @@ const ADMIN_NAV = [
   { id: 'strategist', label: 'Planning', icon: <BrainCircuit className="w-5 h-5" /> },
   { id: 'intelligence', label: 'Team Info', icon: <ShieldCheck className="w-5 h-5" /> },
   { id: 'job_titles', label: 'Job Titles', icon: <Briefcase className="w-5 h-5" /> },
+  { id: 'modules', label: 'Task Modules', icon: <Layers className="w-5 h-5" /> },
   { id: 'roadmap', label: 'Agency Roadmap', icon: <MapIcon className="w-5 h-5" /> },
   { id: 'backups', label: 'Data Backups', icon: <Download className="w-5 h-5" /> },
 ];
@@ -262,8 +264,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             )}
           </div>
         </header>
-
-        <main className="flex-1 overflow-y-auto px-10 pb-10 custom-scrollbar">
+        
+        <main className="flex-1 overflow-y-auto px-6 lg:px-10 pb-24 lg:pb-10 custom-scrollbar">
           <div className="max-w-7xl mx-auto">
              <AnimatePresence mode="wait">
                 <motion.div
@@ -288,12 +290,43 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                   {page === 'strategist' && <StrategistPage me={me} />}
                   {page === 'intelligence' && <TeamIntelligencePage me={me} />}
                   {page === 'job_titles' && <JobTitlesPage me={me} />}
-                  {page === 'roadmap' && <AgencyRoadmap me={me} />}
-                  {page === 'backups' && <BackupsPage me={me} />}
+                  { page === 'roadmap' && <AgencyRoadmap me={me} /> }
+                  { page === 'backups' && <BackupsPage me={me} /> }
+                  { page === 'modules' && <ModulesPage me={me} /> }
                 </motion.div>
              </AnimatePresence>
           </div>
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="lg:hidden fixed bottom-6 left-6 right-6 z-50 glass border-white/10 rounded-[2rem] px-4 py-3 flex justify-around items-center shadow-2xl backdrop-blur-2xl">
+          {navItems.slice(0, 5).map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleNav(item.id as Page)}
+              className={`p-3 rounded-2xl transition-all relative ${page === item.id ? 'text-primary bg-primary/10' : 'text-text-muted'}`}
+            >
+              {item.icon}
+              {page === item.id && (
+                <motion.div 
+                  layoutId="mobileNavActive"
+                  className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full"
+                />
+              )}
+              {item.id === 'notifications' && unreadCount > 0 && (
+                <span className="absolute top-2 right-2 bg-primary text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-black">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+          ))}
+          <button 
+            onClick={() => setSidebarOpen(true)}
+            className="p-3 text-text-muted"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        </nav>
       </div>
     </motion.div>
   );
