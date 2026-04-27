@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Plus, Trash2, CircleDashed } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
-import type { Task, TaskState, User, Project, WorkModule } from '../api';
+import type { Task, TaskState, User, Project, WorkModule, JobTitle } from '../api';
 
 const STATE_COLORS: Record<string, { bg: string, text: string, shadow: string }> = {
   'pending': { bg: 'bg-slate-500/10', text: 'text-slate-400', shadow: 'shadow-slate-500/20' },

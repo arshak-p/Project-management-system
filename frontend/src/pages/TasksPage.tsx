@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp, ShieldCheck } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
-import type { Project, TaskState, WorkModule, User, Task } from '../api';
+import type { Project, TaskState, WorkModule, User, Task, JobTitle } from '../api';
 
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'text-red-400 bg-red-400/10',
