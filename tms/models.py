@@ -240,6 +240,8 @@ class WorkItem(models.Model):
             models.Index(fields=["project", "state"]),
             models.Index(fields=["assignee"]),
             models.Index(fields=["due_date"]),
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["updated_at"]),
         ]
 
     def __str__(self) -> str:
@@ -300,6 +302,11 @@ class TimeLog(models.Model):
 
     class Meta:
         ordering = ["-logged_at"]
+        indexes = [
+            models.Index(fields=["logged_at"]),
+            models.Index(fields=["user"]),
+            models.Index(fields=["work_item"]),
+        ]
 
 
 class Notification(models.Model):
@@ -339,6 +346,9 @@ class ActivityLog(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_at"]),
+        ]
 
 
 class Backup(models.Model):
@@ -356,6 +366,9 @@ class Backup(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_at"]),
+        ]
 
     def __str__(self):
         return f"Backup {self.month}"
