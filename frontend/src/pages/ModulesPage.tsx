@@ -50,15 +50,15 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
   if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" /></div>;
 
   return (
-    <div className="space-y-8 pb-20">
-      <div className="flex justify-between items-end">
+    <div className="space-y-8 pb-20 px-4 md:px-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter">Task Modules</h1>
+          <h1 className="text-3xl lg:text-4xl font-black tracking-tighter">Task Modules</h1>
           <p className="text-text-muted mt-2 font-bold uppercase tracking-[0.2em] text-[10px] opacity-60">Categorize your project workflow</p>
         </div>
         <button 
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
+          className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
         >
           <Plus className="w-4 h-4" /> New Module
         </button>
@@ -97,8 +97,8 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="glass w-full max-w-md rounded-[2.5rem] border-primary/30 p-8 shadow-2xl animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center lg:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="glass w-full lg:max-w-md h-full lg:h-auto lg:rounded-[2.5rem] border-primary/30 p-6 lg:p-8 shadow-2xl animate-in zoom-in-95 flex flex-col justify-center">
             <div className="flex justify-between items-start mb-8">
               <div>
                 <h3 className="text-2xl font-black italic">Create Module</h3>
