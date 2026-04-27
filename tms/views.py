@@ -285,8 +285,8 @@ class WorkItemViewSet(SalesSafeViewSet):
             try:
                 new_state = State.objects.get(pk=new_state_id)
                 if new_state.slug in ("client-review", "completed-launched") and new_state.id != inst.state_id:
-                    if not (u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER)):
-                        raise PermissionDenied("Only Project Managers or Admins can approve work for Client Review or Completion.")
+                    if not (u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD)):
+                        raise PermissionDenied("Only Leads, Managers or Admins can approve work for Client Review or Completion.")
             except State.DoesNotExist:
                 pass
 

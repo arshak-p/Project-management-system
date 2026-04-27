@@ -39,13 +39,15 @@ def work_items_for_user(user: User, include_archived: bool = False) -> QuerySet[
         return base.none()
     if user.role == User.Role.TEAM_HEAD:
         dept_id = user_department_id(user)
-        if not dept_id:
-            return base.filter(assignee=user)
-        return base.filter(
-            Q(department_id=dept_id)
-            | Q(assignee__tms_profile__department_id=dept_id)
-            | Q(assignee=user)
-        ).distinct()
+        user_title = getattr(user, "title", "")
+        
+        q_filter = Q(assignee=user)
+        if dept_id:
+            q_filter |= Q(department_id=dept_id) | Q(assignee__tms_profile__department_id=dept_id)
+        if user_title:
+            q_filter |= Q(assignee__title=user_title)
+            
+        return base.filter(q_filter).distinct()
     if user.role == User.Role.SPECIALIST:
         return base.filter(assignee=user)
     return base.none()
@@ -85,9 +87,17 @@ def can_edit_work_item(user: User, work_item: WorkItem) -> bool:
     if user.role == User.Role.PROJECT_MANAGER:
         return True
     if user.role == User.Role.TEAM_HEAD:
-        dept_id = user_department_id(user)
         if work_item.assignee_id == user.id:
             return True
+            
+        dept_id = user_department_id(user)
+        user_title = getattr(user, "title", "")
+        
+        # Check by Title (The new way)
+        if user_title and work_item.assignee and work_item.assignee.title == user_title:
+            return True
+            
+        # Check by Department (The legacy way)
         if dept_id and (
             work_item.department_id == dept_id
             or (
