@@ -20,12 +20,7 @@ const PRIORITY_ICONS: Record<string, React.ReactNode> = {
 export default function TasksPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [states, setStates] = useState<TaskState[]>([
-    { id: 9991, name: 'Backlog', slug: 'backlog', color: '#64748b' },
-    { id: 9992, name: 'In Progress', slug: 'in-progress', color: '#3b82f6' },
-    { id: 9993, name: 'Client Review', slug: 'client-review', color: '#8b5cf6' },
-    { id: 9994, name: 'Completed / Launched', slug: 'completed-launched', color: '#10b981' },
-  ]);
+  const [states, setStates] = useState<TaskState[]>([]);
   const [modules, setModules] = useState<WorkModule[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
