@@ -70,6 +70,7 @@ export interface Task {
     email: string;
     first_name?: string;
     last_name?: string;
+    title?: string;
   } | null;
   assignee_name?: string;
   project__slug?: string;
