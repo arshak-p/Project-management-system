@@ -62,8 +62,19 @@ const USER_NAV = [
   { id: 'profile', label: 'Profile', icon: <UserCircle className="w-5 h-5" /> },
 ];
 
+const TEAM_HEAD_NAV = [
+  { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+  { id: 'projects', label: 'Projects', icon: <Briefcase className="w-5 h-5" /> },
+  { id: 'tasks', label: 'Team Tasks', icon: <CheckCircle2 className="w-5 h-5" /> },
+  { id: 'kanban', label: 'Team Board', icon: <LayoutGrid className="w-5 h-5" /> },
+  { id: 'my_tasks', label: 'My Tasks', icon: <ClipboardList className="w-5 h-5" /> },
+  { id: 'timesheets', label: 'Timesheets', icon: <Clock3 className="w-5 h-5" /> },
+  { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
+  { id: 'profile', label: 'Profile', icon: <UserCircle className="w-5 h-5" /> },
+];
 
-const ADMIN_ROLES = ['admin', 'team_head', 'project_manager'];
+const ADMIN_ROLES = ['admin', 'project_manager'];
+const TEAM_HEAD_ROLES = ['team_head'];
 
 export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [page, setPage] = useState<Page>('overview');
@@ -82,7 +93,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     api.getMe().then(r => {
       setMe(r.data);
       const isA = r.data.is_superuser || ADMIN_ROLES.includes(r.data.role || '');
-      if (!isA && page === 'overview') setPage('my_tasks');
+      const isTH = TEAM_HEAD_ROLES.includes(r.data.role || '');
+      if (!isA && !isTH && page === 'overview') setPage('my_tasks');
     }).catch(() => onLogout());
   }, [onLogout, page]);
 
@@ -137,7 +149,11 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   }, []);
 
   const isAdmin = me?.is_superuser || ADMIN_ROLES.includes(me?.role || '');
-  const navItems = isAdmin ? ADMIN_NAV : USER_NAV;
+  const isTeamHead = TEAM_HEAD_ROLES.includes(me?.role || '');
+  
+  let navItems = USER_NAV;
+  if (isAdmin) navItems = ADMIN_NAV;
+  else if (isTeamHead) navItems = TEAM_HEAD_NAV;
 
   // Guard: Do not render the dashboard body until the user profile is securely loaded
   if (!me) {
@@ -187,7 +203,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] lg:translate-x-0'}
       `}>
         <div className="p-10 flex items-center justify-between">
-          <button onClick={() => handleNav(isAdmin ? 'overview' : 'my_tasks')} className="flex items-center gap-6 group">
+          <button onClick={() => handleNav((isAdmin || isTeamHead) ? 'overview' : 'my_tasks')} className="flex items-center gap-6 group">
             <div className="relative">
                <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full group-hover:bg-primary/50 transition-all"></div>
                <img src="/colour parrot-icon.png" alt="Logo" className="relative h-16 w-auto animate-float" />

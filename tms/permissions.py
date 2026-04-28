@@ -30,5 +30,5 @@ class IsPMOrAdmin(permissions.BasePermission):
         return bool(
             u
             and u.is_authenticated
-            and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD])
+            and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.PROJECT_MANAGER])
         )
