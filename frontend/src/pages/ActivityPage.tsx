@@ -5,7 +5,7 @@ import { Activity as ActivityIcon, Clock, Briefcase, FileText, Database, Search,
 import type { User, Activity } from '../api';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function ActivityPage({ me }: { me: User | null }) {
+export default function ActivityPage({ me: _me }: { me: User | null }) {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState('');
