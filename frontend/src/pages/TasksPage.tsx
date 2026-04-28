@@ -32,11 +32,18 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [filterState, setFilterState] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
   const [filterModule, setFilterModule] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+  });
   const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', reference_link: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const load = useCallback(() => {
     Promise.all([
@@ -118,6 +125,8 @@ export default function TasksPage({ me }: { me: User | null }) {
       if (startDate && taskDate < startDate) match = false;
       if (endDate && taskDate > endDate) match = false;
     }
+    
+    if (!showCompleted && t.state_slug === 'completed-launched') match = false;
     
     return match;
   });
@@ -265,6 +274,17 @@ export default function TasksPage({ me }: { me: User | null }) {
           </div>
           
           <div className="flex items-center gap-4 w-full lg:w-auto">
+            <label className="flex items-center justify-between gap-4 bg-surface/50 border border-border/50 px-6 py-3.5 rounded-2xl cursor-pointer hover:border-primary/40 transition-all shadow-sm group">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className={`w-4 h-4 ${showCompleted ? 'text-emerald-500' : 'text-text-muted'} group-hover:scale-110 transition-transform`} />
+                <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text">Completed</span>
+              </div>
+              <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} className="sr-only" />
+              <div className={`w-9 h-5 rounded-full relative transition-all duration-300 ${showCompleted ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-white/10'}`}>
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${showCompleted ? 'left-5' : 'left-1'}`}></div>
+              </div>
+            </label>
+
             <label className="flex items-center justify-between gap-4 bg-surface/50 border border-border/50 px-6 py-3.5 rounded-2xl cursor-pointer hover:border-primary/40 transition-all shadow-sm group">
               <div className="flex items-center gap-3">
                 <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'} group-hover:scale-110 transition-transform`} />
