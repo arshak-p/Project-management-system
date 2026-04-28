@@ -3,6 +3,7 @@ import { Plus, Trash2, Loader2, Layers, CheckCircle2, X } from 'lucide-react';
 import { api } from '../api';
 import type { WorkModule, User } from '../api';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function ModulesPage({ me: _me }: { me: User | null }) {
   const [modules, setModules] = useState<WorkModule[]>([]);
   const [isLoading, setIsLoading] = useState(true);

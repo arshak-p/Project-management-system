@@ -3,6 +3,7 @@ import { api } from '../api';
 import type { Cycle, Project, User } from '../api';
 import { Loader2, CalendarRange, Plus, ExternalLink, CalendarDays } from 'lucide-react';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function CyclesPage({ me: _me }: { me: User | null }) {
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);

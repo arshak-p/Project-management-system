@@ -18,6 +18,7 @@ interface DraftTask {
   priority: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function StrategistPage({ me: _me }: { me: User | null }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);

@@ -88,8 +88,9 @@ export default function TeamPage({ me }: { me: User | null }) {
       } else {
         setSuccess('Verification code sent to email!');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to send verification code. Please try again.');
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(detail || 'Failed to send verification code. Please try again.');
     } finally {
       setIsSendingOtp(false);
     }
@@ -106,8 +107,9 @@ export default function TeamPage({ me }: { me: User | null }) {
       await api.verifyCreationOTP(form.email, otp);
       setIsEmailVerified(true);
       setSuccess('Email address verified successfully!');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid or expired code. Please check and try again.');
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(detail || 'Invalid or expired code. Please check and try again.');
     } finally {
       setIsVerifyingOtp(false);
     }

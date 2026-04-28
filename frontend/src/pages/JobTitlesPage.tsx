@@ -3,6 +3,7 @@ import { Plus, Trash2, Loader2, Briefcase, CheckCircle2, X } from 'lucide-react'
 import { api } from '../api';
 import type { JobTitle, User } from '../api';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function JobTitlesPage({ me: _me }: { me: User | null }) {
   const [titles, setTitles] = useState<JobTitle[]>([]);
   const [isLoading, setIsLoading] = useState(true);

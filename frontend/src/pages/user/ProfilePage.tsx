@@ -11,6 +11,7 @@ const ROLE_LABELS: Record<string, string> = {
   client: '🏢 Client',
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function ProfilePage({ me: _me }: { me: User | null }) {
   const [me, setMe] = useState<User | null>(null);
   const [form, setForm] = useState({ first_name: '', last_name: '', title: '', phone: '' });

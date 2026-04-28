@@ -16,6 +16,7 @@ interface Backup {
   } | null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function BackupsPage({ me: _me }: { me: User | null }) {
   const [backups, setBackups] = useState<Backup[]>([]);
   const [isLoading, setIsLoading] = useState(true);

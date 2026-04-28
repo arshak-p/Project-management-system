@@ -49,7 +49,7 @@ export default function MyTasksPage({ me }: { me: User | null }) {
       })
       .catch(err => console.error("Error fetching my tasks:", err))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [me?.id]);
 
   useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
 
