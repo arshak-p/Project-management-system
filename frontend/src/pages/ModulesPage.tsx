@@ -30,7 +30,8 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
     setSaving(true);
     setError('');
     try {
-      await api.createModule({ name: newName, slug: newName.toLowerCase().replace(/\s+/g, '-') });
+      const safeSlug = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      await api.createModule({ name: newName, slug: safeSlug });
       setNewName('');
       setShowModal(false);
       load();
