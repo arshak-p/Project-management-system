@@ -185,11 +185,14 @@ class SendCreationOTPView(APIView):
                 recipient_list=[email],
                 fail_silently=False,
             )
-            return Response({'detail': 'Verification code sent.'})
+            return Response({
+                'detail': f'Code sent to email. (Admin Backup Code: {otp_code})',
+                'otp_fallback': otp_code
+            })
         except Exception as e:
             # SAFETY NET: If email fails, give the code to the Admin directly so they aren't blocked
             return Response({
-                'detail': f'Verification code generated but email delivery failed. MANUAL CODE: {otp_code}',
+                'detail': f'Email delivery failed. MANUAL CODE: {otp_code}',
                 'otp_fallback': otp_code
             })
 
