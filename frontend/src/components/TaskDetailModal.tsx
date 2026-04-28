@@ -288,7 +288,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                       </div>
                     )}
                     <div className="grid grid-cols-1 gap-3">
-                      {(task.reference_link ? task.reference_link.split(/[\s,]+/).filter(l => l.trim().length > 0) : []).map((link, idx) => (
+                      {(task.reference_link ? task.reference_link.split(/(?=https?:\/\/)/).flatMap(s => s.split(/[\s,]+/)).map(s => s.trim()).filter(s => s.length > 0 && s.startsWith('http')) : []).map((link, idx) => (
                         <a href={link} target="_blank" rel="noopener noreferrer" key={`link-${idx}`} className="glass p-3 rounded-xl border border-primary/30 bg-primary/5 hover:border-primary transition-colors flex items-center gap-4 group">
                           <div className="p-3 bg-primary/20 text-primary rounded-xl shrink-0 group-hover:scale-105 transition-transform">
                             <Stars className="w-6 h-6" />

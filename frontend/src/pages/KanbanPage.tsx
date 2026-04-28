@@ -98,6 +98,10 @@ export default function KanbanPage({ me }: { me: User | null }) {
             if (filterProject && t.project?.toString() !== filterProject) return false;
             if (filterModule && t.module?.toString() !== filterModule) return false;
             if (filterJobTitle && t.assignee?.title !== filterJobTitle) return false;
+            
+            // Strict Privacy Protocol: Specialists only see their own assigned tasks
+            if (me?.role === 'specialist' && t.assignee?.id !== me?.id) return false;
+            
             return true;
           });
           const colors = STATE_COLORS[state.slug] || STATE_COLORS['pending'];
