@@ -73,7 +73,7 @@ class CreateUserView(APIView):
         try:
             send_mail(
                 subject='Welcome to Colour Parrot - Your Account is Ready!',
-                message=f'Hello {first_name},\n\nYour account on the Colour Parrot Task Management System has been created.\n\nLogin Email: {email}\n\nYou can now log in and start collaborating on your assigned projects.\n\nBest regards,\nThe Colour Parrot Team',
+                message=f'Hello {first_name},\n\nYour account on the Colour Parrot Task Management System has been created.\n\nSystem Portal: https://c1r9rt-workflow.in\nLogin Email: {email}\n\nYou can now log in and start collaborating on your assigned projects.\n\nBest regards,\nThe Colour Parrot Team',
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
                 fail_silently=False,
