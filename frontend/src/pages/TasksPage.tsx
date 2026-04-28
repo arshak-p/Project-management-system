@@ -391,9 +391,23 @@ export default function TasksPage({ me }: { me: User | null }) {
               </div>
             )}
             {filtered.map(task => (
-              <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`flex flex-col md:flex-row md:items-center gap-3 md:gap-4 px-5 py-4 hover:bg-surface/30 transition-all group cursor-pointer relative overflow-hidden ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''} ${task.priority === 'urgent' ? 'bg-red-500/5 border-l-2 border-red-500' : ''} ${task.state_slug === 'client-review' ? 'bg-[#8b5cf6]/5 border-l-4 border-l-[#8b5cf6]' : ''}`}>
+              <div 
+                key={task.id} 
+                onClick={() => setSelectedTaskId(task.id)} 
+                className={`flex flex-col md:flex-row md:items-center gap-3 md:gap-4 px-5 py-4 hover:bg-surface/30 transition-all group cursor-pointer relative overflow-hidden ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''}`}
+                style={{ 
+                  borderLeft: `4px solid ${states.find(s => s.id === task.state)?.color || '#3b82f6'}`,
+                  backgroundColor: `${states.find(s => s.id === task.state)?.color || '#3b82f6'}05`
+                }}
+              >
                 <div className="flex items-center gap-3">
-                  <div className={`w-1.5 h-8 rounded-full flex-shrink-0 hidden md:block ${task.state_slug === 'client-review' ? 'bg-[#8b5cf6]' : task.priority === 'urgent' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-primary'}`}></div>
+                  <div 
+                    className="w-1.5 h-8 rounded-full flex-shrink-0 hidden md:block" 
+                    style={{ 
+                      backgroundColor: states.find(s => s.id === task.state)?.color || '#3b82f6',
+                      boxShadow: `0 0 10px ${states.find(s => s.id === task.state)?.color || '#3b82f6'}40`
+                    }}
+                  ></div>
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="text-[10px] font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 shrink-0">{task.task_code}</code>
                     {(() => {
