@@ -139,6 +139,19 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const isAdmin = me?.is_superuser || ADMIN_ROLES.includes(me?.role || '');
   const navItems = isAdmin ? ADMIN_NAV : USER_NAV;
 
+  // Guard: Do not render the dashboard body until the user profile is securely loaded
+  if (!me) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse"></div>
+          <Loader2 className="w-12 h-12 text-primary animate-spin relative z-10" />
+        </div>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-text-muted opacity-40 mt-8">Decrypting Clearance...</p>
+      </div>
+    );
+  }
+
   const handleNav = (newPage: Page, pushHistory = true) => {
     if (pushHistory && page !== newPage) setHistory(prev => [...prev.slice(-10), page]);
     setPage(newPage);
