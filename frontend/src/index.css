@@ -140,6 +140,7 @@ h1, h2, h3 {
   font-weight: 800;
   background: linear-gradient(135deg, var(--text) 60%, var(--primary));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
