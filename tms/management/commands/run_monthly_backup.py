@@ -93,9 +93,9 @@ class Command(BaseCommand):
         # Generate CSV Data (Full Master Export)
         task_csv = io.StringIO()
         task_writer = csv.writer(task_csv)
-        task_writer.writerow(["ID", "Code", "Title", "Project", "State", "Assignee", "Created"])
+        task_writer.writerow(["ID", "Code", "Title", "Module", "Project", "State", "Assignee", "Created"])
         for t in WorkItem.objects.all():
-            task_writer.writerow([t.id, t.task_code, t.title, t.project.name if t.project else "", t.state.name if t.state else "", t.assignee.email if t.assignee else "", t.created_at.strftime("%Y-%m-%d")])
+            task_writer.writerow([t.id, t.task_code, t.title, t.module.name if t.module else "", t.project.name if t.project else "", t.state.name if t.state else "", t.assignee.email if t.assignee else "", t.created_at.strftime("%Y-%m-%d")])
             
         time_csv = io.StringIO()
         time_writer = csv.writer(time_csv)
