@@ -29,6 +29,7 @@ const StrategistPage = lazy(() => import('./pages/StrategistPage'));
 const TeamIntelligencePage = lazy(() => import('./pages/TeamIntelligencePage'));
 const BackupsPage = lazy(() => import('./pages/BackupsPage'));
 const ModulesPage = lazy(() => import('./pages/ModulesPage'));
+const TeamHeadDashboard = lazy(() => import('./pages/TeamHeadDashboard'));
 import { getWsUrl } from './config';
 
 type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence' | 'backups' | 'modules';
@@ -64,11 +65,10 @@ const USER_NAV = [
 
 const TEAM_HEAD_NAV = [
   { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-  { id: 'projects', label: 'Projects', icon: <Briefcase className="w-5 h-5" /> },
   { id: 'tasks', label: 'Team Tasks', icon: <CheckCircle2 className="w-5 h-5" /> },
   { id: 'kanban', label: 'Team Board', icon: <LayoutGrid className="w-5 h-5" /> },
+  { id: 'intelligence', label: 'My Team', icon: <Users className="w-5 h-5" /> },
   { id: 'my_tasks', label: 'My Tasks', icon: <ClipboardList className="w-5 h-5" /> },
-  { id: 'timesheets', label: 'Timesheets', icon: <Clock3 className="w-5 h-5" /> },
   { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
   { id: 'profile', label: 'Profile', icon: <UserCircle className="w-5 h-5" /> },
 ];
@@ -316,7 +316,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-text-muted opacity-40">Loading Intelligence...</p>
                     </div>
                   }>
-                    {page === 'overview' && <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />}
+                    {page === 'overview' && (isTeamHead ? <TeamHeadDashboard me={me} /> : <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />)}
                     {page === 'projects' && <ProjectsPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />}
                     {page === 'cycles' && <CyclesPage me={me} />}
                     {page === 'tasks' && <TasksPage me={me} />}
