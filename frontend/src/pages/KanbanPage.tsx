@@ -155,6 +155,14 @@ export default function KanbanPage({ me }: { me: User | null }) {
                                  </span>
                                ) : null;
                              })()}
+                             {(() => {
+                               const mod = modules.find(m => m.id === task.module);
+                               return mod ? (
+                                 <span className="text-[9px] font-black uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded w-max">
+                                   {mod.name}
+                                 </span>
+                               ) : null;
+                             })()}
                              <h4 className="font-bold text-sm leading-relaxed">{task.title}</h4>
                           </div>
                           <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/5 opacity-40 group-hover:opacity-100 transition-opacity">
