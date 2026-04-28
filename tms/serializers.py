@@ -91,6 +91,7 @@ class UserSerializer(serializers.ModelSerializer):
             "client_project_id",
             "is_active",
             "date_joined",
+            "date_of_birth",
         )
         read_only_fields = ("id",)
         extra_kwargs = {"password": {"write_only": True, "required": False}}
