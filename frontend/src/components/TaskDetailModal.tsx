@@ -269,12 +269,12 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                       <p className="text-[10px] text-text-muted mt-1 leading-relaxed">Paste cloud storage links, brand guides, or asset briefs here.</p>
                     </div>
                     <div className="w-full md:w-auto min-w-[300px] flex gap-2">
-                      <input 
-                        type="text" 
-                        placeholder="https://drive.google.com/..." 
+                      <textarea 
+                        placeholder="https://drive...&#10;https://frame.io/..." 
                         value={task.reference_link || ''}
                         onChange={e => handleUpdateField('reference_link', e.target.value)}
-                        className="flex-1 px-4 py-2 bg-surface border border-border rounded-xl text-xs focus:border-primary outline-none transition-all shadow-sm"
+                        rows={3}
+                        className="flex-1 px-4 py-2 bg-surface border border-border rounded-xl text-xs focus:border-primary outline-none transition-all shadow-sm custom-scrollbar"
                       />
                     </div>
                   </div>
@@ -288,18 +288,18 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                       </div>
                     )}
                     <div className="grid grid-cols-1 gap-3">
-                      {task.reference_link && (
-                        <a href={task.reference_link} target="_blank" rel="noopener noreferrer" className="glass p-3 rounded-xl border border-primary/30 bg-primary/5 hover:border-primary transition-colors flex items-center gap-4 group">
+                      {(task.reference_link ? task.reference_link.split(/[\s,]+/).filter(l => l.trim().length > 0) : []).map((link, idx) => (
+                        <a href={link} target="_blank" rel="noopener noreferrer" key={`link-${idx}`} className="glass p-3 rounded-xl border border-primary/30 bg-primary/5 hover:border-primary transition-colors flex items-center gap-4 group">
                           <div className="p-3 bg-primary/20 text-primary rounded-xl shrink-0 group-hover:scale-105 transition-transform">
                             <Stars className="w-6 h-6" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-sm text-text truncate">Reference Link</h4>
-                            <p className="text-xs text-text-muted mt-0.5 truncate">{task.reference_link}</p>
+                            <h4 className="font-semibold text-sm text-text truncate">Reference Link {idx + 1}</h4>
+                            <p className="text-xs text-text-muted mt-0.5 truncate">{link}</p>
                           </div>
                           <ChevronRight className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors shrink-0 mx-2" />
                         </a>
-                      )}
+                      ))}
                       {attachments.map(a => (
                         <a href={a.file} target="_blank" rel="noopener noreferrer" key={a.id} className="glass p-3 rounded-xl border border-border hover:border-primary/50 transition-colors flex items-center gap-4 group">
                           <div className="p-3 bg-primary/10 text-primary rounded-xl shrink-0 group-hover:scale-105 transition-transform">
