@@ -144,12 +144,18 @@ export default function TeamPage({ me }: { me: User | null }) {
     }
 
     setSaving(true); setError(''); setSuccess('');
+    
+    // Sanitize empty strings to null to satisfy strict Django date validation
+    const payload = { ...form } as Record<string, any>;
+    if (!payload.date_joined) payload.date_joined = null;
+    if (!payload.date_of_birth) payload.date_of_birth = null;
+
     try {
       if (editingUser) {
-        await api.updateUser(editingUser.id, form);
+        await api.updateUser(editingUser.id, payload);
         setSuccess(`✅ Member details updated successfully!`);
       } else {
-        await api.createUser(form);
+        await api.createUser(payload);
         setSuccess(`✅ Member "${form.first_name || form.email}" added successfully!`);
       }
       setForm(defaultForm);
