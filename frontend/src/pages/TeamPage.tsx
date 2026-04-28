@@ -58,6 +58,8 @@ export default function TeamPage({ me }: { me: User | null }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [success, setSuccess] = useState('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -143,12 +145,26 @@ export default function TeamPage({ me }: { me: User | null }) {
       return;
     }
 
+    if (editingUser && isChangingPassword) {
+      if (!form.password) {
+        setError('Please enter a new password.');
+        return;
+      }
+      if (form.password !== confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
+    }
+
     setSaving(true); setError(''); setSuccess('');
     
     // Sanitize empty strings to null to satisfy strict Django date validation
     const payload = { ...form } as Record<string, any>;
     if (!payload.date_joined) payload.date_joined = null;
     if (!payload.date_of_birth) payload.date_of_birth = null;
+    if (editingUser && !isChangingPassword) {
+      delete payload.password;
+    }
 
     try {
       if (editingUser) {
@@ -160,6 +176,8 @@ export default function TeamPage({ me }: { me: User | null }) {
       }
       setForm(defaultForm);
       setEditingUser(null);
+      setIsChangingPassword(false);
+      setConfirmPassword('');
       setIsEmailVerified(false);
       setShowOtpField(false);
       setOtp('');
@@ -185,6 +203,8 @@ export default function TeamPage({ me }: { me: User | null }) {
       date_joined: user.date_joined ? new Date(user.date_joined).toISOString().split('T')[0] : '',
       date_of_birth: user.date_of_birth ? new Date(user.date_of_birth).toISOString().split('T')[0] : '',
     });
+    setIsChangingPassword(false);
+    setConfirmPassword('');
     setShowModal(true);
   };
 
@@ -232,7 +252,7 @@ export default function TeamPage({ me }: { me: User | null }) {
                   <p className="text-xs text-text-muted">{editingUser ? 'Modify account details' : 'Create a new account for your team'}</p>
                 </div>
               </div>
-              <button onClick={() => { setShowModal(false); setError(''); setForm(defaultForm); setEditingUser(null); }} className="p-2 hover:bg-surface rounded-xl text-text-muted hover:text-text transition-colors">
+              <button onClick={() => { setShowModal(false); setError(''); setForm(defaultForm); setEditingUser(null); setIsChangingPassword(false); setConfirmPassword(''); }} className="p-2 hover:bg-surface rounded-xl text-text-muted hover:text-text transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -339,23 +359,79 @@ export default function TeamPage({ me }: { me: User | null }) {
 
               {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
                 <div className="space-y-1.5 animate-in fade-in duration-300">
-                  <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-                    {editingUser ? 'Reset Password (Optional)' : 'Initial Password'} <span className="text-error">{editingUser ? '' : '*'}</span>
-                  </label>
-                  <div className="relative">
-                    <input 
-                      type={showPassword ? 'text' : 'password'} 
-                      autoComplete="new-password" 
-                      value={form.password} 
-                      onChange={e => setForm({ ...form, password: e.target.value })} 
-                      placeholder={editingUser ? "Leave blank to keep current" : "Min 8 characters"} 
-                      required={!editingUser} 
-                      className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
-                    />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-text-muted hover:text-text">
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+                  {editingUser ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Account Security</label>
+                        {!isChangingPassword && (
+                          <button 
+                            type="button" 
+                            onClick={() => setIsChangingPassword(true)}
+                            className="text-xs font-bold text-primary hover:text-[#8b5cf6] transition-colors"
+                          >
+                            + Change Password
+                          </button>
+                        )}
+                      </div>
+                      
+                      {isChangingPassword && (
+                        <div className="grid grid-cols-2 gap-3 mt-2 p-3 bg-primary/5 border border-primary/20 rounded-xl animate-in slide-in-from-top-2">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-primary uppercase tracking-wider">New Password</label>
+                            <div className="relative">
+                              <input 
+                                type={showPassword ? 'text' : 'password'} 
+                                autoComplete="new-password" 
+                                value={form.password} 
+                                onChange={e => setForm({ ...form, password: e.target.value })} 
+                                placeholder="Min 8 characters" 
+                                className="w-full pl-3 pr-8 py-2 bg-surface border border-border rounded-lg text-sm focus:border-primary outline-none" 
+                              />
+                              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-2 text-text-muted hover:text-text">
+                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-primary uppercase tracking-wider">Confirm Password</label>
+                            <input 
+                              type={showPassword ? 'text' : 'password'} 
+                              autoComplete="new-password" 
+                              value={confirmPassword} 
+                              onChange={e => setConfirmPassword(e.target.value)} 
+                              placeholder="Re-type password" 
+                              className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm focus:border-primary outline-none" 
+                            />
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <button type="button" onClick={() => { setIsChangingPassword(false); setForm({...form, password: ''}); setConfirmPassword(''); }} className="text-[10px] uppercase font-bold text-text-muted hover:text-text transition-colors">
+                              Cancel Password Change
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                        Initial Password <span className="text-error">*</span>
+                      </label>
+                      <div className="relative">
+                        <input 
+                          type={showPassword ? 'text' : 'password'} 
+                          autoComplete="new-password" 
+                          value={form.password} 
+                          onChange={e => setForm({ ...form, password: e.target.value })} 
+                          placeholder="Min 8 characters" 
+                          required 
+                          className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
+                        />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-text-muted hover:text-text">
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -426,7 +502,7 @@ export default function TeamPage({ me }: { me: User | null }) {
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowModal(false); setError(''); setForm(defaultForm); }} className="flex-1 py-2.5 glass border border-border hover:border-primary/40 text-sm rounded-xl font-medium transition-colors text-text-muted hover:text-text">
+                <button type="button" onClick={() => { setShowModal(false); setError(''); setForm(defaultForm); setIsChangingPassword(false); setConfirmPassword(''); }} className="flex-1 py-2.5 glass border border-border hover:border-primary/40 text-sm rounded-xl font-medium transition-colors text-text-muted hover:text-text">
                   Cancel
                 </button>
                 <button type="submit" disabled={saving} className="flex-1 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2 shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)]">
