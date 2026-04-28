@@ -202,7 +202,12 @@ export default function TasksPage({ me }: { me: User | null }) {
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Workflow State</label>
                   <select value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} required className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all cursor-pointer">
                     <option value="">Select State *</option>
-                    {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    {states
+                      .filter(s => {
+                        if (me?.role !== 'specialist') return true;
+                        return !['client-review', 'completed-launched', 'archived'].includes(s.slug);
+                      })
+                      .map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
 

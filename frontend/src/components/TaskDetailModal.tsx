@@ -333,7 +333,13 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                 onChange={e => handleUpdateField('state', Number(e.target.value))}
                 className={`w-full px-3 py-2.5 bg-surface border rounded-xl text-sm outline-none transition-all shadow-sm ${task.state_slug === 'client-review' ? 'border-[#8b5cf6] shadow-[0_0_15px_rgba(139,92,246,0.1)]' : 'border-border focus:border-primary'}`}
               >
-                {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {states
+                  .filter(s => {
+                    if (me?.role !== 'specialist') return true; // Managers see all states
+                    // Specialists cannot skip to Client Review or Completed
+                    return !['client-review', 'completed-launched', 'archived'].includes(s.slug);
+                  })
+                  .map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
 
