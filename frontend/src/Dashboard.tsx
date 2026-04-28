@@ -59,6 +59,7 @@ const ADMIN_NAV = [
 
 const USER_NAV = [
   { id: 'my_tasks', label: 'My Tasks', icon: <ClipboardList className="w-5 h-5" /> },
+  { id: 'kanban', label: 'My Board', icon: <LayoutGrid className="w-5 h-5" /> },
   { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
   { id: 'profile', label: 'Profile', icon: <UserCircle className="w-5 h-5" /> },
 ];
