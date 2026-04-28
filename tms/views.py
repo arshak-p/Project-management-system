@@ -268,7 +268,6 @@ class WorkItemViewSet(SalesSafeViewSet):
             u.is_superuser
             or u.role == User.Role.ADMIN
             or u.role == User.Role.PROJECT_MANAGER
-            or u.role == User.Role.TEAM_HEAD
         ):
             raise PermissionDenied("Only admins and project managers can create tasks.")
         serializer.save(_activity_user=u)
