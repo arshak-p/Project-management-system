@@ -394,12 +394,12 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
                 <Paperclip className="w-3.5 h-3.5" /> Reference Link
               </label>
-              <input 
-                type="text"
+              <textarea 
                 value={task.reference_link || ''}
                 onChange={e => handleUpdateField('reference_link', e.target.value || null)}
-                placeholder="https://..."
-                className="w-full px-3 py-2.5 bg-surface/50 border border-border rounded-xl text-xs focus:border-primary outline-none hover:border-primary/50 transition-colors"
+                placeholder="Paste links here (separated by newlines)..."
+                rows={3}
+                className="w-full px-3 py-2.5 bg-surface/50 border border-border rounded-xl text-xs focus:border-primary outline-none hover:border-primary/50 transition-colors custom-scrollbar"
               />
             </div>
 

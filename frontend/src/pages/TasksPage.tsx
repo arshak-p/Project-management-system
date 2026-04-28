@@ -226,7 +226,7 @@ export default function TasksPage({ me }: { me: User | null }) {
 
                 <div className="md:col-span-12 space-y-2.5">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Reference Link (Optional)</label>
-                  <input value={form.reference_link} onChange={e => setForm({ ...form, reference_link: e.target.value })} placeholder="https://cloud-storage.com/assets..." className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all placeholder:text-text-muted/30" />
+                  <textarea value={form.reference_link} onChange={e => setForm({ ...form, reference_link: e.target.value })} placeholder="Paste multiple links here (separated by newlines)..." rows={3} className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all placeholder:text-text-muted/30 custom-scrollbar" />
                 </div>
 
                 <div className="md:col-span-6 space-y-2.5">
