@@ -287,8 +287,36 @@ class WorkItemViewSet(SalesSafeViewSet):
                 if new_state.slug in ("client-review", "completed-launched") and new_state.id != inst.state_id:
                     if not (u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD)):
                         raise PermissionDenied("Only Leads, Managers or Admins can approve work for Client Review or Completion.")
+                
+                # Notify Team Head when work is done and ready for review
+                if new_state.slug == "team-head-review" and inst.state_id != new_state.id:
+                    ths = User.objects.filter(role=User.Role.TEAM_HEAD, is_active=True)
+                    if inst.assignee and inst.assignee.title:
+                        ths = ths.filter(title=inst.assignee.title)
+                        for th in ths:
+                            notify_user(
+                                user_id=th.id,
+                                title="Task Ready for Review 📋",
+                                body=f"Task '{inst.task_code}' has been moved to Team Head Review by {u.get_full_name() or u.email}.",
+                                link=f"/task/{inst.id}"
+                            )
             except State.DoesNotExist:
                 pass
+
+        # If TEAM_HEAD, restrict editing to ONLY the state field.
+        if u.role == User.Role.TEAM_HEAD and not u.is_superuser:
+            # We enforce saving ONLY the state if they sent it
+            allowed_data = {}
+            if "state" in self.request.data:
+                allowed_data["state"] = self.request.data["state"]
+            # Re-serialize or simply update the state manually on the instance
+            if "state" in allowed_data:
+                inst.state_id = allowed_data["state"]
+                inst._activity_user = u
+                inst.save(update_fields=["state_id", "updated_at"])
+                return
+            else:
+                raise PermissionDenied("Team Heads are only permitted to update the task status.")
 
         serializer.save(_activity_user=u)
 
