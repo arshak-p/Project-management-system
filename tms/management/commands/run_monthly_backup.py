@@ -90,19 +90,17 @@ class Command(BaseCommand):
         import io
         from django.core.mail import EmailMessage
 
-        # Generate CSV Data (Filtered for this specific month)
+        # Generate CSV Data (Full Master Export)
         task_csv = io.StringIO()
         task_writer = csv.writer(task_csv)
         task_writer.writerow(["ID", "Code", "Title", "Project", "State", "Assignee", "Created"])
-        monthly_tasks = WorkItem.objects.filter(created_at__year=now.year, created_at__month=now.month)
-        for t in monthly_tasks:
+        for t in WorkItem.objects.all():
             task_writer.writerow([t.id, t.task_code, t.title, t.project.name if t.project else "", t.state.name if t.state else "", t.assignee.email if t.assignee else "", t.created_at.strftime("%Y-%m-%d")])
             
         time_csv = io.StringIO()
         time_writer = csv.writer(time_csv)
         time_writer.writerow(["Task", "User", "Minutes", "Note", "Date"])
-        monthly_logs = TimeLog.objects.filter(logged_at__year=now.year, logged_at__month=now.month)
-        for tl in monthly_logs:
+        for tl in TimeLog.objects.all():
             time_writer.writerow([tl.work_item.task_code if tl.work_item else "", tl.user.email if tl.user else "", tl.minutes, tl.note, tl.logged_at.strftime("%Y-%m-%d")])
 
         # Send Email to the system email account (the 5GB vault)
