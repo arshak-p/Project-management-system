@@ -85,12 +85,46 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f"Cloud Sync Webhook failed: {str(e)}"))
 
-        # 5. Notify Admins
+        # 5. Notify Admins and Email the Backup
+        import csv
+        import io
+        from django.core.mail import EmailMessage
+
+        # Generate CSV Data
+        task_csv = io.StringIO()
+        task_writer = csv.writer(task_csv)
+        task_writer.writerow(["ID", "Code", "Title", "Project", "State", "Assignee", "Created"])
+        for t in WorkItem.objects.all():
+            task_writer.writerow([t.id, t.task_code, t.title, t.project.name if t.project else "", t.state.name if t.state else "", t.assignee.email if t.assignee else "", t.created_at.strftime("%Y-%m-%d")])
+            
+        time_csv = io.StringIO()
+        time_writer = csv.writer(time_csv)
+        time_writer.writerow(["Task", "User", "Minutes", "Note", "Date"])
+        for tl in TimeLog.objects.all():
+            time_writer.writerow([tl.work_item.task_code if tl.work_item else "", tl.user.email if tl.user else "", tl.minutes, tl.note, tl.logged_at.strftime("%Y-%m-%d")])
+
+        # Send Email to the system email account (the 5GB vault)
+        vault_email = settings.EMAIL_HOST_USER or settings.DEFAULT_FROM_EMAIL
+        if vault_email:
+            try:
+                email = EmailMessage(
+                    subject=f"Agency Automated Backup - {month_str}",
+                    body=f"Attached are the human-readable CSV backups for {month_str}.\n\nThis email serves as your secure, off-site cloud storage vault.",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[vault_email],
+                )
+                email.attach(f"tasks_backup_{month_str}.csv", task_csv.getvalue(), "text/csv")
+                email.attach(f"timelogs_backup_{month_str}.csv", time_csv.getvalue(), "text/csv")
+                email.send(fail_silently=False)
+                self.stdout.write(self.style.SUCCESS(f"Successfully emailed CSV backups to {vault_email}"))
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"Failed to email backups: {str(e)}"))
+
         notify_roles(
             roles=[User.Role.ADMIN, User.Role.PROJECT_MANAGER],
-            title="📊 Monthly Agency Backup & Performance Ready",
-            body=f"Backup for {month_str} is ready. We've also performed a {retention_months}-month retention cleanup and prepared your agency performance summary.",
-            link="/admin/backups" 
+            title="📊 Monthly Agency Backup Ready & Emailed",
+            body=f"Backup for {month_str} has been automatically sent to your verification email inbox. We've also performed a {retention_months}-month retention cleanup.",
+            link="/backups" 
         )
 
         self.stdout.write(self.style.SUCCESS(f"Monthly backup flow for {month_str} completed."))
