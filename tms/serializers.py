@@ -94,7 +94,7 @@ class UserSerializer(serializers.ModelSerializer):
             "date_of_birth",
         )
         read_only_fields = ("id",)
-        extra_kwargs = {"password": {"write_only": True, "required": False}}
+        extra_kwargs = {"password": {"write_only": True, "required": False, "allow_blank": True}}
 
     def validate_password(self, value):
         from django.contrib.auth.password_validation import validate_password
@@ -114,6 +114,12 @@ class UserSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password", None)
         dept_id = validated_data.pop("department_id", _UNSET)
         cp_id = validated_data.pop("client_project_id", _UNSET)
+        
+        # Backend Safety Net: Convert empty strings to None for date fields
+        if "date_of_birth" in validated_data and validated_data["date_of_birth"] == "":
+            validated_data["date_of_birth"] = None
+        if "date_joined" in validated_data and validated_data["date_joined"] == "":
+            validated_data["date_joined"] = None
         
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
