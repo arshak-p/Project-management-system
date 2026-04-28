@@ -128,6 +128,9 @@ export default function TasksPage({ me }: { me: User | null }) {
     
     if (!showCompleted && t.state_slug === 'completed-launched') match = false;
     
+    // Strict Privacy Protocol: Specialists only see their own assigned tasks
+    if (me?.role === 'specialist' && t.assignee?.id !== me?.id) match = false;
+    
     return match;
   });
 
