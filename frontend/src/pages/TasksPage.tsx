@@ -148,7 +148,7 @@ export default function TasksPage({ me }: { me: User | null }) {
           <h1 className="text-3xl lg:text-5xl font-black tracking-tighter">Work Items</h1>
           <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mt-1 opacity-60 italic">Live Task Engine // Agency Operations</p>
         </div>
-        {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'team_head') && (
+        {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
           <button 
             onClick={() => setShowForm(!showForm)} 
             className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"

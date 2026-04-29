@@ -111,7 +111,7 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
             # 1. Notify Team Heads for Review
             if slug == 'team-head-review':
                 notify_roles(
-                    [User.Role.TEAM_HEAD, User.Role.PROJECT_MANAGER],
+                    [User.Role.PROJECT_MANAGER],
                     title="Review Required",
                     body=f"Task {instance.task_code} is ready for internal review.",
                     link=f"/task/{instance.id}",
