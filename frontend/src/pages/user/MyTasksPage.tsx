@@ -257,10 +257,10 @@ export default function MyTasksPage({ me }: { me: User | null }) {
                    transition={{ delay: idx * 0.05 }}
                    onClick={() => setSelectedTaskId(t.id)}
                     className={`group p-6 glass rounded-[2rem] border-white/5 flex items-center gap-6 cursor-pointer transition-all hover:bg-white/5 ${
-                      t.priority === 'urgent' ? 'border-error/20 hover:border-error/40' : 'hover:border-primary/40'
-                    }`}
+                       t.is_client_approved ? 'border-emerald-500/40 hover:border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : (['client-review', 'completed-launched'].includes(t.state_slug || '') ? 'border-blue-500/40 hover:border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : (t.priority === 'urgent' ? 'border-error/20 hover:border-error/40' : 'hover:border-primary/40'))
+                     }`}
                  >
-                    <div className={`p-4 rounded-2xl ${t.priority === 'urgent' ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'} group-hover:shadow-glow transition-all`}>
+                    <div className={`p-4 rounded-2xl ${t.is_client_approved ? 'bg-emerald-500/10 text-emerald-500' : (['client-review', 'completed-launched'].includes(t.state_slug || '') ? 'bg-blue-500/10 text-blue-500' : (t.priority === 'urgent' ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'))} group-hover:shadow-glow transition-all`}>
                        {PRIORITY_ICONS[t.priority] || <CircleDashed className="w-5 h-5" />}
                     </div>
                     <div className="flex-1 min-w-0">

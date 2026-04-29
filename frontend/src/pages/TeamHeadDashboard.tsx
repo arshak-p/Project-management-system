@@ -43,6 +43,18 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
     }
   };
 
+  const handleQuickReject = async (e: React.MouseEvent, taskId: number) => {
+    e.stopPropagation();
+    const reworkState = states.find(s => s.slug === 'rework-revision');
+    if (!reworkState) return;
+    try {
+      await api.updateTask(taskId, { state: reworkState.id });
+      loadData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const personalTasks = tasks.filter(t => t.assignee?.id === me?.id);
   const teamTasks = tasks.filter(t => t.assignee?.id !== me?.id);
 
@@ -135,12 +147,20 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
                   </div>
                   <div className="flex items-center gap-2">
                     {task.state_slug === 'team-head-review' && (
-                      <button 
-                        onClick={(e) => handleQuickApprove(e, task.id)}
-                        className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white font-black uppercase tracking-widest text-[8px] rounded border border-emerald-500/30 transition-all hover:scale-105"
-                      >
-                        Approve
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button 
+                          onClick={(e) => handleQuickApprove(e, task.id)}
+                          className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white font-black uppercase tracking-widest text-[8px] rounded border border-emerald-500/30 transition-all hover:scale-105"
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={(e) => handleQuickReject(e, task.id)}
+                          className="px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-black uppercase tracking-widest text-[8px] rounded border border-red-500/30 transition-all hover:scale-105"
+                        >
+                          Reject
+                        </button>
+                      </div>
                     )}
                     <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${
                       task.state_slug === 'team-head-review' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : 'bg-white/5 text-text-muted'
