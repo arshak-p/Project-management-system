@@ -182,7 +182,7 @@ class StateViewSet(SalesSafeViewSet):
         # SELF-SEEDING BRAIN: If empty, create the Elite Workflow states automatically
         if not State.objects.exists():
             DEFAULTS = [
-                ('backlog', 'Backlog', '#64748b', 0),
+                ('backlog', 'Pending', '#64748b', 0),
                 ('to-do', 'To Do', '#6366f1', 10),
                 ('in-progress', 'In Progress', '#3b82f6', 20),
                 ('team-head-review', 'Team Head Review', '#f59e0b', 40),
