@@ -83,12 +83,27 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
   }, [taskId]);
 
   const handleUpdateField = async (field: string, value: string | number | boolean | null) => {
+    const oldTask = task;
+    if (task) {
+      const updatedTask = { ...task, [field]: value };
+      if (field === 'state') {
+        const foundState = states.find(s => s.id === value);
+        if (foundState) {
+          updatedTask.state_slug = foundState.slug;
+          updatedTask.state__name = foundState.name;
+        }
+      }
+      setTask(updatedTask);
+    }
+    window.dispatchEvent(new CustomEvent('cp-task-updated'));
+
     try {
       await api.updateTask(taskId, { [field]: value });
-      loadData();
-      window.dispatchEvent(new CustomEvent('cp-task-updated'));
+      api.getTask(taskId).then(res => setTask(res.data)).catch(() => {});
     } catch (e) {
       console.error('Failed to update task', e);
+      setTask(oldTask);
+      window.dispatchEvent(new CustomEvent('cp-task-updated'));
     }
   };
 

@@ -42,11 +42,14 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
     e.stopPropagation();
     const clientReviewState = states.find(s => s.slug === 'client-review');
     if (!clientReviewState) return;
+    const oldTasks = tasks;
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, state_slug: 'client-review', state: clientReviewState.id } : t));
     try {
       await api.updateTask(taskId, { state: clientReviewState.id });
       loadData();
     } catch (err) {
       console.error(err);
+      setTasks(oldTasks);
     }
   };
 
@@ -54,11 +57,14 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
     e.stopPropagation();
     const reworkState = states.find(s => s.slug === 'rework-revision');
     if (!reworkState) return;
+    const oldTasks = tasks;
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, state_slug: 'rework-revision', state: reworkState.id } : t));
     try {
       await api.updateTask(taskId, { state: reworkState.id });
       loadData();
     } catch (err) {
       console.error(err);
+      setTasks(oldTasks);
     }
   };
 
