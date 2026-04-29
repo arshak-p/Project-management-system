@@ -141,7 +141,7 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
                   <div>
                     <span className="text-[8px] font-black uppercase tracking-widest text-[#8b5cf6]">{task.task_code} • {task.project__slug || 'GENERAL'} {task.module_slug && `• ${task.module_slug}`}</span>
                     <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors">{task.title}</h4>
-                    <span className="text-[8px] font-black uppercase text-text-muted/40 block mt-1">Assignee: {task.assignee?.first_name || 'Generic Operator'}</span>
+                    <span className="text-[8px] font-black uppercase text-text-muted/40 block mt-1">Assignee: {task.assignee?.first_name || 'Generic Operator'} • Status: {task.state__name || task.state_slug?.replace(/-/g, ' ')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {task.state_slug === 'team-head-review' && (

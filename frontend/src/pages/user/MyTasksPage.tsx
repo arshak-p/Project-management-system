@@ -267,7 +267,7 @@ export default function MyTasksPage({ me }: { me: User | null }) {
                        <div className="flex items-center gap-3 mb-2">
                           <span className="text-[9px] font-black uppercase text-primary tracking-[0.2em]">{t.task_code} • {t.project__slug || 'GENERAL'} {t.module_slug && `• ${t.module_slug}`}</span>
                           <span className="w-1 h-1 rounded-full bg-white/10"></span>
-                          <span className="text-[9px] font-black text-text-muted/40 uppercase tracking-[0.1em]">{t.state__name}</span>
+                          <span className="text-[9px] font-black text-text-muted/40 uppercase tracking-[0.1em]">{t.state__name || t.state_slug?.replace(/-/g, ' ')}</span>
                           {t.is_client_approved ? (
                             <span className="text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.1)]">🟢 Client Approved</span>
                           ) : ['client-review', 'completed-launched'].includes(t.state_slug || '') ? (
