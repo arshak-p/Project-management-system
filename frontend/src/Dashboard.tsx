@@ -4,7 +4,7 @@ import type { User } from './api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Briefcase, CheckCircle2, Users,
-  LogOut, Bell, LayoutGrid, Menu,
+  LogOut, Bell, LayoutGrid, Menu, X,
   ClipboardList, UserCircle, ArrowLeft, Sun, Moon,
   Clock3, CalendarRange, Activity, Map as MapIcon, BrainCircuit, ShieldCheck, Download, Layers,
   Loader2
@@ -204,7 +204,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] lg:translate-x-0'}
       `}>
         <div className="p-10 flex items-center justify-between">
-          <button onClick={() => handleNav((isAdmin || isTeamHead) ? 'overview' : 'my_tasks')} className="flex items-center gap-6 group">
+          <button onClick={() => { handleNav((isAdmin || isTeamHead) ? 'overview' : 'my_tasks'); setSidebarOpen(false); }} className="flex items-center gap-6 group">
             <div className="relative">
                <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full group-hover:bg-primary/50 transition-all"></div>
                <img src="/colour parrot-icon.png" alt="Logo" className="relative h-16 w-auto animate-float" />
@@ -214,13 +214,16 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-text-muted mt-3 opacity-60">Management</p>
             </div>
           </button>
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-3 glass rounded-xl text-text-muted hover:text-white transition-all ml-2">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => (
             <motion.button 
               key={item.id} 
-              onClick={() => handleNav(item.id as Page)} 
+              onClick={() => { handleNav(item.id as Page); setSidebarOpen(false); }} 
               className={navItemClass(item.id)}
               whileHover={{ x: 4 }}
               whileTap={{ scale: 0.98 }}
