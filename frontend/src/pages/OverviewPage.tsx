@@ -18,7 +18,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const load = useCallback(() => {
-    setIsLoading(true);
+
     Promise.all([
       api.getAnalytics(), 
       api.getProjects(), 
