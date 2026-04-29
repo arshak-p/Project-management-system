@@ -208,7 +208,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                         const h = date.getHours();
                         const m = date.getMinutes();
                         const timeVal = h + m / 60;
-                        const isOvertime = timeVal < 9.0 || timeVal > 18.0; // 9 AM to 6 PM
+                        const isOvertime = timeVal < 9.0 || timeVal > 18.0;
                         
                         return (
                           <div key={act.id} className="pl-8 relative flex flex-col gap-0.5 animate-in slide-in-from-left-2 duration-200">

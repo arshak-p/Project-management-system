@@ -83,8 +83,7 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         
-        {/* SECTION 1: PERSONAL WORK */}
-        <div className="glass rounded-[2.5rem] p-8 border border-primary/10">
+        <div>
           <div className="flex items-center gap-4 mb-8">
             <div className="p-3 bg-primary/20 rounded-xl">
               <ClipboardList className="w-6 h-6 text-primary" />
@@ -118,8 +117,7 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
           </div>
         </div>
 
-        {/* SECTION 2: TEAM WORK */}
-        <div className="glass rounded-[2.5rem] p-8 border border-white/5">
+        <div>
           <div className="flex items-center gap-4 mb-8">
             <div className="p-3 bg-[#8b5cf6]/20 rounded-xl">
               <Users className="w-6 h-6 text-[#8b5cf6]" />
@@ -175,7 +173,6 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
         </div>
       </div>
 
-      {/* SECTION 3: EXTENDED LIFECYCLE TRACKER */}
       <div className="glass rounded-[2.5rem] p-8 border border-white/5">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
           <div>
@@ -200,22 +197,18 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
             </thead>
             <tbody className="divide-y divide-white/5 font-mono text-xs">
               {teamTasks.map(task => {
-                // Determine lifecycle stats using sequential state search
                 const taskActs = activities.filter(a => a.entity_type === 'work_item' && a.entity_id === task.id.toString());
                 
                 const assignAct = taskActs.find(a => a.action === 'created');
                 const assignDate = assignAct ? new Date(assignAct.created_at).toLocaleDateString() : new Date(task.created_at).toLocaleDateString();
 
-                // Find the first time state became 'in-progress'
-                const startAct = taskActs.find(a => a.payload && typeof a.payload === 'object' && (a.payload as any).state_id === 20); // 'in-progress' fallback id
+                const startAct = taskActs.find(a => a.payload && typeof a.payload === 'object' && (a.payload as any).state_id === 20); 
                 const startDate = startAct ? new Date(startAct.created_at).toLocaleDateString() : 'Pending';
 
-                // Find the completion metrics
-                const completeAct = taskActs.find(a => a.payload && typeof a.payload === 'object' && [50, 100].includes((a.payload as any).state_id)); // state fallback IDs
+                const completeAct = taskActs.find(a => a.payload && typeof a.payload === 'object' && [50, 100].includes((a.payload as any).state_id)); 
                 const completeDate = completeAct ? new Date(completeAct.created_at).toLocaleDateString() : (['client-review', 'completed-launched'].includes(task.state_slug || '') ? new Date(task.updated_at).toLocaleDateString() : 'Ongoing');
 
-                // Rework logic
-                const reworkCount = taskActs.filter(a => a.payload && typeof a.payload === 'object' && (a.payload as any).state_id === 60).length; // 'rework-revision' id
+                const reworkCount = taskActs.filter(a => a.payload && typeof a.payload === 'object' && (a.payload as any).state_id === 60).length; 
 
                 return (
                   <tr key={task.id} className="hover:bg-white/2 transition-colors cursor-pointer" onClick={() => setSelectedTaskId(task.id)}>
