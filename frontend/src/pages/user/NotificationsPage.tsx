@@ -85,7 +85,7 @@ export default function NotificationsPage({ me }: { me: User | null }) {
                     </div>
                     <button
                       onClick={() => markRead(n.id)}
-                      className="opacity-0 group-hover:opacity-100 flex items-center gap-1 text-xs text-primary hover:text-green-400 transition-all px-3 py-1.5 glass border border-border rounded-lg flex-shrink-0"
+                      className="opacity-100 md:opacity-0 group-hover:opacity-100 flex items-center gap-1 text-xs text-primary hover:text-green-400 transition-all px-3 py-1.5 glass border border-border rounded-lg flex-shrink-0"
                     >
                       <CheckCircle className="w-3.5 h-3.5" /> Mark read
                     </button>
