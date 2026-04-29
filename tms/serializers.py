@@ -270,6 +270,8 @@ class WorkItemSerializer(serializers.ModelSerializer):
         required=False,
     )
     state_slug = serializers.SlugField(source="state.slug", read_only=True)
+    state__name = serializers.CharField(source="state.name", read_only=True)
+    project__slug = serializers.SlugField(source="project.slug", read_only=True)
     module_slug = serializers.SlugField(source="module.slug", read_only=True)
     label_details = LabelSerializer(source="labels", many=True, read_only=True)
     total_minutes = serializers.SerializerMethodField()
@@ -284,6 +286,8 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "description",
             "state",
             "state_slug",
+            "state__name",
+            "project__slug",
             "priority",
             "module",
             "module_slug",
