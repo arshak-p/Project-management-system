@@ -125,18 +125,18 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
               ))}
            </div>
 
-           <div className="flex items-center gap-2 p-1 glass rounded-2xl border border-white/5">
+           <div className="flex flex-col sm:flex-row items-center gap-2 p-2 sm:p-1 glass rounded-2xl border border-white/5 w-full sm:w-auto">
               <input 
                 type="date" 
                 value={customRange.start}
                 onChange={(e) => setCustomRange(p => ({ ...p, start: e.target.value }))}
-                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none border-r border-white/5" 
+                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none border-b sm:border-b-0 sm:border-r border-white/5 w-full sm:w-auto" 
               />
               <input 
                 type="date" 
                 value={customRange.end}
                 onChange={(e) => setCustomRange(p => ({ ...p, end: e.target.value }))}
-                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none" 
+                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none w-full sm:w-auto" 
               />
               {(customRange.start || customRange.end) && (
                 <button onClick={() => setCustomRange({ start: '', end: '' })} className="p-1.5 hover:bg-white/5 rounded-lg">

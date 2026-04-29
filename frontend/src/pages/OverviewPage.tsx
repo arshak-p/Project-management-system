@@ -115,7 +115,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
       })()}
 
       {notifications.length > 0 && (
-         <div className="fixed top-24 right-8 z-[100] flex flex-col gap-3 w-72 pointer-events-none">
+          <div className="fixed bottom-4 right-4 md:top-24 md:bottom-auto md:right-8 z-[100] flex flex-col gap-3 w-[calc(100%-2rem)] md:w-72 pointer-events-none">
             <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500 italic mb-1 px-4 drop-shadow-sm">Priority Alpha Alerts</h3>
             {notifications.map(n => (
               <motion.div 
