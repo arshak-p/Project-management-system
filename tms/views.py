@@ -31,7 +31,7 @@ from tms.models import (
     WorkItemComment,
     Backup,
 )
-from tms.permissions import BlockSalesWrites, IsAdminRole, IsPMOrAdmin
+from tms.permissions import BlockSalesWrites, IsAdminRole, IsPMOrAdmin, IsLeadPMOrAdmin
 from tms.serializers import (
     ActivityLogSerializer,
     BackupSerializer,
@@ -96,7 +96,9 @@ class UserViewSet(SalesSafeViewSet):
         return qs
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve", "update", "partial_update"):
+        if self.action in ("list", "retrieve"):
+            return [permissions.IsAuthenticated(), IsLeadPMOrAdmin()]
+        if self.action in ("update", "partial_update", "create", "destroy"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
         if self.action in ("create", "destroy"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
