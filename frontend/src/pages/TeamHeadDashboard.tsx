@@ -29,6 +29,8 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(() => loadData(), 8000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleQuickApprove = async (e: React.MouseEvent, taskId: number) => {

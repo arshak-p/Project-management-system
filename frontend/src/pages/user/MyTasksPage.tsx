@@ -51,7 +51,11 @@ export default function MyTasksPage({ me }: { me: User | null }) {
       .finally(() => setIsLoading(false));
   }, [me?.id]);
 
-  useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
+  useEffect(() => { 
+    Promise.resolve().then(() => load()); 
+    const interval = setInterval(() => load(), 8000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const projectChartData = useMemo(() => {
     return (analytics?.by_project as ProjectAnalytics[] | undefined)?.map((p: ProjectAnalytics) => ({

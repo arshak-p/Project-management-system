@@ -40,7 +40,11 @@ export default function KanbanPage({ me }: { me: User | null }) {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
+  useEffect(() => { 
+    Promise.resolve().then(() => load()); 
+    const interval = setInterval(() => load(), 8000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const handleDelete = async (id: number) => {
     if (!confirm('Abort this work item permanently?')) return;
