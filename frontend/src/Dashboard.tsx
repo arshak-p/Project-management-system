@@ -97,7 +97,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       const isTH = TEAM_HEAD_ROLES.includes(r.data.role || '');
       if (!isA && !isTH && page === 'overview') setPage('my_tasks');
     }).catch(() => onLogout());
-  }, [onLogout, page]);
+  }, []);
 
   useEffect(() => {
     // Request permission for Desktop Notifications
