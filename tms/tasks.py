@@ -84,7 +84,15 @@ def check_birthdays():
     )
     
     count = 0
+    from tms.models import Notification
     for user in birthday_users:
+        existing = Notification.objects.filter(
+            title=f"It's {user.first_name}'s Birthday! 🥳",
+            created_at__date=today
+        ).exists()
+        if existing:
+            continue
+
         # 1. Notify the birthday person
         notify_user(
             user.id,
