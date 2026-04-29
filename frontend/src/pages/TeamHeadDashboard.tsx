@@ -139,7 +139,7 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
                   className="p-4 bg-background border border-white/5 rounded-2xl flex items-center justify-between hover:bg-white/5 transition-all cursor-pointer group"
                 >
                   <div>
-                    <span className="text-[8px] font-black uppercase tracking-widest text-[#8b5cf6]">{task.task_code}</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-[#8b5cf6]">{task.task_code} • {task.project__slug || 'GENERAL'} {task.module_slug && `• ${task.module_slug}`}</span>
                     <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors">{task.title}</h4>
                     <span className="text-[8px] font-black uppercase text-text-muted/40 block mt-1">Assignee: {task.assignee?.first_name || 'Generic Operator'}</span>
                   </div>

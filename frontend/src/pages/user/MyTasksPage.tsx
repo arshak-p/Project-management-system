@@ -265,7 +265,7 @@ export default function MyTasksPage({ me }: { me: User | null }) {
                     </div>
                     <div className="flex-1 min-w-0">
                        <div className="flex items-center gap-3 mb-2">
-                          <span className="text-[9px] font-black uppercase text-primary tracking-[0.2em]">{t.project__slug || 'GENERAL'}</span>
+                          <span className="text-[9px] font-black uppercase text-primary tracking-[0.2em]">{t.task_code} • {t.project__slug || 'GENERAL'} {t.module_slug && `• ${t.module_slug}`}</span>
                           <span className="w-1 h-1 rounded-full bg-white/10"></span>
                           <span className="text-[9px] font-black text-text-muted/40 uppercase tracking-[0.1em]">{t.state__name}</span>
                           {t.is_client_approved ? (
