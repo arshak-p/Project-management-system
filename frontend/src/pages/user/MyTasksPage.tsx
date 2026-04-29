@@ -274,6 +274,8 @@ export default function MyTasksPage({ me }: { me: User | null }) {
                             <span className="text-[8px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-[0_0_8px_rgba(59,130,246,0.1)]">🔵 In-House Approved</span>
                           ) : t.state_slug === 'team-head-review' ? (
                             <span className="text-[8px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse">🟡 Pending Review</span>
+                          ) : t.state_slug === 'rework-revision' ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded border border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.15)] animate-pulse">🔴 Rework / Re-Edit</span>
                           ) : null}
                        </div>
                        <h4 className="font-extrabold text-sm text-text-muted group-hover:text-white transition-colors uppercase tracking-tight truncate">{t.title}</h4>

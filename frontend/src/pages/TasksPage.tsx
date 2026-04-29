@@ -433,6 +433,10 @@ export default function TasksPage({ me }: { me: User | null }) {
                       <span className="flex items-center gap-1 text-[9px] bg-amber-500/10 text-amber-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-amber-500/20 animate-pulse">
                         🟡 Pending Review
                       </span>
+                    ) : task.state_slug === 'rework-revision' ? (
+                      <span className="flex items-center gap-1 text-[9px] bg-red-500/10 text-red-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.15)] animate-pulse">
+                        🔴 Rework / Re-Edit
+                      </span>
                     ) : null}
                   </div>
                 </div>
