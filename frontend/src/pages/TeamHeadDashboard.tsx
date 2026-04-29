@@ -8,21 +8,40 @@ import TaskDetailModal from '../components/TaskDetailModal';
 export default function TeamHeadDashboard({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [states, setStates] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
-  useEffect(() => {
+  const loadData = () => {
     Promise.all([
       api.getTasks(),
-      api.getActivity().catch(() => ({ data: [] }))
+      api.getActivity().catch(() => ({ data: [] })),
+      api.getStates().catch(() => ({ data: [] }))
     ])
-      .then(([tRes, actRes]) => {
+      .then(([tRes, actRes, stateRes]) => {
         setTasks(tRes.data);
         setActivities(actRes.data);
+        setStates(stateRes.data);
       })
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  const handleQuickApprove = async (e: React.MouseEvent, taskId: number) => {
+    e.stopPropagation();
+    const clientReviewState = states.find(s => s.slug === 'client-review');
+    if (!clientReviewState) return;
+    try {
+      await api.updateTask(taskId, { state: clientReviewState.id });
+      loadData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const personalTasks = tasks.filter(t => t.assignee?.id === me?.id);
   const teamTasks = tasks.filter(t => t.assignee?.id !== me?.id);
@@ -114,11 +133,21 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
                     <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors">{task.title}</h4>
                     <span className="text-[8px] font-black uppercase text-text-muted/40 block mt-1">Assignee: {task.assignee?.first_name || 'Generic Operator'}</span>
                   </div>
-                  <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${
-                    task.state_slug === 'team-head-review' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : 'bg-white/5 text-text-muted'
-                  }`}>
-                    {task.state__name}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {task.state_slug === 'team-head-review' && (
+                      <button 
+                        onClick={(e) => handleQuickApprove(e, task.id)}
+                        className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white font-black uppercase tracking-widest text-[8px] rounded border border-emerald-500/30 transition-all hover:scale-105"
+                      >
+                        Approve
+                      </button>
+                    )}
+                    <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${
+                      task.state_slug === 'team-head-review' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : 'bg-white/5 text-text-muted'
+                    }`}>
+                      {task.state__name}
+                    </span>
+                  </div>
                 </div>
               ))
             )}
