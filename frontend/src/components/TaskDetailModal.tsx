@@ -21,6 +21,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
   const [attachments, setAttachments] = useState<WorkItemAttachment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
   
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('details');
@@ -39,14 +40,18 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
       api.getAssignableUsers().catch(() => ({ data: [] })),
       api.getStates(),
       api.getAttachments(taskId).catch(() => ({ data: [] })),
+      api.getActivity().catch(() => ({ data: [] })),
     ])
-      .then(([tRes, cRes, tlRes, uRes, sRes, aRes]) => {
+      .then(([tRes, cRes, tlRes, uRes, sRes, aRes, actRes]) => {
         setTask(tRes.data);
         setComments(cRes.data);
         setTimeLogs(tlRes.data);
         setUsers(uRes.data);
         setStates(sRes.data);
         setAttachments(aRes.data);
+        if (actRes && actRes.data) {
+          setActivities(actRes.data.filter((a: any) => a.entity_type === 'work_item' && a.entity_id === taskId.toString()));
+        }
       })
       .finally(() => setIsLoading(false));
   }, [taskId]);
@@ -190,9 +195,40 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                     )}
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-text-muted uppercase mb-3 flex items-center gap-2"><Activity className="w-4 h-4" /> Recent Activity</h3>
-                    <p className="text-xs text-text-muted">Task created on {new Date(task.created_at).toLocaleString()}</p>
-                    <p className="text-xs text-text-muted mt-1">Last updated on {new Date(task.updated_at).toLocaleString()}</p>
+                    <h3 className="text-sm font-bold text-text-muted uppercase mb-3 flex items-center gap-2"><Activity className="w-4 h-4" /> Execution Timeline</h3>
+                    <div className="space-y-3 relative before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[1px] before:bg-border/60">
+                      <div className="pl-8 relative flex flex-col">
+                        <div className="absolute left-[11px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary border border-background"></div>
+                        <p className="text-xs text-text font-medium">Task Created</p>
+                        <p className="text-[10px] text-text-muted font-mono">{new Date(task.created_at).toLocaleString()}</p>
+                      </div>
+                      
+                      {activities.map((act: any) => {
+                        const date = new Date(act.created_at);
+                        const h = date.getHours();
+                        const m = date.getMinutes();
+                        const timeVal = h + m / 60;
+                        const isOvertime = timeVal < 9.0 || timeVal > 18.0; // 9 AM to 6 PM
+                        
+                        return (
+                          <div key={act.id} className="pl-8 relative flex flex-col gap-0.5 animate-in slide-in-from-left-2 duration-200">
+                            <div className={`absolute left-[11px] top-1.5 w-2.5 h-2.5 rounded-full border border-background ${isOvertime ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-primary'}`}></div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-semibold text-text capitalize">{act.action}</span>
+                              <span className="text-[10px] text-text-muted font-mono">{date.toLocaleString()}</span>
+                              {isOvertime && (
+                                <span className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 bg-amber-500/10 text-amber-500 rounded border border-amber-500/20 animate-pulse">
+                                  After-Hours Work
+                                </span>
+                              )}
+                            </div>
+                            {act.user && (
+                              <p className="text-[10px] text-text-muted">Executed by {act.user.first_name || act.user.email}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}

@@ -160,24 +160,38 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         <div className="lg:col-span-4 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
-           {filteredUsers.map(user => (
-             <button 
-               key={user.id} 
-               onClick={() => setSelectedUserId(user.id)}
-               className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all group ${
-                 selectedUserId === user.id ? 'bg-primary border-primary shadow-glow text-white' : 'glass border-white/5 text-text-muted hover:border-primary/40'
-               }`}
-             >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xs font-black ${selectedUserId === user.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
-                   {user.first_name?.[0] || '?' }
+            {['admin', 'project_manager', 'team_head', 'specialist'].map(role => {
+              const roleUsers = filteredUsers.filter(u => u.role === role);
+              if (roleUsers.length === 0) return null;
+              
+              return (
+                <div key={role} className="space-y-2 mb-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20 mb-3 block">
+                    {role.replace('_', ' ')} Tiers ({roleUsers.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {roleUsers.map(user => (
+                      <button 
+                        key={user.id} 
+                        onClick={() => setSelectedUserId(user.id)}
+                        className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all group ${
+                          selectedUserId === user.id ? 'bg-primary border-primary shadow-glow text-white' : 'glass border-white/5 text-text-muted hover:border-primary/40'
+                        }`}
+                      >
+                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xs font-black ${selectedUserId === user.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
+                            {user.first_name?.[0] || '?' }
+                         </div>
+                         <div className="text-left flex-1 min-w-0">
+                            <p className="font-extrabold text-sm truncate capitalize">{user.first_name || 'Generic Operator'} {user.last_name}</p>
+                            <p className={`text-[9px] font-black uppercase tracking-widest ${selectedUserId === user.id ? 'text-white/60' : 'text-text-muted/40'}`}>{user.role || 'Member'}</p>
+                         </div>
+                         <ChevronRight className={`w-4 h-4 transition-transform ${selectedUserId === user.id ? 'translate-x-1' : 'opacity-0'}`} />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="text-left flex-1 min-w-0">
-                   <p className="font-extrabold text-sm truncate capitalize">{user.first_name || 'Generic Operator'} {user.last_name}</p>
-                   <p className={`text-[9px] font-black uppercase tracking-widest ${selectedUserId === user.id ? 'text-white/60' : 'text-text-muted/40'}`}>{user.role || 'Member'}</p>
-                </div>
-                <ChevronRight className={`w-4 h-4 transition-transform ${selectedUserId === user.id ? 'translate-x-1' : 'opacity-0'}`} />
-             </button>
-           ))}
+              );
+            })}
         </div>
 
         <div className="lg:col-span-8">
