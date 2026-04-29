@@ -379,7 +379,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               </select>
             </div>
 
-            {task.state_slug === 'client-review' && !task.is_client_approved && (me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'team_head') && (
+            {task.state_slug === 'client-review' && !task.is_client_approved && (me?.role === 'admin' || me?.role === 'project_manager') && (
               <div className="pt-2 animate-in slide-in-from-top-2">
                 <button 
                   onClick={() => handleUpdateField('is_client_approved', true)}
