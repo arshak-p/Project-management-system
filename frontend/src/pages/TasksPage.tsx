@@ -442,6 +442,9 @@ export default function TasksPage({ me }: { me: User | null }) {
                       ) : null;
                     })()}
                     {task.due_date && <span className="flex items-center gap-1 opacity-60">🚩 {task.due_date}</span>}
+                    <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[10px] font-bold text-text-muted">
+                      👤 {task.assignee?.first_name || task.assignee?.email || 'Unassigned'}
+                    </span>
                     <span className="md:hidden font-black text-primary/60 uppercase tracking-widest ml-auto">
                       {states.find(s => s.id === task.state)?.name}
                     </span>
