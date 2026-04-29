@@ -30,7 +30,12 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
   useEffect(() => {
     loadData();
     const interval = setInterval(() => loadData(), 8000);
-    return () => clearInterval(interval);
+    const handleUpd = () => loadData();
+    window.addEventListener('cp-task-updated', handleUpd);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('cp-task-updated', handleUpd);
+    };
   }, []);
 
   const handleQuickApprove = async (e: React.MouseEvent, taskId: number) => {

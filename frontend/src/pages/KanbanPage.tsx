@@ -43,7 +43,12 @@ export default function KanbanPage({ me }: { me: User | null }) {
   useEffect(() => { 
     Promise.resolve().then(() => load()); 
     const interval = setInterval(() => load(), 8000);
-    return () => clearInterval(interval);
+    const handleUpd = () => load();
+    window.addEventListener('cp-task-updated', handleUpd);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('cp-task-updated', handleUpd);
+    };
   }, [load]);
 
   const handleDelete = async (id: number) => {

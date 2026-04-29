@@ -86,6 +86,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
     try {
       await api.updateTask(taskId, { [field]: value });
       loadData();
+      window.dispatchEvent(new CustomEvent('cp-task-updated'));
     } catch (e) {
       console.error('Failed to update task', e);
     }
