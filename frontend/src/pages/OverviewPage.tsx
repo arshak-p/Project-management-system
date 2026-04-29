@@ -35,7 +35,11 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
       .finally(() => setIsLoading(false));
   }, []);
 
-  useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
+  useEffect(() => { 
+    Promise.resolve().then(() => load()); 
+    const interval = setInterval(() => load(), 8000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   if (isLoading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
