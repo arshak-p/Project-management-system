@@ -268,6 +268,13 @@ export default function MyTasksPage({ me }: { me: User | null }) {
                           <span className="text-[9px] font-black uppercase text-primary tracking-[0.2em]">{t.project__slug || 'GENERAL'}</span>
                           <span className="w-1 h-1 rounded-full bg-white/10"></span>
                           <span className="text-[9px] font-black text-text-muted/40 uppercase tracking-[0.1em]">{t.state__name}</span>
+                          {t.is_client_approved ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.1)]">🟢 Client Approved</span>
+                          ) : ['client-review', 'completed-launched'].includes(t.state_slug || '') ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-[0_0_8px_rgba(59,130,246,0.1)]">🔵 In-House Approved</span>
+                          ) : t.state_slug === 'team-head-review' ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse">🟡 Pending Review</span>
+                          ) : null}
                        </div>
                        <h4 className="font-extrabold text-sm text-text-muted group-hover:text-white transition-colors uppercase tracking-tight truncate">{t.title}</h4>
                     </div>

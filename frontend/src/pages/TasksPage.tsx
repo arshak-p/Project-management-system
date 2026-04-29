@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp, ShieldCheck, X } from 'lucide-react';
+import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp, X } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
 import type { Project, TaskState, WorkModule, User, Task } from '../api';
@@ -421,11 +421,19 @@ export default function TasksPage({ me }: { me: User | null }) {
                     <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${PRIORITY_COLORS[task.priority] || 'text-text-muted'}`}>
                       {PRIORITY_ICONS[task.priority]} {task.priority}
                     </span>
-                    {task.is_client_approved && (
-                      <span className="flex items-center gap-1 text-[9px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-emerald-500/20">
-                        <ShieldCheck className="w-3 h-3" /> Approved
+                    {task.is_client_approved ? (
+                      <span className="flex items-center gap-1 text-[9px] bg-emerald-500/10 text-emerald-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+                        🟢 Client Approved
                       </span>
-                    )}
+                    ) : ['client-review', 'completed-launched'].includes(task.state_slug || '') ? (
+                      <span className="flex items-center gap-1 text-[9px] bg-blue-500/10 text-blue-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.15)]">
+                        🔵 In-House Approved
+                      </span>
+                    ) : task.state_slug === 'team-head-review' ? (
+                      <span className="flex items-center gap-1 text-[9px] bg-amber-500/10 text-amber-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-amber-500/20 animate-pulse">
+                        🟡 Pending Review
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 
