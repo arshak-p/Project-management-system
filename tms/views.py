@@ -658,9 +658,9 @@ class BackupViewSet(viewsets.ModelViewSet):
 
                 t_out = io.StringIO()
                 t_w = csv.writer(t_out)
-                t_w.writerow(['Task Code', 'Title', 'State', 'Priority', 'Module', 'Assignee', 'Created At', 'Description'])
+                t_w.writerow(['Task Code', 'Title', 'State', 'Priority', 'Module', 'Assignee', 'Created At', 'Scheduled Date', 'Due Date', 'Reference Link', 'Description'])
                 for item in WorkItem.objects.filter(project=project).select_related('state', 'module', 'assignee'):
-                    t_w.writerow([item.task_code, item.title, item.state.name, item.priority, item.module.name if item.module else "", item.assignee.get_full_name() if item.assignee else "Unassigned", item.created_at, item.description])
+                    t_w.writerow([item.task_code, item.title, item.state.name, item.priority, item.module.name if item.module else "", item.assignee.get_full_name() if item.assignee else "Unassigned", item.created_at, item.scheduled_date or "", item.due_date or "", item.reference_link or "", item.description])
                 zip_file.writestr(f"{prefix}Tasks_Detailed.csv", t_out.getvalue())
 
                 c_out = io.StringIO()
