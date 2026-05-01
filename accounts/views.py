@@ -1,6 +1,7 @@
 import random
 from django.conf import settings
 from django.core.mail import send_mail
+import threading
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -9,7 +10,23 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from accounts.models import User, EmailOTP
 from accounts.serializers import CustomTokenObtainPairSerializer
-from tms.permissions import IsAdminRole
+from tms.permissions import IsAdminRole, IsHRManagement
+
+def send_async_email(subject, message, recipient_list):
+    def send():
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Async Email Failed: {str(e)}")
+            
+    thread = threading.Thread(target=send)
+    thread.start()
 
 
 class LoginView(TokenObtainPairView):
@@ -22,7 +39,7 @@ class RefreshView(TokenRefreshView):
 
 class CreateUserView(APIView):
     """Admin-only: create a new team member with a password."""
-    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    permission_classes = [permissions.IsAuthenticated, IsHRManagement]
 
     def post(self, request):
         data = request.data
@@ -70,16 +87,12 @@ class CreateUserView(APIView):
         user._activity_user = request.user
         user.save()
 
-        try:
-            send_mail(
-                subject='Welcome to Colour Parrot - Your Account is Ready!',
-                message=f'Hello {first_name},\n\nYour account on the Colour Parrot Task Management System has been created.\n\nSystem Portal: https://c1r9rt-workflow.in\nLogin Email: {email}\n\nYou can now log in and start collaborating on your assigned projects.\n\nBest regards,\nThe Colour Parrot Team',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-        except:
-            pass # Continue even if mail fails
+        # Async Welcome Email
+        send_async_email(
+            subject='Welcome to Colour Parrot - Your Account is Ready!',
+            message=f'Hello {first_name},\n\nYour account on the Colour Parrot Task Management System has been created.\n\nSystem Portal: https://c1r9rt-workflow.in\nLogin Email: {email}\n\nYou can now log in and start collaborating on your assigned projects.\n\nBest regards,\nThe Colour Parrot Team',
+            recipient_list=[email]
+        )
 
         return Response({
             'id': user.id,
@@ -112,20 +125,13 @@ class RequestOTPView(APIView):
         EmailOTP.objects.create(email=email, otp=otp_code)
 
         # Send Email (Fallback to console if SMTP not configured)
-        try:
-            send_mail(
-                subject='Colour Parrot Security Code',
-                message=f'Your secure login code is: {otp_code}. It will expire in 10 minutes.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-            return Response({'detail': 'OTP sent successfully.'})
-        except Exception as e:
-            # For development/debug: if email fails, we return a success with a note
-            if settings.DEBUG:
-                return Response({'detail': f'OTP generated (DEBUG: {otp_code}) but email failed to send. Check console.'})
-            return Response({'detail': 'Failed to send OTP email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Async OTP Email
+        send_async_email(
+            subject='Colour Parrot Security Code',
+            message=f'Your secure login code is: {otp_code}. It will expire in 10 minutes.',
+            recipient_list=[email]
+        )
+        return Response({'detail': 'OTP sent successfully.'})
 
 
 class VerifyOTPView(APIView):
@@ -166,7 +172,7 @@ class VerifyOTPView(APIView):
 
 class SendCreationOTPView(APIView):
     """Send OTP to a brand new email before user creation."""
-    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    permission_classes = [permissions.IsAuthenticated, IsHRManagement]
 
     def post(self, request):
         email = request.data.get('email', '').strip()
@@ -177,28 +183,21 @@ class SendCreationOTPView(APIView):
         otp_code = f"{random.randint(100000, 999999)}"
         EmailOTP.objects.create(email=email, otp=otp_code)
 
-        try:
-            send_mail(
-                subject='Colour Parrot: Verify Team Member Email',
-                message=f'You are being added to the Colour Parrot TMS. Your verification code is: {otp_code}.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-            return Response({
-                'detail': f'Code sent to email. (Admin Backup Code: {otp_code})',
-                'otp_fallback': otp_code
-            })
-        except Exception as e:
-            # SAFETY NET: If email fails, give the code to the Admin directly so they aren't blocked
-            return Response({
-                'detail': f'Email delivery failed. MANUAL CODE: {otp_code}',
-                'otp_fallback': otp_code
-            })
+        # Async Creation OTP
+        send_async_email(
+            subject='Colour Parrot: Verify Team Member Email',
+            message=f'You are being added to the Colour Parrot TMS. Your verification code is: {otp_code}.',
+            recipient_list=[email]
+        )
+        return Response({
+            'detail': f'Code sent to email. (Admin Backup Code: {otp_code})',
+            'otp_fallback': otp_code
+        })
+
 
 class VerifyCreationOTPView(APIView):
     """Verify OTP for a new email before creation."""
-    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    permission_classes = [permissions.IsAuthenticated, IsHRManagement]
 
     def post(self, request):
         email = request.data.get('email', '').strip()

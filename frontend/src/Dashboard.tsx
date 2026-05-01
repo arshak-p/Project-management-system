@@ -69,8 +69,17 @@ const TEAM_HEAD_NAV = [
   { id: 'profile', label: 'Profile', icon: <UserCircle className="w-5 h-5" /> },
 ];
 
+const HR_NAV = [
+  { id: 'team', label: 'Team Members', icon: <Users className="w-5 h-5" /> },
+  { id: 'intelligence', label: 'Team Info', icon: <ShieldCheck className="w-5 h-5" /> },
+  { id: 'job_titles', label: 'Job Titles', icon: <Briefcase className="w-5 h-5" /> },
+  { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
+  { id: 'profile', label: 'Profile', icon: <UserCircle className="w-5 h-5" /> },
+];
+
 const ADMIN_ROLES = ['admin', 'project_manager'];
 const TEAM_HEAD_ROLES = ['team_head'];
+const HR_ROLES = ['hr'];
 
 export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [page, setPage] = useState<Page>('overview');
@@ -93,7 +102,10 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       setMe(r.data);
       const isA = r.data.is_superuser || ADMIN_ROLES.includes(r.data.role || '');
       const isTH = TEAM_HEAD_ROLES.includes(r.data.role || '');
-      if (!isA && !isTH && page === 'overview') setPage('my_tasks');
+      const isHR = HR_ROLES.includes(r.data.role || '');
+      
+      if (isHR && page === 'overview') setPage('team');
+      else if (!isA && !isTH && !isHR && page === 'overview') setPage('my_tasks');
     }).catch(() => onLogout());
   }, []);
 
@@ -166,10 +178,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
 
   const isAdmin = me?.is_superuser || ADMIN_ROLES.includes(me?.role || '');
   const isTeamHead = TEAM_HEAD_ROLES.includes(me?.role || '');
+  const isHR = HR_ROLES.includes(me?.role || '');
   
   let navItems = USER_NAV;
   if (isAdmin) navItems = ADMIN_NAV;
   else if (isTeamHead) navItems = TEAM_HEAD_NAV;
+  else if (isHR) navItems = HR_NAV;
 
   // Guard: Do not render the dashboard body until the user profile is securely loaded
   if (!me) {

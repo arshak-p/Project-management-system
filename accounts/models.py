@@ -20,6 +20,7 @@ class User(AbstractUser):
         PROJECT_MANAGER = "project_manager", "Project Manager"
         TEAM_HEAD = "team_head", "Team Head"
         SPECIALIST = "specialist", "Specialist / Creator"
+        HR = "hr", "Human Resources"
         SALES_MANAGER = "sales_manager", "Sales Manager"
         CLIENT = "client", "Client"
 
