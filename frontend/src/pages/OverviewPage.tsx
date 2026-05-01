@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
-import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight, Bell, Cake, PartyPopper, X } from 'lucide-react';
-import type { AnalyticsSummary, Project, Activity, Notification, User } from '../api';
+import { motion } from 'framer-motion';
+import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight, Cake, PartyPopper } from 'lucide-react';
+import type { AnalyticsSummary, Project, Activity, User } from '../api';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, Cell

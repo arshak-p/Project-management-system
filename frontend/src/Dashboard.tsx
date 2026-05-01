@@ -34,11 +34,6 @@ import { getWsUrl } from './config';
 
 type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence' | 'backups' | 'modules';
 
-interface Notification {
-  id: number;
-  read: boolean;
-}
-
 const ADMIN_NAV = [
   { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
   { id: 'projects', label: 'Projects', icon: <Briefcase className="w-5 h-5" /> },
