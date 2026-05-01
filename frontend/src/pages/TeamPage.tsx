@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import type { User, JobTitle } from '../api';
-import { Loader2, Users, Shield, User2, Mail, Plus, X, Phone, Briefcase, Eye, EyeOff, Database, Pencil, CalendarRange } from 'lucide-react';
+import { Loader2, Users, Shield, User2, Mail, Plus, X, Phone, Briefcase, Eye, EyeOff, Database, Pencil, CalendarRange, Copy, Check } from 'lucide-react';
 
 const ROLE_COLORS: Record<string, string> = {
   admin: 'text-red-400 bg-red-400/10 border-red-400/20',
@@ -71,6 +71,13 @@ export default function TeamPage({ me }: { me: User | null }) {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [showOtpField, setShowOtpField] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyOtp = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleSendOtp = async () => {
     if (!form.email) {
@@ -265,8 +272,21 @@ export default function TeamPage({ me }: { me: User | null }) {
                 </div>
               )}
               {success && (
-                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-sm text-green-400 animate-in fade-in">
-                  {success}
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-sm text-green-400 animate-in fade-in flex items-center justify-between">
+                  <span>{success}</span>
+                  {success.includes('CODE:') && (
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const code = success.split('CODE:')[1].trim().split(' ')[0];
+                        handleCopyOtp(code);
+                      }}
+                      className="ml-2 p-1.5 hover:bg-green-500/20 rounded-lg transition-all flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied ? 'Copied' : 'Copy'}
+                    </button>
+                  )}
                 </div>
               )}
 
