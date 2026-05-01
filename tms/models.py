@@ -204,6 +204,8 @@ class WorkItem(models.Model):
         related_name="assigned_work_items",
     )
     due_date = models.DateField(null=True, blank=True)
+    deadline = models.DateField(null=True, blank=True)
+    posting_date = models.DateField(null=True, blank=True)
     cycle = models.ForeignKey(
         Cycle,
         null=True,
@@ -224,6 +226,9 @@ class WorkItem(models.Model):
     board_position = models.PositiveIntegerField(
         default=0,
     )
+    rework_count = models.PositiveIntegerField(default=0, help_text="Total number of times this task was sent back for revision")
+    state_durations = models.JSONField(default=dict, help_text="Total minutes spent in each state: {'state_name': minutes}")
+    last_state_change = models.DateTimeField(null=True, blank=True, help_text="Timestamp of the most recent state transition")
     timer_start = models.DateTimeField(null=True, blank=True, help_text="Timestamp when the last In Progress session started")
     is_client_approved = models.BooleanField(default=False)
     created_by = models.ForeignKey(
@@ -261,6 +266,9 @@ class WorkItem(models.Model):
             return seq.next_code()
 
     def save(self, *args, **kwargs):
+        if not self.pk and not self.posting_date:
+            from django.utils import timezone
+            self.posting_date = timezone.now().date()
         if not self.task_code:
             self.task_code = self.allocate_task_code(self.project)
         super().save(*args, **kwargs)

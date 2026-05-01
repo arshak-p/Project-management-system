@@ -61,13 +61,24 @@ class SalesSafeViewSet(viewsets.ModelViewSet):
 
 
 class DepartmentViewSet(SalesSafeViewSet):
-    queryset = Department.objects.filter(is_active=True)
     serializer_class = DepartmentSerializer
+
+    def get_queryset(self):
+        qs = Department.objects.all()
+        # Include archived if targeting a specific ID for recovery or requested
+        if self.kwargs.get('pk') or self.request.query_params.get("archived") == "true":
+            return qs
+        return qs.filter(is_active=True)
 
 
 class JobTitleViewSet(SalesSafeViewSet):
-    queryset = JobTitle.objects.filter(is_active=True)
     serializer_class = JobTitleSerializer
+
+    def get_queryset(self):
+        qs = JobTitle.objects.all()
+        if self.kwargs.get('pk') or self.request.query_params.get("archived") == "true":
+            return qs
+        return qs.filter(is_active=True)
 
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
@@ -89,7 +100,7 @@ class UserViewSet(SalesSafeViewSet):
     serializer_class = UserSerializer
 
     def get_queryset(self):
-        include_archived = self.request.query_params.get("archived") == "true"
+        include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
         qs = User.objects.filter(is_superuser=False).select_related("tms_profile").prefetch_related()
         if not include_archived:
             qs = qs.filter(is_active=True)
@@ -143,7 +154,7 @@ class ProjectViewSet(SalesSafeViewSet):
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
-        include_archived = self.request.query_params.get("archived") == "true"
+        include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
         qs = access.projects_for_user(self.request.user, include_archived=include_archived)
         return qs.annotate(total_minutes=Sum("work_items__time_logs__minutes"))
 
@@ -168,8 +179,13 @@ class ProjectViewSet(SalesSafeViewSet):
 
 
 class ModuleViewSet(SalesSafeViewSet):
-    queryset = Module.objects.filter(is_active=True)
     serializer_class = ModuleSerializer
+
+    def get_queryset(self):
+        qs = Module.objects.all()
+        if self.kwargs.get('pk') or self.request.query_params.get("archived") == "true":
+            return qs
+        return qs.filter(is_active=True)
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -182,8 +198,13 @@ class ModuleViewSet(SalesSafeViewSet):
 
 
 class StateViewSet(SalesSafeViewSet):
-    queryset = State.objects.filter(is_active=True)
     serializer_class = StateSerializer
+
+    def get_queryset(self):
+        qs = State.objects.all()
+        if self.kwargs.get('pk') or self.request.query_params.get("archived") == "true":
+            return qs
+        return qs.filter(is_active=True)
 
     def list(self, request, *args, **kwargs):
         # SELF-SEEDING BRAIN: If empty, create the Elite Workflow states automatically
@@ -219,8 +240,13 @@ class StateViewSet(SalesSafeViewSet):
 
 
 class LabelViewSet(SalesSafeViewSet):
-    queryset = Label.objects.filter(is_active=True)
     serializer_class = LabelSerializer
+
+    def get_queryset(self):
+        qs = Label.objects.all()
+        if self.kwargs.get('pk') or self.request.query_params.get("archived") == "true":
+            return qs
+        return qs.filter(is_active=True)
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -237,8 +263,11 @@ class CycleViewSet(SalesSafeViewSet):
 
     def get_queryset(self):
         u = self.request.user
-        qs = Cycle.objects.filter(is_active=True).select_related("project")
-        projects = access.projects_for_user(u)
+        include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
+        qs = Cycle.objects.all().select_related("project")
+        if not include_archived:
+            qs = qs.filter(is_active=True)
+        projects = access.projects_for_user(u, include_archived=include_archived)
         return qs.filter(project__in=projects)
 
     def perform_destroy(self, instance):
@@ -258,11 +287,11 @@ class CycleMemberViewSet(SalesSafeViewSet):
 
 class WorkItemViewSet(SalesSafeViewSet):
     serializer_class = WorkItemSerializer
-    filterset_fields = ("project", "state", "module", "assignee", "cycle")
+    filterset_fields = ("project", "state", "module", "assignee", "cycle", "posting_date", "due_date", "deadline")
     search_fields = ("title", "task_code", "description")
 
     def get_queryset(self):
-        include_archived = self.request.query_params.get("archived") == "true"
+        include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
         qs = access.work_items_for_user(self.request.user, include_archived=include_archived)
         slug = self.request.query_params.get("project_slug")
         if slug:
@@ -310,19 +339,38 @@ class WorkItemViewSet(SalesSafeViewSet):
                 pass
 
         # If TEAM_HEAD, restrict editing to ONLY the state field.
+        # If TEAM_HEAD, restrict editing to ONLY the state field and tactical dates.
         if u.role == User.Role.TEAM_HEAD and not u.is_superuser:
-            # We enforce saving ONLY the state if they sent it
-            allowed_data = {}
-            if "state" in self.request.data:
-                allowed_data["state"] = self.request.data["state"]
-            # Re-serialize or simply update the state manually on the instance
-            if "state" in allowed_data:
-                inst.state_id = allowed_data["state"]
+            allowed_fields = ["state", "posting_date", "due_date", "deadline", "scheduled_date", "board_position"]
+            data = self.request.data
+            
+            update_fields = ["updated_at"]
+            modified = False
+            
+            if "state" in data:
+                inst.state_id = data["state"]
+                update_fields.append("state_id")
+                modified = True
+            
+            if "board_position" in data:
+                inst.board_position = data["board_position"]
+                update_fields.append("board_position")
+                modified = True
+            
+            for f in ["posting_date", "due_date", "deadline", "scheduled_date"]:
+                if f in data:
+                    val = data[f]
+                    if val == "": val = None
+                    setattr(inst, f, val)
+                    update_fields.append(f)
+                    modified = True
+            
+            if modified:
                 inst._activity_user = u
-                inst.save(update_fields=["state_id", "updated_at"])
+                inst.save(update_fields=update_fields)
                 return
             else:
-                raise PermissionDenied("Team Heads are only permitted to update the task status.")
+                raise PermissionDenied("Team Heads are permitted to update status and tactical dates.")
 
         serializer.save(_activity_user=u)
 
@@ -442,6 +490,11 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         n.save(update_fields=["read"])
         return Response({"status": "ok"})
 
+    @action(detail=False, methods=["post"], url_path="mark-all-read")
+    def mark_all_read(self, request):
+        Notification.objects.filter(user=request.user, read=False).update(read=True)
+        return Response({"status": "ok"})
+
 
 class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -522,13 +575,14 @@ class AnalyticsSummaryView(APIView):
             wis.values("project_id", "project__slug", "project__name").annotate(c=Count("id")).order_by("-c")
         )
 
-        # Optimized Historical trend (last 30 days) - Query once, process in Python
+        # Dynamic Historical trend: 30 days for 'Month' mode, 90 days for 'All Time' mode
         now = timezone.now()
-        start_30 = (now - timezone.timedelta(days=29)).date()
+        days_to_show = 29 if start_date else 89
+        start_trend = (now - timezone.timedelta(days=days_to_show)).date()
         
-        # Get all counts grouped by date in 2 clever queries
+        # Get all counts grouped by date
         created_counts = dict(
-            wis.filter(created_at__date__gte=start_30)
+            wis.filter(created_at__date__gte=start_trend)
             .values("created_at__date")
             .annotate(c=Count("id"))
             .values_list("created_at__date", "c")
@@ -536,18 +590,18 @@ class AnalyticsSummaryView(APIView):
         completed_counts = dict(
             wis.filter(
                 state__slug__in=["launched", "completed-launched"], 
-                updated_at__date__gte=start_30
+                updated_at__date__gte=start_trend
             )
             .values("updated_at__date")
             .annotate(c=Count("id"))
             .values_list("updated_at__date", "c")
         )
 
-        last_30_days = []
-        for i in range(29, -1, -1):
+        trend_list = []
+        for i in range(days_to_show, -1, -1):
             day = (now - timezone.timedelta(days=i)).date()
             day_str = day.strftime("%Y-%m-%d")
-            last_30_days.append({
+            trend_list.append({
                 "date": day_str,
                 "created": created_counts.get(day, 0),
                 "completed": completed_counts.get(day, 0)
@@ -566,7 +620,7 @@ class AnalyticsSummaryView(APIView):
                 "by_module": by_module,
                 "by_project": by_project,
                 "assignee_workload": workload,
-                "historical_trend": last_30_days,
+                "historical_trend": trend_list,
             }
         )
 
@@ -665,9 +719,9 @@ class BackupViewSet(viewsets.ModelViewSet):
 
                 t_out = io.StringIO()
                 t_w = csv.writer(t_out)
-                t_w.writerow(['Task Code', 'Title', 'State', 'Priority', 'Module', 'Assignee', 'Created At', 'Scheduled Date', 'Due Date', 'Reference Link', 'Description'])
+                t_w.writerow(['Task Code', 'Title', 'State', 'Priority', 'Module', 'Assignee', 'Created At', 'Posting Date', 'Scheduled Date', 'Due Date', 'Deadline', 'Reference Link', 'Description'])
                 for item in WorkItem.objects.filter(project=project).select_related('state', 'module', 'assignee'):
-                    t_w.writerow([item.task_code, item.title, item.state.name, item.priority, item.module.name if item.module else "", item.assignee.get_full_name() if item.assignee else "Unassigned", item.created_at, item.scheduled_date or "", item.due_date or "", item.reference_link or "", item.description])
+                    t_w.writerow([item.task_code, item.title, item.state.name, item.priority, item.module.name if item.module else "", item.assignee.get_full_name() if item.assignee else "Unassigned", item.created_at, item.posting_date or "", item.scheduled_date or "", item.due_date or "", item.deadline or "", item.reference_link or "", item.description])
                 zip_file.writestr(f"{prefix}Tasks_Detailed.csv", t_out.getvalue())
 
                 c_out = io.StringIO()

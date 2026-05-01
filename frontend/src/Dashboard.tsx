@@ -110,7 +110,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
          const newData = r.data.filter((n: Notification) => !n.read);
          setUnreadCount(newData.length);
        });
-    }, 30000);
+    }, 5000); // Faster Background Sync: 5s
     return () => clearInterval(hb);
   }, []);
 

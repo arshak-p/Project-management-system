@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Plus, Trash2, CircleDashed } from 'lucide-react';
+import { Loader2, Plus, Trash2, CircleDashed, AlertTriangle } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
 import type { Task, TaskState, User, Project, WorkModule, JobTitle } from '../api';
@@ -24,6 +24,9 @@ export default function KanbanPage({ me }: { me: User | null }) {
   const [filterProject, setFilterProject] = useState('');
   const [filterModule, setFilterModule] = useState('');
   const [filterJobTitle, setFilterJobTitle] = useState(me?.role === 'team_head' ? (me?.title || '') : '');
+  const [filterPostingDate, setFilterPostingDate] = useState('');
+  const [filterDueDate, setFilterDueDate] = useState('');
+  const [filterDeadline, setFilterDeadline] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -42,7 +45,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
 
   useEffect(() => { 
     Promise.resolve().then(() => load()); 
-    const interval = setInterval(() => load(), 8000);
+    const interval = setInterval(() => load(), 4000); // Accelerated Polling: 4s
     const handleUpd = () => load();
     window.addEventListener('cp-task-updated', handleUpd);
     return () => {
@@ -97,6 +100,34 @@ export default function KanbanPage({ me }: { me: User | null }) {
             <option value="">All Job Titles</option>
             {jobTitles.map(jt => <option key={jt.id} value={jt.name}>{jt.name}</option>)}
           </select>
+          <div className="col-span-2 lg:col-auto flex gap-2">
+            {me?.role !== 'specialist' && (
+              <input 
+                type="date"
+                value={filterPostingDate}
+                onChange={e => setFilterPostingDate(e.target.value)}
+                title="Filter by Posting Date"
+                className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:w-[130px]"
+                style={{ colorScheme: 'dark' }}
+              />
+            )}
+            <input 
+              type="date"
+              value={filterDueDate}
+              onChange={e => setFilterDueDate(e.target.value)}
+              title="Filter by Due Date"
+              className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:w-[130px]"
+              style={{ colorScheme: 'dark' }}
+            />
+            <input 
+              type="date"
+              value={filterDeadline}
+              onChange={e => setFilterDeadline(e.target.value)}
+              title="Filter by Deadline"
+              className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:w-[130px]"
+              style={{ colorScheme: 'dark' }}
+            />
+          </div>
         </div>
       </motion.div>
 
@@ -107,6 +138,9 @@ export default function KanbanPage({ me }: { me: User | null }) {
             if (filterProject && t.project?.toString() !== filterProject) return false;
             if (filterModule && t.module?.toString() !== filterModule) return false;
             if (filterJobTitle && t.assignee?.title !== filterJobTitle) return false;
+            if (filterPostingDate && t.posting_date !== filterPostingDate) return false;
+            if (filterDueDate && t.due_date !== filterDueDate) return false;
+            if (filterDeadline && t.deadline !== filterDeadline) return false;
             
             // Strict Privacy Protocol: Specialists only see their own assigned tasks
             if (me?.role === 'specialist' && t.assignee?.id !== me?.id) return false;
@@ -177,6 +211,11 @@ export default function KanbanPage({ me }: { me: User | null }) {
                                ) : null;
                              })()}
                              <h4 className="font-bold text-sm leading-relaxed">{task.title}</h4>
+                                 <div className="flex flex-wrap gap-2 mt-1">
+                                   {me?.role !== 'specialist' && task.posting_date && <span className="text-[8px] font-bold opacity-60">📅 {task.posting_date}</span>}
+                                   {task.due_date && <span className="text-[8px] font-bold opacity-60">🚩 {task.due_date}</span>}
+                                   {task.deadline && <span className="text-[8px] font-black text-red-500 flex items-center gap-1"><AlertTriangle className="w-2.5 h-2.5" /> DEADLINE: {task.deadline}</span>}
+                                 </div>
                           </div>
                           <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/5 opacity-40 group-hover:opacity-100 transition-opacity">
                              <div className="flex items-center gap-2">

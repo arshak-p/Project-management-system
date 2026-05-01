@@ -53,7 +53,7 @@ export default function MyTasksPage({ me }: { me: User | null }) {
 
   useEffect(() => { 
     Promise.resolve().then(() => load()); 
-    const interval = setInterval(() => load(), 8000);
+    const interval = setInterval(() => load(), 4000); // Accelerated Polling: 4s
     const handleUpd = () => load();
     window.addEventListener('cp-task-updated', handleUpd);
     return () => {
@@ -302,10 +302,11 @@ export default function MyTasksPage({ me }: { me: User | null }) {
                           <p className={`text-[9px] uppercase font-black tracking-widest ${t.priority === 'urgent' ? 'text-error' : 'text-text-muted/40'}`}>
                             {t.priority}
                           </p>
-                          <div className="flex items-center justify-end gap-2 mt-1.5 text-[10px] text-text-muted font-bold">
-                             <Clock className="w-3.5 h-3.5" />
-                             {t.due_date || 'N/A'}
-                          </div>
+                           <div className="flex flex-col items-end gap-1 mt-1.5 text-[9px] text-text-muted font-bold">
+                              {me?.role !== 'specialist' && t.posting_date && <div className="flex items-center gap-1.5">📅 {t.posting_date}</div>}
+                              <div className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> {t.due_date || 'N/A'}</div>
+                              {t.deadline && <div className="flex items-center gap-1.5 text-red-500 font-black"><AlertTriangle className="w-3 h-3" /> DEADLINE: {t.deadline}</div>}
+                           </div>
                        </div>
                        <div className="w-10 h-10 rounded-xl border border-white/5 flex items-center justify-center text-text-muted/20 group-hover:border-primary/40 group-hover:text-primary transition-all group-hover:translate-x-1">
                           <ChevronRight className="w-5 h-5" />

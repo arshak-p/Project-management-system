@@ -24,6 +24,14 @@ export default function NotificationsPage({ me }: { me: User | null }) {
     } catch (e) { console.error(e); }
   };
 
+  const markAllRead = async () => {
+    try {
+      await api.markAllNotificationsRead();
+      load();
+      window.dispatchEvent(new Event('notificationRead'));
+    } catch (e) { console.error(e); }
+  };
+
   const handleNotifyClick = (n: Notification) => {
     if (!n.read) markRead(n.id);
     if (n.link && n.link.startsWith('/task/')) {
@@ -52,11 +60,22 @@ export default function NotificationsPage({ me }: { me: User | null }) {
           <h1 className="text-3xl font-bold">Notifications</h1>
           <p className="text-text-muted mt-1">{unread.length} unread notification{unread.length !== 1 ? 's' : ''}</p>
         </div>
-        {unread.length > 0 && (
-          <span className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 text-sm rounded-full font-semibold">
-            {unread.length} New
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {unread.length > 0 && (
+            <button 
+              onClick={markAllRead}
+              className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 text-sm rounded-xl font-semibold hover:bg-primary/20 transition-all flex items-center gap-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Mark all as read
+            </button>
+          )}
+          {unread.length > 0 && (
+            <span className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 text-sm rounded-full font-semibold">
+              {unread.length} New
+            </span>
+          )}
+        </div>
       </div>
 
       {notifications.length === 0 ? (

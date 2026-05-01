@@ -60,9 +60,10 @@ export default function ProjectsPage({ onNavigate, me }: { onNavigate?: (page: s
     if (!confirm(`Restore project orbit "${name}" to active status?`)) return;
     try {
       await api.updateProject(id, { is_active: true });
+      alert(`Project orbit "${name}" restored successfully.`);
       load();
     } catch {
-      alert('Restore failed.');
+      alert('Restore failed. Target orbit inaccessible.');
     }
   };
 

@@ -111,6 +111,17 @@ button, a, input, select {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Fix for select options in dark mode */
+select option {
+  background-color: #0f172a; /* Slate 900 */
+  color: #f8fafc; /* Slate 50 */
+}
+
+[data-theme='light'] select option {
+  background-color: #ffffff;
+  color: #1e293b;
+}
+
 button:active {
   transform: scale(0.96);
 }

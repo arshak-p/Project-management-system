@@ -36,17 +36,39 @@ def handle_user_save(sender, instance: User, created: bool, **kwargs):
 
 @receiver(pre_save, sender=WorkItem)
 def track_work_item_state(sender, instance: WorkItem, **kwargs):
+    now = timezone.now()
     if instance.pk:
         try:
             old_inst = WorkItem.objects.get(pk=instance.pk)
             instance._old_state_id = old_inst.state_id
             instance._old_assignee_id = old_inst.assignee_id
+            
+            # --- Analytics: Track Time in States ---
+            if old_inst.state_id != instance.state_id:
+                # 1. Update Durations
+                last_change = old_inst.last_state_change or old_inst.created_at
+                duration = now - last_change
+                minutes = int(duration.total_seconds() // 60)
+                
+                state_name = old_inst.state.name
+                durations = old_inst.state_durations or {}
+                durations[state_name] = durations.get(state_name, 0) + minutes
+                instance.state_durations = durations
+                instance.last_state_change = now
+
+                # 2. Track Rework Counts
+                rework_slugs = ['re-edit', 'rework-revision']
+                if instance.state.slug in rework_slugs:
+                    instance.rework_count = old_inst.rework_count + 1
+                    
         except WorkItem.DoesNotExist:
             instance._old_state_id = None
             instance._old_assignee_id = None
+            instance.last_state_change = now
     else:
         instance._old_state_id = None
         instance._old_assignee_id = None
+        instance.last_state_change = now
 
 
 @receiver(post_save, sender=WorkItem)
@@ -66,6 +88,9 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
             "task_code": instance.task_code,
             "title": instance.title,
             "state_id": instance.state_id,
+            "posting_date": str(instance.posting_date) if instance.posting_date else None,
+            "due_date": str(instance.due_date) if instance.due_date else None,
+            "deadline": str(instance.deadline) if instance.deadline else None,
         },
     )
 

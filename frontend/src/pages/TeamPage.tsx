@@ -222,9 +222,10 @@ export default function TeamPage({ me }: { me: User | null }) {
     if (!confirm('Restore this team member to active status?')) return;
     try {
       await api.updateUser(id, { is_active: true });
+      alert('Member restored to active duty.');
       load();
     } catch {
-      alert('Failed to restore member.');
+      alert('Failed to restore member. Permission denied.');
     }
   };
 

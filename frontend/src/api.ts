@@ -64,7 +64,9 @@ export interface Task {
   state_slug?: string;
   module: number;
   priority: string;
+  posting_date: string | null;
   due_date: string | null;
+  deadline: string | null;
   scheduled_date: string | null;
   reference_link?: string;
   assignee: {
@@ -256,6 +258,7 @@ export const api = {
   getActivity: () => apiClient.get('activity/'),
   getNotifications: () => apiClient.get('notifications/'),
   markNotificationRead: (id: number) => apiClient.post(`notifications/${id}/mark-read/`),
+  markAllNotificationsRead: () => apiClient.post('notifications/mark-all-read/'),
   createUser: (data: object) =>
     apiClient.post('/auth/create-user/', data),
   updateUser: (id: number, data: object) =>

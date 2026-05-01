@@ -421,14 +421,38 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               </select>
             </div>
 
+            {me?.role !== 'specialist' && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                  <div className="w-1 h-3 bg-indigo-500 rounded-full"></div> Posting Date
+                </label>
+                <div className="w-full px-3 py-2.5 bg-surface/50 border border-border/50 rounded-xl text-sm font-mono text-indigo-400/80">
+                  {task.posting_date || new Date(task.created_at).toISOString().split('T')[0]}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
-                <div className="w-1 h-3 bg-amber-500 rounded-full"></div> Final Deadline
+                <div className="w-1 h-3 bg-amber-500 rounded-full"></div> Due Date
               </label>
               <input 
                 type="date"
                 value={task.due_date || ''}
                 onChange={e => handleUpdateField('due_date', e.target.value || null)}
+                className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
+                style={{ colorScheme: 'dark' }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1 h-3 bg-red-500 rounded-full"></div> Final Deadline
+              </label>
+              <input 
+                type="date"
+                value={task.deadline || ''}
+                onChange={e => handleUpdateField('deadline', e.target.value || null)}
                 className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
                 style={{ colorScheme: 'dark' }}
               />

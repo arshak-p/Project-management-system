@@ -13,24 +13,28 @@ def ping_celery():
 def check_deadlines():
     """Scans for tasks due in the next 24-48 hours and notifies assignees."""
     from datetime import date, timedelta
+    from django.db import models
     from tms.models import WorkItem
     from tms.notify import notify_user
     
     tomorrow = date.today() + timedelta(days=1)
     
-    # Find active tasks due tomorrow or today that are not completed (simple filter)
+    # Find active tasks due tomorrow or today that are not completed (checks both due_date and deadline)
     upcoming = WorkItem.objects.filter(
-        due_date__lte=tomorrow,
+        (models.Q(due_date__lte=tomorrow) | models.Q(deadline__lte=tomorrow)),
         is_active=True,
         assignee__isnull=False
     ).exclude(state__slug__in=['completed-launched', 'archived'])
     
     count = 0
     for task in upcoming:
+        urgent_flag = "🚨 DEADLINE" if task.deadline and task.deadline <= tomorrow else "📅 Due"
+        date_str = task.deadline if urgent_flag == "🚨 DEADLINE" else task.due_date
+        
         notify_user(
             task.assignee.id,
-            title=f"Deadline Reminder: {task.task_code}",
-            body=f"Task '{task.title}' is due on {task.due_date}. Please plan accordingly.",
+            title=f"{urgent_flag} Reminder: {task.task_code}",
+            body=f"Task '{task.title}' is reaching its {urgent_flag.lower()} on {date_str}. Please plan accordingly.",
             link=f"/task/{task.id}"
         )
         count += 1

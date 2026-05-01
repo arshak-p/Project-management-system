@@ -9,6 +9,9 @@ from tms.notify import notify_roles
 from accounts.models import User
 import urllib.request
 import json
+import csv
+import io
+from django.core.mail import EmailMessage
 
 class Command(BaseCommand):
     help = "Performs monthly backup, retention cleanup, and agency performance summary."
@@ -86,37 +89,82 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"Cloud Sync Webhook failed: {str(e)}"))
 
         # 5. Notify Admins and Email the Backup
-        import csv
-        import io
-        from django.core.mail import EmailMessage
+        # (CSV and IO imports moved to top level)
 
-        # Generate CSV Data (Full Master Export)
+        # 1. Full Master Task Sheet
         task_csv = io.StringIO()
         task_writer = csv.writer(task_csv)
-        task_writer.writerow(["ID", "Code", "Title", "Module", "Project", "State", "Assignee", "Created"])
-        for t in WorkItem.objects.all():
-            task_writer.writerow([t.id, t.task_code, t.title, t.module.name if t.module else "", t.project.name if t.project else "", t.state.name if t.state else "", t.assignee.email if t.assignee else "", t.created_at.strftime("%Y-%m-%d")])
+        task_writer.writerow([
+            "Task Code", "Title", "Project", "Module", "State", "Priority", 
+            "Assignee", "Created At", "Posting Date", "Scheduled Date", 
+            "Due Date", "Deadline", "Rework Count", "State Time (Min)", 
+            "Reference Links", "Description"
+        ])
+        for t in WorkItem.objects.all().select_related('project', 'module', 'state', 'assignee'):
+            # Format state durations for readability
+            state_info = " | ".join([f"{s}: {m}m" for s, m in (t.state_durations or {}).items()])
             
+            task_writer.writerow([
+                t.task_code, t.title, 
+                t.project.name if t.project else "Unlinked",
+                t.module.name if t.module else "No Module",
+                t.state.name if t.state else "N/A",
+                t.priority,
+                t.assignee.get_full_name() if t.assignee else "Unassigned",
+                t.created_at.strftime("%Y-%m-%d %H:%M"),
+                t.posting_date or "",
+                t.scheduled_date or "",
+                t.due_date or "",
+                t.deadline or "",
+                t.rework_count,
+                state_info,
+                t.reference_link or "",
+                t.description or ""
+            ])
+            
+        # 2. Detailed Effort Sheet
         time_csv = io.StringIO()
         time_writer = csv.writer(time_csv)
-        time_writer.writerow(["Task", "User", "Minutes", "Note", "Date"])
-        for tl in TimeLog.objects.all():
-            time_writer.writerow([tl.work_item.task_code if tl.work_item else "", tl.user.email if tl.user else "", tl.minutes, tl.note, tl.logged_at.strftime("%Y-%m-%d")])
+        time_writer.writerow(["Task Code", "User", "Minutes", "Logged Date", "Note"])
+        for tl in TimeLog.objects.all().select_related('work_item', 'user'):
+            time_writer.writerow([
+                tl.work_item.task_code if tl.work_item else "N/A",
+                tl.user.get_full_name() if tl.user else "N/A",
+                tl.minutes,
+                tl.logged_at.strftime("%Y-%m-%d %H:%M"),
+                tl.note or ""
+            ])
+
+        # 3. Master Comment Sheet
+        comment_csv = io.StringIO()
+        comment_w = csv.writer(comment_csv)
+        comment_w.writerow(["Task Code", "Author", "Comment Body", "Timestamp"])
+        from tms.models import WorkItemComment
+        for c in WorkItemComment.objects.all().select_related('work_item', 'author'):
+            comment_w.writerow([c.work_item.task_code, c.author.get_full_name(), c.body, c.created_at.strftime("%Y-%m-%d %H:%M")])
 
         # Send Email to the system email account (the 5GB vault)
         vault_email = settings.EMAIL_HOST_USER or settings.DEFAULT_FROM_EMAIL
         if vault_email:
             try:
                 email = EmailMessage(
-                    subject=f"Agency Automated Backup - {month_str}",
-                    body=f"Attached are the human-readable CSV backups for {month_str}.\n\nThis email serves as your secure, off-site cloud storage vault.",
+                    subject=f"MASTER AGENCY BACKUP - {month_str}",
+                    body=(
+                        f"This is the automated MASTER backup for {month_str}.\n\n"
+                        "Included Attachments:\n"
+                        "1. MASTER_TASK_SHEET.csv - Every task and tactical date.\n"
+                        "2. EFFORT_LOGS.csv - Minute-by-minute team logs.\n"
+                        "3. COMMUNICATION_LOGS.csv - All task discussions.\n\n"
+                        "This email serves as your secure, human-readable cloud vault."
+                    ),
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     to=[vault_email],
                 )
-                email.attach(f"tasks_backup_{month_str}.csv", task_csv.getvalue(), "text/csv")
-                email.attach(f"timelogs_backup_{month_str}.csv", time_csv.getvalue(), "text/csv")
+                email.attach(f"MASTER_TASK_SHEET_{month_str}.csv", task_csv.getvalue(), "text/csv")
+                email.attach(f"EFFORT_LOGS_{month_str}.csv", time_csv.getvalue(), "text/csv")
+                email.attach(f"COMMUNICATION_LOGS_{month_str}.csv", comment_csv.getvalue(), "text/csv")
                 email.send(fail_silently=False)
-                self.stdout.write(self.style.SUCCESS(f"Successfully emailed CSV backups to {vault_email}"))
+                self.stdout.write(self.style.SUCCESS(f"Successfully emailed MASTER sheets to {vault_email}"))
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Failed to email backups: {str(e)}"))
 

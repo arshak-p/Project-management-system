@@ -32,6 +32,9 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [filterState, setFilterState] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
   const [filterModule, setFilterModule] = useState('');
+  const [filterPostingDate, setFilterPostingDate] = useState('');
+  const [filterDueDate, setFilterDueDate] = useState('');
+  const [filterDeadline, setFilterDeadline] = useState('');
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
@@ -40,7 +43,7 @@ export default function TasksPage({ me }: { me: User | null }) {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
   });
-  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', reference_link: '', assignee: '' });
+  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -88,11 +91,11 @@ export default function TasksPage({ me }: { me: User | null }) {
         module: Number(form.module),
         assignee_id: form.assignee ? Number(form.assignee) : null,
         due_date: form.due_date || null,
-        scheduled_date: form.scheduled_date || null,
+        deadline: form.deadline || null,
         reference_link: form.reference_link || null,
       });
       setShowForm(false);
-      setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', reference_link: '', assignee: '' });
+      setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
       load();
     } catch (err: unknown) {
       const errorData = (err as { response?: { data?: unknown } })?.response?.data;
@@ -108,8 +111,13 @@ export default function TasksPage({ me }: { me: User | null }) {
 
   const handleRestore = async (id: number) => {
     if (!confirm('Restore this task to active work items?')) return;
-    await api.updateTask(id, { is_active: true });
-    load();
+    try {
+      await api.updateTask(id, { is_active: true });
+      alert('Task restored successfully.');
+      load();
+    } catch {
+      alert('Failed to restore task. Security clearance required.');
+    }
   };
 
   const filtered = tasks.filter(t => {
@@ -119,6 +127,9 @@ export default function TasksPage({ me }: { me: User | null }) {
     if (filterState && t.state?.toString() !== filterState) match = false;
     if (filterAssignee && t.assignee?.id?.toString() !== filterAssignee) match = false;
     if (filterModule && t.module?.toString() !== filterModule) match = false;
+    if (filterPostingDate && t.posting_date !== filterPostingDate) match = false;
+    if (filterDueDate && t.due_date !== filterDueDate) match = false;
+    if (filterDeadline && t.deadline !== filterDeadline) match = false;
     
     if (startDate || endDate) {
       const taskDate = (t.created_at || "").split("T")[0];
@@ -238,13 +249,13 @@ export default function TasksPage({ me }: { me: User | null }) {
                 </div>
 
                 <div className="md:col-span-6 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8b5cf6] ml-1">Planned Start</label>
-                  <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} className="w-full px-6 py-4 bg-[#8b5cf6]/5 border border-[#8b5cf6]/20 rounded-2xl text-sm font-bold focus:border-[#8b5cf6] outline-none transition-all" style={{ colorScheme: 'dark' }} />
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Due Date</label>
+                  <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-sm font-bold focus:border-amber-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
 
                 <div className="md:col-span-6 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Final Deadline</label>
-                  <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-sm font-bold focus:border-amber-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 ml-1">Final Deadline</label>
+                  <input type="date" value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} className="w-full px-6 py-4 bg-red-500/5 border border-red-500/20 rounded-2xl text-sm font-bold focus:border-red-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
               </form>
             </div>
@@ -339,12 +350,26 @@ export default function TasksPage({ me }: { me: User | null }) {
 
         <div className="flex flex-col lg:flex-row items-center gap-4 pt-4 border-t border-white/5">
           <div className="grid grid-cols-2 lg:flex items-center gap-4 flex-1 w-full">
+             {me?.role !== 'specialist' && (
+               <div className="flex flex-col flex-1">
+                 <label className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-1 ml-1">Post Date</label>
+                 <input type="date" value={filterPostingDate} onChange={e => setFilterPostingDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               </div>
+             )}
              <div className="flex flex-col flex-1">
-               <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-1 ml-1">Date Range Start</label>
+               <label className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-1 ml-1">Due Date</label>
+               <input type="date" value={filterDueDate} onChange={e => setFilterDueDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+             </div>
+             <div className="flex flex-col flex-1">
+               <label className="text-[9px] font-black uppercase tracking-widest text-red-500 mb-1 ml-1">Deadline</label>
+               <input type="date" value={filterDeadline} onChange={e => setFilterDeadline(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+             </div>
+             <div className="flex flex-col flex-1">
+               <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-1 ml-1">Created From</label>
                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
              <div className="flex flex-col flex-1">
-               <label className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-1 ml-1">Date Range End</label>
+               <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-1 ml-1">Created To</label>
                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
           </div>
@@ -370,7 +395,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                Month
              </button>
              <button 
-               onClick={() => { setStartDate(''); setEndDate(''); setFilterProject(''); setFilterState(''); setFilterAssignee(''); setFilterModule(''); setSearch(''); }}
+               onClick={() => { setStartDate(''); setEndDate(''); setFilterProject(''); setFilterState(''); setFilterAssignee(''); setFilterModule(''); setFilterPostingDate(''); setFilterDueDate(''); setFilterDeadline(''); setSearch(''); }}
                className="flex-1 lg:flex-none px-6 py-3.5 bg-error/10 text-error border border-error/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-error/20 transition-all"
              >
                Reset All
@@ -453,7 +478,9 @@ export default function TasksPage({ me }: { me: User | null }) {
                         </span>
                       ) : null;
                     })()}
+                    {me?.role !== 'specialist' && task.posting_date && <span className="flex items-center gap-1 opacity-60">📅 {task.posting_date}</span>}
                     {task.due_date && <span className="flex items-center gap-1 opacity-60">🚩 {task.due_date}</span>}
+                    {task.deadline && <span className="flex items-center gap-1 opacity-60">💀 {task.deadline}</span>}
                     <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[10px] font-bold text-text-muted">
                       👤 {task.assignee?.first_name || task.assignee?.email || 'Unassigned'}
                     </span>
