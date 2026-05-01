@@ -98,7 +98,15 @@ class CreateUserView(APIView):
         # Instant Async Welcome Email
         send_reliable_email_async(
             subject='Welcome to Colour Parrot - Your Account is Ready!',
-            message=f'Hello {first_name},\n\nYour account on the Colour Parrot Task Management System has been created.\n\nSystem Portal: https://c1r9rt-workflow.in\nLogin Email: {email}\n\nYou can now log in and start collaborating on your assigned projects.\n\nBest regards,\nThe Colour Parrot Team',
+            message=(
+                f'Hello {first_name},\n\n'
+                'Your account on the Colour Parrot Task Management System has been created.\n\n'
+                'System Portal: https://c1r9rt-workflow.in\n'
+                f'Login Email: {email}\n\n'
+                'You can now log in and start collaborating on your assigned projects.\n\n'
+                'Best regards,\n'
+                'The Colour Parrot Team'
+            ),
             recipient_list=[email]
         )
 
