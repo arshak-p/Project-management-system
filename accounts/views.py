@@ -12,20 +12,26 @@ from accounts.models import User, EmailOTP
 from accounts.serializers import CustomTokenObtainPairSerializer
 from tms.permissions import IsAdminRole, IsHRManagement
 
+from django.core.mail import EmailMessage
+import threading
+
 def send_async_email(subject, message, recipient_list):
     def send():
         try:
-            send_mail(
+            email = EmailMessage(
                 subject=subject,
-                message=message,
+                body=message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=recipient_list,
-                fail_silently=False,
+                to=recipient_list,
             )
+            email.send(fail_silently=False)
         except Exception as e:
-            print(f"Async Email Failed: {str(e)}")
+            # We log to a file so we can debug if it fails
+            with open("email_debug.log", "a") as f:
+                f.write(f"{timezone.now()} - FAILED: {subject} to {recipient_list}. Error: {str(e)}\n")
             
     thread = threading.Thread(target=send)
+    thread.daemon = True # Ensure it doesn't block server shutdown
     thread.start()
 
 
