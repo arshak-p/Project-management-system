@@ -146,32 +146,6 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
         );
       })()}
 
-                    onClick={(e) => dismissNotification(e, n.id)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-background border border-border rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-error/10 hover:text-error z-20"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center animate-pulse">
-                      <Bell className="w-3.5 h-3.5 text-amber-500" />
-                    </div>
-                    <div className="flex-1 min-w-0 pr-2">
-                      <p className="text-[11px] font-black text-text group-hover:text-amber-500 transition-colors truncate block">
-                        {n.title}
-                      </p>
-                      <p className="text-[9px] font-bold text-text-muted opacity-60 truncate block mt-0.5">
-                        {n.body}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="w-1 h-1 rounded-full bg-amber-500"></div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-         </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div 
           whileHover={{ y: -5 }}
