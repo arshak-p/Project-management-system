@@ -13,26 +13,22 @@ from accounts.serializers import CustomTokenObtainPairSerializer
 from tms.permissions import IsAdminRole, IsHRManagement
 
 from django.core.mail import EmailMessage
-import threading
 
-def send_async_email(subject, message, recipient_list):
-    def send():
-        try:
-            email = EmailMessage(
-                subject=subject,
-                body=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=recipient_list,
-            )
-            email.send(fail_silently=False)
-        except Exception as e:
-            # We log to a file so we can debug if it fails
-            with open("email_debug.log", "a") as f:
-                f.write(f"{timezone.now()} - FAILED: {subject} to {recipient_list}. Error: {str(e)}\n")
-            
-    thread = threading.Thread(target=send)
-    thread.daemon = True # Ensure it doesn't block server shutdown
-    thread.start()
+def send_reliable_email(subject, message, recipient_list):
+    try:
+        email = EmailMessage(
+            subject=subject,
+            body=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=recipient_list,
+        )
+        email.send(fail_silently=False)
+        return True
+    except Exception as e:
+        # Log error to file for emergency check
+        with open("email_debug.log", "a") as f:
+            f.write(f"{timezone.now()} - FAILED: {subject} to {recipient_list}. Error: {str(e)}\n")
+        return False
 
 
 class LoginView(TokenObtainPairView):
@@ -93,8 +89,8 @@ class CreateUserView(APIView):
         user._activity_user = request.user
         user.save()
 
-        # Async Welcome Email
-        send_async_email(
+        # Reliable Welcome Email
+        send_reliable_email(
             subject='Welcome to Colour Parrot - Your Account is Ready!',
             message=f'Hello {first_name},\n\nYour account on the Colour Parrot Task Management System has been created.\n\nSystem Portal: https://c1r9rt-workflow.in\nLogin Email: {email}\n\nYou can now log in and start collaborating on your assigned projects.\n\nBest regards,\nThe Colour Parrot Team',
             recipient_list=[email]
@@ -131,13 +127,16 @@ class RequestOTPView(APIView):
         EmailOTP.objects.create(email=email, otp=otp_code)
 
         # Send Email (Fallback to console if SMTP not configured)
-        # Async OTP Email
-        send_async_email(
+        # Reliable OTP Email
+        sent = send_reliable_email(
             subject='Colour Parrot Security Code',
             message=f'Your secure login code is: {otp_code}. It will expire in 10 minutes.',
             recipient_list=[email]
         )
-        return Response({'detail': 'OTP sent successfully.'})
+        if sent:
+            return Response({'detail': 'OTP sent successfully.'})
+        else:
+            return Response({'detail': 'Failed to deliver OTP. Check server settings.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class VerifyOTPView(APIView):
@@ -189,16 +188,19 @@ class SendCreationOTPView(APIView):
         otp_code = f"{random.randint(100000, 999999)}"
         EmailOTP.objects.create(email=email, otp=otp_code)
 
-        # Async Creation OTP
-        send_async_email(
+        # Reliable Creation OTP
+        sent = send_reliable_email(
             subject='Colour Parrot: Verify Team Member Email',
             message=f'You are being added to the Colour Parrot TMS. Your verification code is: {otp_code}.',
             recipient_list=[email]
         )
-        return Response({
-            'detail': f'Code sent to email. (Admin Backup Code: {otp_code})',
-            'otp_fallback': otp_code
-        })
+        if sent:
+            return Response({
+                'detail': f'Code sent to email. (Admin Backup Code: {otp_code})',
+                'otp_fallback': otp_code
+            })
+        else:
+            return Response({'detail': 'Email delivery failed. Code not sent.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class VerifyCreationOTPView(APIView):
