@@ -13,22 +13,28 @@ from accounts.serializers import CustomTokenObtainPairSerializer
 from tms.permissions import IsAdminRole, IsHRManagement
 
 from django.core.mail import EmailMessage
+from concurrent.futures import ThreadPoolExecutor
 
-def send_reliable_email(subject, message, recipient_list):
-    try:
-        email = EmailMessage(
-            subject=subject,
-            body=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=recipient_list,
-        )
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        # Log error to file for emergency check
-        with open("email_debug.log", "a") as f:
-            f.write(f"{timezone.now()} - FAILED: {subject} to {recipient_list}. Error: {str(e)}\n")
-        return False
+# Use a global executor to keep threads alive even after the request finishes
+email_executor = ThreadPoolExecutor(max_workers=4)
+
+def send_reliable_email_async(subject, message, recipient_list):
+    def send():
+        try:
+            email = EmailMessage(
+                subject=subject,
+                body=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=recipient_list,
+            )
+            email.send(fail_silently=False)
+        except Exception as e:
+            with open("email_debug.log", "a") as f:
+                f.write(f"{timezone.now()} - ASYNC FAILED: {subject} to {recipient_list}. Error: {str(e)}\n")
+            
+    # Dispatch to the executor and return immediately
+    email_executor.submit(send)
+    return True
 
 
 class LoginView(TokenObtainPairView):
@@ -89,8 +95,8 @@ class CreateUserView(APIView):
         user._activity_user = request.user
         user.save()
 
-        # Reliable Welcome Email
-        send_reliable_email(
+        # Instant Async Welcome Email
+        send_reliable_email_async(
             subject='Welcome to Colour Parrot - Your Account is Ready!',
             message=f'Hello {first_name},\n\nYour account on the Colour Parrot Task Management System has been created.\n\nSystem Portal: https://c1r9rt-workflow.in\nLogin Email: {email}\n\nYou can now log in and start collaborating on your assigned projects.\n\nBest regards,\nThe Colour Parrot Team',
             recipient_list=[email]
@@ -127,16 +133,13 @@ class RequestOTPView(APIView):
         EmailOTP.objects.create(email=email, otp=otp_code)
 
         # Send Email (Fallback to console if SMTP not configured)
-        # Reliable OTP Email
-        sent = send_reliable_email(
+        # Instant Async OTP Email
+        send_reliable_email_async(
             subject='Colour Parrot Security Code',
             message=f'Your secure login code is: {otp_code}. It will expire in 10 minutes.',
             recipient_list=[email]
         )
-        if sent:
-            return Response({'detail': 'OTP sent successfully.'})
-        else:
-            return Response({'detail': 'Failed to deliver OTP. Check server settings.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'detail': 'OTP sent successfully.'})
 
 
 class VerifyOTPView(APIView):
@@ -188,19 +191,16 @@ class SendCreationOTPView(APIView):
         otp_code = f"{random.randint(100000, 999999)}"
         EmailOTP.objects.create(email=email, otp=otp_code)
 
-        # Reliable Creation OTP
-        sent = send_reliable_email(
+        # Instant Async Creation OTP
+        send_reliable_email_async(
             subject='Colour Parrot: Verify Team Member Email',
             message=f'You are being added to the Colour Parrot TMS. Your verification code is: {otp_code}.',
             recipient_list=[email]
         )
-        if sent:
-            return Response({
-                'detail': f'Code sent to email. (Admin Backup Code: {otp_code})',
-                'otp_fallback': otp_code
-            })
-        else:
-            return Response({'detail': 'Email delivery failed. Code not sent.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({
+            'detail': f'Code sent to email. (Admin Backup Code: {otp_code})',
+            'otp_fallback': otp_code
+        })
 
 
 class VerifyCreationOTPView(APIView):
