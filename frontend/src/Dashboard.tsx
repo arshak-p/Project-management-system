@@ -81,6 +81,9 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [page, setPage] = useState<Page>('overview');
   const [me, setMe] = useState<User | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [dismissedIds, setDismissedIds] = useState<number[]>([]);
+  const [isNotifyPaused, setIsNotifyPaused] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [history, setHistory] = useState<Page[]>([]);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
@@ -107,12 +110,29 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
 
     const hb = setInterval(() => {
        api.getNotifications().then(r => {
-         const newData = r.data.filter((n: Notification) => !n.read);
-         setUnreadCount(newData.length);
+         const all = r.data.filter((n: any) => !n.read);
+         setUnreadCount(all.length);
+         setNotifications(all.slice(0, 3));
        });
-    }, 5000); // Faster Background Sync: 5s
+    }, 5000); 
     return () => clearInterval(hb);
   }, []);
+
+  // Global Auto-dismiss with Hover Pause
+  useEffect(() => {
+    if (isNotifyPaused) return;
+
+    const visible = notifications.filter(n => !dismissedIds.includes(n.id));
+    if (visible.length === 0) return;
+
+    const timers = visible.map(n => {
+      return setTimeout(() => {
+        setDismissedIds(prev => [...new Set([...prev, n.id])]);
+      }, 6000);
+    });
+
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [notifications, dismissedIds, isNotifyPaused]);
 
   useEffect(() => {
     // Real-time Notification Socket
@@ -373,6 +393,56 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             <Menu className="w-5 h-5" />
           </button>
         </nav>
+        {/* Global Notifications Container */}
+        <div 
+          className="fixed bottom-6 right-6 md:top-24 md:bottom-auto md:right-8 z-[200] flex flex-col gap-3 w-[calc(100%-3rem)] md:w-80 pointer-events-none"
+          onMouseEnter={() => setIsNotifyPaused(true)}
+          onMouseLeave={() => setIsNotifyPaused(false)}
+        >
+          <AnimatePresence>
+            {notifications.filter(n => !dismissedIds.includes(n.id)).map(n => (
+              <motion.div 
+                key={n.id} 
+                initial={{ opacity: 0, x: 50, scale: 0.9, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, x: 20, scale: 0.9, filter: 'blur(10px)' }}
+                className="glass p-4 rounded-[1.5rem] border border-white/10 shadow-glow-lg pointer-events-auto cursor-pointer group relative overflow-hidden backdrop-blur-3xl"
+                onClick={() => handleNav('notifications')}
+              >
+                 <div className="absolute top-0 left-0 w-1 h-full bg-primary/60"></div>
+                 <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary mt-0.5">
+                       <Bell className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                         <h4 className="text-[11px] font-black uppercase tracking-wider text-white">{n.title}</h4>
+                         <button 
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             setDismissedIds(prev => [...new Set([...prev, n.id])]);
+                           }}
+                           className="p-1.5 hover:bg-white/10 rounded-lg transition-all text-white/40 hover:text-white"
+                         >
+                           <X className="w-3.5 h-3.5" />
+                         </button>
+                      </div>
+                      <p className="text-[10px] text-text-muted mt-1 leading-relaxed font-bold opacity-80">{n.body}</p>
+                    </div>
+                 </div>
+                 {/* Progress Bar for Auto-dismiss */}
+                 {!isNotifyPaused && (
+                   <motion.div 
+                     initial={{ scaleX: 1 }}
+                     animate={{ scaleX: 0 }}
+                     transition={{ duration: 6, ease: "linear" }}
+                     className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary/20 origin-left"
+                   />
+                 )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
     </motion.div>
   );

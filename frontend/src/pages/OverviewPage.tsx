@@ -13,8 +13,6 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [dismissedIds, setDismissedIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'month' | 'all'>('all');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -29,15 +27,13 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
     Promise.all([
       api.getAnalytics(params), 
       api.getProjects(), 
-      api.getActivity(),
-      api.getNotifications()
+      api.getActivity()
     ])
-      .then(([a, p, act, n]) => {
+      .then(([a, p, act]) => {
         setAnalytics(a.data);
         setProjects(p.data);
         const activityCount = viewMode === 'all' ? 20 : 10;
         setRecentActivity(act.data.slice(0, activityCount));
-        setNotifications(n.data.filter((notif: Notification) => !notif.read).slice(0, 3));
       })
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
@@ -48,27 +44,6 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
     const interval = setInterval(() => load(), 3000); // Accelerated Polling: 3s
     return () => clearInterval(interval);
   }, [load]);
-
-  // Auto-dismiss logic: Ensure notifications disappear after 6s even with 3s polling
-  useEffect(() => {
-    const newNotifications = notifications.filter(n => !dismissedIds.includes(n.id));
-    
-    const timers = newNotifications.map(n => {
-      return setTimeout(() => {
-        setDismissedIds(prev => [...new Set([...prev, n.id])]);
-      }, 6000); // 6 second "Quick Look" lifetime
-    });
-
-    return () => timers.forEach(t => clearTimeout(t));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notifications.map(n => n.id).join(',')]); 
-
-  const dismissNotification = (e: React.MouseEvent, id: number) => {
-    e.stopPropagation();
-    setDismissedIds(prev => [...new Set([...prev, id])]);
-  };
-
-  const visibleNotifications = notifications.filter(n => !dismissedIds.includes(n.id));
 
   if (isLoading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -171,21 +146,6 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
         );
       })()}
 
-      {visibleNotifications.length > 0 && (
-          <div className="fixed bottom-4 right-4 md:top-24 md:bottom-auto md:right-8 z-[100] flex flex-col gap-3 w-[calc(100%-2rem)] md:w-72 pointer-events-none">
-            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500 italic mb-1 px-4 drop-shadow-sm">Priority Alpha Alerts</h3>
-            <AnimatePresence>
-              {visibleNotifications.map(n => (
-                <motion.div 
-                  key={n.id} 
-                  initial={{ opacity: 0, x: 50, scale: 0.9 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8, x: 20 }}
-                  whileHover={{ scale: 1.02 }}
-                  className="p-4 glass border border-amber-500/20 rounded-[1.5rem] flex items-center justify-between group hover:bg-amber-500/10 cursor-pointer transition-all shadow-2xl pointer-events-auto backdrop-blur-3xl relative"
-                  onClick={() => onNavigate?.('notifications')}
-                >
-                  <button 
                     onClick={(e) => dismissNotification(e, n.id)}
                     className="absolute -top-2 -right-2 w-6 h-6 bg-background border border-border rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-error/10 hover:text-error z-20"
                   >
