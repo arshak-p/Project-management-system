@@ -25,6 +25,13 @@ class Command(BaseCommand):
             month=month_str,
             defaults={'is_approved': False}
         )
+
+        # Calculate Previous Month range for targeted export
+        first_day_this_month = now.replace(day=1)
+        last_day_prev_month = first_day_this_month - timedelta(days=1)
+        first_day_prev_month = last_day_prev_month.replace(day=1)
+        
+        prev_month_str = first_day_prev_month.strftime("%Y-%m")
         
         if not created and backup_req.is_approved:
             self.stdout.write(self.style.WARNING(f"Backup for {month_str} already approved."))
@@ -100,7 +107,12 @@ class Command(BaseCommand):
             "Due Date", "Deadline", "Rework Count", "State Time (Min)", 
             "Reference Links", "Description"
         ])
-        for t in WorkItem.objects.all().select_related('project', 'module', 'state', 'assignee'):
+        
+        # We backup ALL tasks but highlight current status
+        all_tasks = WorkItem.objects.all().select_related('project', 'module', 'state', 'assignee')
+        self.stdout.write(f"Exporting {all_tasks.count()} total tasks to Master Sheet...")
+        
+        for t in all_tasks:
             # Format state durations for readability
             state_info = " | ".join([f"{s}: {m}m" for s, m in (t.state_durations or {}).items()])
             
@@ -126,7 +138,16 @@ class Command(BaseCommand):
         time_csv = io.StringIO()
         time_writer = csv.writer(time_csv)
         time_writer.writerow(["Task Code", "User", "Minutes", "Logged Date", "Note"])
-        for tl in TimeLog.objects.all().select_related('work_item', 'user'):
+        
+        # TARGETED: Filter logs specifically from last month
+        prev_month_logs = TimeLog.objects.filter(
+            logged_at__year=first_day_prev_month.year,
+            logged_at__month=first_day_prev_month.month
+        ).select_related('work_item', 'user')
+        
+        self.stdout.write(f"Exporting {prev_month_logs.count()} time logs from {prev_month_str}...")
+        
+        for tl in prev_month_logs:
             time_writer.writerow([
                 tl.work_item.task_code if tl.work_item else "N/A",
                 tl.user.get_full_name() if tl.user else "N/A",

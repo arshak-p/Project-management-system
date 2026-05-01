@@ -272,8 +272,11 @@ export default function TeamPage({ me }: { me: User | null }) {
                 </div>
               )}
               {success && (
-                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-sm text-green-400 animate-in fade-in flex items-center justify-between">
-                  <span>{success}</span>
+                <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl text-sm text-emerald-400 animate-in fade-in flex items-center justify-between shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-60">System Message</span>
+                    <span className="font-bold">{success}</span>
+                  </div>
                   {success.includes('CODE:') && (
                     <button 
                       type="button"
@@ -281,10 +284,10 @@ export default function TeamPage({ me }: { me: User | null }) {
                         const code = success.split('CODE:')[1].trim().split(' ')[0];
                         handleCopyOtp(code);
                       }}
-                      className="ml-2 p-1.5 hover:bg-green-500/20 rounded-lg transition-all flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest"
+                      className="ml-4 px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase tracking-tighter shadow-lg shadow-emerald-500/20"
                     >
-                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      {copied ? 'Copied' : 'Copy'}
+                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                   )}
                 </div>
