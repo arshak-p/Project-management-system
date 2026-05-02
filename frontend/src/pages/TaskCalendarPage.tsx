@@ -166,9 +166,9 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-6 order-2 lg:order-1">
           <div className="bento-card p-0 overflow-hidden">
-            <div className="p-8 flex items-center justify-between border-b border-white/5 bg-surface/30">
+            <div className="p-6 lg:p-8 flex flex-col sm:flex-row items-center justify-between border-b border-white/5 bg-surface/30 gap-4">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
                   <CalendarIcon className="w-5 h-5 text-primary" />
@@ -184,8 +184,8 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
               </div>
             </div>
 
-            <div className="p-4 overflow-x-auto">
-              <div className="min-w-[800px]">
+            <div className="p-4 overflow-x-auto scrollbar-thin scrollbar-thumb-white/10">
+              <div className="min-w-[800px] lg:min-w-0">
                 <div className="grid grid-cols-7 mb-4 px-2">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                     <div key={day} className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-text-muted py-2">{day}</div>
@@ -199,7 +199,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                     return (
                       <div 
                         key={idx} 
-                        className={`min-h-[140px] p-4 bg-background/40 hover:bg-white/5 transition-all relative group cursor-pointer border-r border-b border-white/5 ${!day ? 'bg-transparent pointer-events-none' : ''}`}
+                        className={`min-h-[100px] lg:min-h-[140px] p-2 lg:p-4 bg-background/40 hover:bg-white/5 transition-all relative group cursor-pointer border-r border-b border-white/5 ${!day ? 'bg-transparent pointer-events-none' : ''}`}
                         onClick={() => {
                           if (!day) return;
                           const d = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
@@ -208,14 +208,14 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                       >
                         {day && (
                           <>
-                            <div className="flex justify-between items-start mb-3">
-                              <span className={`text-sm font-black transition-all ${isToday ? 'bg-primary text-white w-7 h-7 flex items-center justify-center rounded-full shadow-glow' : 'text-text-muted/40 group-hover:text-text-muted'}`}>
+                            <div className="flex justify-between items-start mb-2 lg:mb-3">
+                              <span className={`text-xs lg:text-sm font-black transition-all ${isToday ? 'bg-primary text-white w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center rounded-full shadow-glow' : 'text-text-muted/40 group-hover:text-text-muted'}`}>
                                 {day}
                               </span>
                               {dayTasks.length > 0 && (
                                 <div className="flex -space-x-1.5 overflow-hidden">
                                   {dayTasks.slice(0, 3).map((t, i) => (
-                                    <div key={t.id} className={`w-2.5 h-2.5 rounded-full border-2 border-background shadow-sm ${
+                                    <div key={t.id} className={`w-2 lg:w-2.5 h-2 lg:h-2.5 rounded-full border-2 border-background shadow-sm ${
                                       t.priority === 'urgent' ? 'bg-error' : 
                                       t.priority === 'high' ? 'bg-orange-500' : 
                                       'bg-primary'
@@ -224,25 +224,22 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                                 </div>
                               )}
                             </div>
-                            <div className="space-y-1.5">
-                              {dayTasks.slice(0, 3).map(t => (
+                            <div className="space-y-1">
+                              {dayTasks.slice(0, 2).map(t => (
                                 <div 
                                   key={t.id} 
                                   onClick={(e) => { e.stopPropagation(); setSelectedTaskId(t.id); }}
-                                  className={`px-2 py-1.5 rounded-xl text-[9px] font-black truncate border transition-all flex justify-between items-center gap-2 ${
+                                  className={`px-2 py-1 rounded-lg text-[8px] lg:text-[9px] font-black truncate border transition-all flex justify-between items-center gap-1 ${
                                     t.priority === 'urgent' ? 'bg-error/10 text-error border-error/20 hover:bg-error/20' : 
                                     t.priority === 'high' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 hover:bg-orange-500/20' : 
                                     'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
                                   }`}
                                 >
                                   <span>{t.title}</span>
-                                  {t.due_date && (
-                                    <span className="bg-white/10 px-1 rounded-md opacity-60 text-[7px] whitespace-nowrap">DO: {new Date(t.due_date).getDate()}</span>
-                                  )}
                                 </div>
                               ))}
-                              {dayTasks.length > 3 && (
-                                <p className="text-[8px] font-black text-text-muted/40 pl-2 uppercase tracking-widest mt-1">+{dayTasks.length - 3} Units</p>
+                              {dayTasks.length > 2 && (
+                                <p className="text-[7px] font-black text-text-muted/40 pl-1 uppercase tracking-widest mt-0.5">+{dayTasks.length - 2}</p>
                               )}
                             </div>
                           </>
@@ -256,7 +253,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
           </div>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-8 order-1 lg:order-2">
           <div className="bento-card p-8 bg-surface/40">
             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted mb-6 flex items-center gap-2">
               <Info className="w-3 h-3" /> Selection Details

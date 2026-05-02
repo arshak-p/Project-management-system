@@ -41,14 +41,20 @@ export default function JobTitlesPage({ me: _me }: { me: User | null }) {
     } finally { setSaving(false); }
   };
 
-    } catch { alert('Failed to delete.'); }
+  const handleDelete = async (id: number) => {
+    if (!confirm('Archive this job title to historical data?')) return;
+    try {
+      await api.deleteJobTitle(id);
+      load();
+    } catch { alert('Failed to archive title.'); }
   };
 
   const handleRestore = async (id: number) => {
+    if (!confirm('Restore this job title to active status?')) return;
     try {
       await api.restoreJobTitle(id);
       load();
-    } catch { alert('Failed to restore.'); }
+    } catch { alert('Failed to restore title.'); }
   };
 
   if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" /></div>;

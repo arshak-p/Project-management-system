@@ -42,14 +42,20 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
     } finally { setSaving(false); }
   };
 
-    } catch { alert('Failed to delete.'); }
+  const handleDelete = async (id: number) => {
+    if (!confirm('Archive this module to historical data?')) return;
+    try {
+      await api.deleteModule(id);
+      load();
+    } catch { alert('Failed to archive module.'); }
   };
   
   const handleRestore = async (id: number) => {
+    if (!confirm('Restore this module to active status?')) return;
     try {
       await api.restoreModule(id);
       load();
-    } catch { alert('Failed to restore.'); }
+    } catch { alert('Failed to restore module.'); }
   };
 
   if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" /></div>;
