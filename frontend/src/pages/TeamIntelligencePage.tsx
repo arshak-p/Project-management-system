@@ -24,7 +24,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [dateRange, setDateRange] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [dateRange, setDateRange] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('monthly');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
 
   useEffect(() => {
@@ -50,6 +50,8 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
     } else if (dateRange === 'monthly') {
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
       start = lastMonth.toISOString().split('T')[0];
+    } else if (dateRange === 'all') {
+      start = '';
     }
 
     return { start, end };
@@ -113,8 +115,8 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
           <p className="text-text-muted mt-2 font-bold tracking-widest uppercase text-[10px] opacity-60 italic">Operator Review // Tactical Performance Deep-Dive</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-           <div className="flex items-center gap-1 p-1 glass rounded-2xl border border-white/5">
-              {(['daily', 'weekly', 'monthly'] as const).map(r => (
+            <div className="flex items-center gap-1 p-1 glass rounded-2xl border border-white/5">
+              {(['daily', 'weekly', 'monthly', 'all'] as const).map(r => (
                 <button 
                   key={r}
                   onClick={() => { setDateRange(r); setCustomRange({ start: '', end: '' }); }}
