@@ -12,28 +12,20 @@ from accounts.models import User, EmailOTP
 from accounts.serializers import CustomTokenObtainPairSerializer
 from tms.permissions import IsAdminRole, IsHRManagement
 
-from django.core.mail import EmailMessage
-from concurrent.futures import ThreadPoolExecutor
-
-# Solid Foundation: Thread pool for background delivery
-email_executor = ThreadPoolExecutor(max_workers=4)
+from django.core.mail import send_mail
 
 def send_reliable_email_async(subject, message, recipient_list):
-    def send():
-        try:
-            email = EmailMessage(
-                subject=subject,
-                body=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=recipient_list,
-            )
-            email.send(fail_silently=False)
-        except Exception as e:
-            # We log to stdout for Render logs
-            print(f"SMTP ERROR: {str(e)}")
-            
-    # Hand off to thread and return immediately
-    email_executor.submit(send)
+    """Simplified synchronous sender for maximum Render stability."""
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=recipient_list,
+            fail_silently=False,
+        )
+    except Exception as e:
+        print(f"SMTP DIRECT ERROR: {str(e)}")
     return True
 
 
