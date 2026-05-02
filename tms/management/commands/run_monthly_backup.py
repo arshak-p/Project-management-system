@@ -59,22 +59,8 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"DB Snapshot failed: {str(e)}"))
 
-        # 3. Suggestion 4: Data Retention Cleanup
-        retention_months = settings.BACKUP_RETENTION_MONTHS
-        cutoff_date = now - timedelta(days=30 * retention_months)
-        expired_backups = Backup.objects.filter(created_at__lt=cutoff_date)
-        
-        for old_backup in expired_backups:
-            self.stdout.write(f"Cleaning up expired backup: {old_backup.month}")
-            # Delete physical files if they exist (CSV backups folder)
-            old_path = os.path.join(settings.BACKUP_STORAGE_PATH, old_backup.month)
-            if os.path.exists(old_path):
-                shutil.rmtree(old_path)
-            # Delete local DB snapshot
-            old_db_snapshot = os.path.join(db_backup_dir, f"db_backup_{old_backup.month}.sql")
-            if os.path.exists(old_db_snapshot):
-                os.remove(old_db_snapshot)
-            old_backup.delete()
+        # Retention logic disabled per User Request: "Never delete any data"
+        self.stdout.write(self.style.NOTICE("Skipping retention cleanup: Permanent Storage Mode Active."))
 
         # 4. Suggestion 1: External Webhook (Cloud Sync Simulation)
         if settings.EXTERNAL_BACKUP_WEBHOOK:
@@ -102,9 +88,9 @@ class Command(BaseCommand):
         task_csv = io.StringIO()
         task_writer = csv.writer(task_csv)
         task_writer.writerow([
-            "Task Code", "Title", "Project", "Module", "State", "Priority", 
-            "Assignee", "Created At", "Posting Date", "Scheduled Date", 
-            "Due Date", "Deadline", "Rework Count", "State Time (Min)", 
+            "Task Code", "Title", "Project Name", "Module/Scope", "Current State", "Priority", 
+            "Specialist Name", "Created At (System)", "Start Date (Do)", "Deadline (Finish)", 
+            "Posting Date (Billing)", "Rework Count", "Internal Schedule", "State Durations (Minutes)", 
             "Reference Links", "Description"
         ])
         
@@ -124,11 +110,11 @@ class Command(BaseCommand):
                 t.priority,
                 t.assignee.get_full_name() if t.assignee else "Unassigned",
                 t.created_at.strftime("%Y-%m-%d %H:%M"),
-                t.posting_date or "",
-                t.scheduled_date or "",
                 t.due_date or "",
                 t.deadline or "",
+                t.posting_date or "",
                 t.rework_count,
+                t.scheduled_date or "",
                 state_info,
                 t.reference_link or "",
                 t.description or ""

@@ -383,6 +383,17 @@ class WorkItemViewSet(SalesSafeViewSet):
         instance.is_active = False
         instance.save(update_fields=["is_active"])
 
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        u = self.request.user
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.HR]):
+            raise PermissionDenied("Only managers or HR can restore tasks.")
+        instance = self.get_object()
+        instance.is_active = True
+        instance._activity_user = u
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "work item restored"})
+
     @action(detail=True, methods=["post"], url_path="record-view")
     def record_view(self, request, pk=None):
         item = self.get_object()

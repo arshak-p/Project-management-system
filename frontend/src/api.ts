@@ -265,6 +265,10 @@ export const api = {
     apiClient.patch(`/users/${id}/`, data),
   deleteUser: (id: number) =>
     apiClient.delete(`/users/${id}/`),
+  restoreUser: (id: number) =>
+    apiClient.post(`/users/${id}/restore/`),
+  restoreTask: (id: number) =>
+    apiClient.post(`/work-items/${id}/restore/`),
   getJobTitles: () => apiClient.get('/job-titles/'),
   createJobTitle: (data: object) => apiClient.post('/job-titles/', data),
   updateJobTitle: (id: number, data: object) => apiClient.patch(`/job-titles/${id}/`, data),
