@@ -229,8 +229,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       </AnimatePresence>
 
       <aside className={`
-        fixed lg:sticky top-0 h-[calc(100vh-2rem)] w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 shadow-premium transition-transform duration-500
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] lg:translate-x-0'}
+        fixed md:sticky top-0 h-[calc(100vh-2rem)] w-72 lg:w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 shadow-premium transition-transform duration-500
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] md:translate-x-0'}
       `}>
         <div className="p-10 flex items-center justify-between">
           <button onClick={() => { handleNav((isAdmin || isTeamHead) ? 'overview' : 'my_tasks'); setSidebarOpen(false); }} className="flex items-center gap-6 group">
@@ -300,7 +300,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       <div className="flex-1 flex flex-col w-full min-w-0 bg-background overflow-hidden relative">
         <header className="h-24 flex items-center justify-between px-10">
           <div className="flex items-center gap-6">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-3 glass rounded-2xl">
+            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-3 glass rounded-2xl">
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-4">
@@ -373,8 +373,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         </main>
 
-        {/* Mobile Bottom Navigation */}
-        <nav className="lg:hidden fixed bottom-6 left-6 right-6 z-50 glass border-white/10 rounded-[2rem] px-4 py-3 flex justify-around items-center shadow-2xl backdrop-blur-2xl">
+        {/* Mobile/Tablet Bottom Navigation */}
+        <nav className="md:hidden fixed bottom-6 left-6 right-6 z-50 glass border-white/10 rounded-[2rem] px-4 py-3 flex justify-around items-center shadow-2xl backdrop-blur-2xl">
           {navItems.slice(0, 5).map((item) => (
             <button
               key={item.id}

@@ -160,8 +160,9 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-4 space-y-4 max-h-[30vh] lg:max-h-[70vh] overflow-y-auto custom-scrollbar pr-2 order-2 lg:order-1">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10">
+           {/* Sidebar: Member List */}
+           <div className="md:col-span-4 lg:col-span-3 space-y-4 max-h-[40vh] md:max-h-[75vh] overflow-y-auto custom-scrollbar pr-2 order-2 md:order-1">
             {['admin', 'project_manager', 'team_head', 'specialist'].map(role => {
               const roleUsers = filteredUsers.filter(u => u.role === role);
               if (roleUsers.length === 0) return null;
@@ -196,7 +197,8 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
             })}
         </div>
 
-        <div className="lg:col-span-8 order-1 lg:order-2">
+        {/* Main Detail Area */}
+        <div className="md:col-span-8 lg:col-span-9 order-1 md:order-2">
            {!selectedUserId ? (
              <div className="h-full min-h-[50vh] flex flex-col items-center justify-center glass rounded-[3rem] border-dashed border-white/10 p-10 text-center">
                 <Users className="w-16 h-16 text-text-muted/10 mb-6" />
