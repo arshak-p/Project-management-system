@@ -430,7 +430,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
             {(me?.role === 'admin' || me?.role === 'project_manager') ? (
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-1 h-3 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div> Posting Date (Billing)
+                  <div className="w-1 h-3 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div> Post Date
                 </label>
                 <input 
                   type="date"
@@ -439,12 +439,12 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                   className="w-full px-3 py-2.5 bg-indigo-500/5 border border-indigo-500/20 rounded-xl text-sm focus:border-indigo-500 outline-none hover:border-indigo-500/50 transition-colors font-bold"
                   style={{ colorScheme: 'dark' }}
                 />
-                <p className="text-[9px] text-text-muted leading-tight pl-1 italic">Drives monthly reports/billing.</p>
+                <p className="text-[9px] text-text-muted leading-tight pl-1 italic">Drives monthly launch reports and project snapshots.</p>
               </div>
             ) : (
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-1 h-3 bg-indigo-500 rounded-full opacity-50"></div> Posting Date (Billing)
+                  <div className="w-1 h-3 bg-indigo-500 rounded-full opacity-50"></div> Post Date
                 </label>
                 <div className="w-full px-3 py-2.5 bg-surface/50 border border-border/50 rounded-xl text-sm font-mono text-indigo-400/80">
                   {task.posting_date || 'Not set'}

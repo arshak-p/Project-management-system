@@ -261,7 +261,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                 </div>
 
                 <div className="md:col-span-4 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 ml-1">Posting Date (Billing)</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 ml-1">Post Date</label>
                   <input type="date" value={form.posting_date} onChange={e => setForm({ ...form, posting_date: e.target.value })} className="w-full px-6 py-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl text-sm font-bold focus:border-indigo-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
               </form>
@@ -488,7 +488,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                         </span>
                       ) : null;
                     })()}
-                    {me?.role !== 'specialist' && task.posting_date && <span className="flex items-center gap-1 opacity-80 text-indigo-400">📅 Billing: {task.posting_date}</span>}
+                    {me?.role !== 'specialist' && task.posting_date && <span className="flex items-center gap-1 opacity-80 text-indigo-400">📅 Post Date: {task.posting_date}</span>}
                     {task.due_date && <span className="flex items-center gap-1 opacity-80 text-amber-500">🚩 Start: {task.due_date}</span>}
                     {task.deadline && <span className="flex items-center gap-1 opacity-80 text-red-500">💀 Deadline: {task.deadline}</span>}
                     <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[10px] font-bold text-text-muted">
