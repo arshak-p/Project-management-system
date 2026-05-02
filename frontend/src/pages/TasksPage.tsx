@@ -416,13 +416,14 @@ export default function TasksPage({ me }: { me: User | null }) {
       ) : (
         <div className="glass rounded-2xl border border-border overflow-hidden">
           <div className="divide-y divide-border/40">
-            {filtered.length === 0 && (
+            {filtered.length === 0 ? (
               <div className="p-12 text-center">
                 <CheckCircle2 className="w-12 h-12 text-text-muted mx-auto mb-4" />
                 <p className="font-bold text-lg">No tasks found</p>
               </div>
-            )}
-              <div 
+            ) : (
+              filtered.map(task => (
+                <div 
                 key={task.id} 
                 onClick={() => setSelectedTaskId(task.id)} 
                 className={`flex flex-col md:flex-row md:items-center gap-3 md:gap-6 px-4 py-5 md:px-6 md:py-4 hover:bg-surface/30 transition-all group cursor-pointer relative overflow-hidden border-b border-white/5 md:border-b-0 ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''}`}
@@ -525,7 +526,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                   )}
                 </div>
               </div>
-            ))}
+            ))) }
           </div>
           {filtered.length > 0 && (
             <div className="px-5 py-3 border-t border-border/50 bg-surface/20 text-xs text-text-muted flex justify-between items-center">

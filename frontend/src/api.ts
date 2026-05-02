@@ -52,6 +52,7 @@ export interface WorkModule {
   id: number;
   name: string;
   slug: string;
+  is_active: boolean;
 }
 
 export interface Task {
@@ -246,13 +247,15 @@ export const api = {
   createTimeLog: (data: object) => apiClient.post('time-logs/', data),
   getStates: () => apiClient.get('states/'),
   createState: (data: object) => apiClient.post('states/', data),
-  getModules: () => apiClient.get('modules/'),
+  getModules: (params?: object) => apiClient.get('modules/', { params }),
   createModule: (data: object) => apiClient.post('modules/', data),
   updateModule: (id: number, data: object) => apiClient.patch(`modules/${id}/`, data),
   deleteModule: (id: number) => apiClient.delete(`modules/${id}/`),
   getDepartments: () => apiClient.get('departments/'),
-  getCycles: () => apiClient.get('cycles/'),
+  getCycles: (params?: object) => apiClient.get('cycles/', { params }),
   createCycle: (data: object) => apiClient.post('cycles/', data),
+  updateCycle: (id: number, data: object) => apiClient.patch(`cycles/${id}/`, data),
+  deleteCycle: (id: number) => apiClient.delete(`cycles/${id}/`),
   getAllTimeLogs: () => apiClient.get('time-logs/'),
   getAnalytics: (params?: object) => apiClient.get('analytics/summary/', { params }),
   getActivity: () => apiClient.get('activity/'),
@@ -283,7 +286,7 @@ export const api = {
     apiClient.post(`/labels/${id}/restore/`),
   restoreCycle: (id: number) =>
     apiClient.post(`/cycles/${id}/restore/`),
-  getJobTitles: () => apiClient.get('/job-titles/'),
+  getJobTitles: (params?: object) => apiClient.get('/job-titles/', { params }),
   createJobTitle: (data: object) => apiClient.post('/job-titles/', data),
   updateJobTitle: (id: number, data: object) => apiClient.patch(`/job-titles/${id}/`, data),
   deleteJobTitle: (id: number) => apiClient.delete(`/job-titles/${id}/`),
