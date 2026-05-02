@@ -120,6 +120,7 @@ export interface AnalyticsSummary {
     completed_or_launched: number;
     pending: number;
     total_time_minutes: number;
+    efficiency?: number;
   };
   by_state: StateDistribution[];
   by_module: unknown[];

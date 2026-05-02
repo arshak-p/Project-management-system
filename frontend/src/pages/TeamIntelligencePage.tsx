@@ -228,7 +228,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                       </div>
                       <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
                          <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Efficiency</span>
-                         <span className="text-4xl font-black text-white">{memberTasks.length > 0 ? '92%' : 'N/A'}</span>
+                         <span className="text-4xl font-black text-white">{memberAnalytics?.totals?.efficiency !== undefined ? `${memberAnalytics.totals.efficiency}%` : 'N/A'}</span>
                       </div>
                    </div>
                 </div>

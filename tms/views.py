@@ -695,14 +695,26 @@ class AnalyticsSummaryView(APIView):
                 "completed": completed_counts.get(day, 0)
             })
 
+        completed_or_launched = wis.filter(
+            Q(state__slug__in=['completed', 'launched', 'done'])
+        ).count()
+        
+        # Heuristic Efficiency: (Completed * 60) / Total Time
+        efficiency = 0
+        if total_time > 0:
+            efficiency = min(100, int((completed_or_launched * 90) / total_time * 100))
+        elif completed_or_launched > 0:
+            efficiency = 100
+
         return Response(
             {
                 "generated_at": timezone.now().isoformat(),
                 "totals": {
-                    "all": total, 
-                    "completed_or_launched": terminal, 
-                    "pending": total - terminal,
-                    "total_time_minutes": total_time
+                    "all": total,
+                    "completed_or_launched": completed_or_launched,
+                    "pending": total - completed_or_launched,
+                    "total_time_minutes": total_time,
+                    "efficiency": efficiency,
                 },
                 "by_state": by_state,
                 "by_module": by_module,
