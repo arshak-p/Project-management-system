@@ -31,7 +31,7 @@ from tms.models import (
     WorkItemComment,
     Backup,
 )
-from tms.permissions import BlockSalesWrites, IsAdminRole, IsPMOrAdmin, IsLeadPMOrAdmin
+from tms.permissions import BlockSalesWrites, IsAdminRole, IsPMOrAdmin, IsLeadPMOrAdmin, IsHRManagement
 from tms.serializers import (
     ActivityLogSerializer,
     BackupSerializer,
@@ -108,11 +108,11 @@ class UserViewSet(SalesSafeViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [permissions.IsAuthenticated(), IsLeadPMOrAdmin()]
+            return [permissions.IsAuthenticated(), IsHRManagement()]
         if self.action in ("update", "partial_update", "create", "destroy"):
-            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
+            return [permissions.IsAuthenticated(), IsHRManagement()]
         if self.action in ("create", "destroy"):
-            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
+            return [permissions.IsAuthenticated(), IsHRManagement()]
         if self.action == "assignable":
             return [permissions.IsAuthenticated(), BlockSalesWrites()]
         if self.action == "me":
@@ -304,8 +304,9 @@ class WorkItemViewSet(SalesSafeViewSet):
             u.is_superuser
             or u.role == User.Role.ADMIN
             or u.role == User.Role.PROJECT_MANAGER
+            or u.role == User.Role.HR
         ):
-            raise PermissionDenied("Only admins and project managers can create tasks.")
+            raise PermissionDenied("Only managers or HR can create tasks.")
         serializer.save(_activity_user=u)
 
     def perform_update(self, serializer):
@@ -376,8 +377,8 @@ class WorkItemViewSet(SalesSafeViewSet):
 
     def perform_destroy(self, instance):
         u = self.request.user
-        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
-            raise PermissionDenied("Only admins and project managers can delete tasks.")
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.HR]):
+            raise PermissionDenied("Only managers or HR can delete tasks.")
         instance._activity_user = u
         instance.is_active = False
         instance.save(update_fields=["is_active"])

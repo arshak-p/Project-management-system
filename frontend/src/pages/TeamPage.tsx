@@ -10,6 +10,7 @@ const ROLE_COLORS: Record<string, string> = {
   specialist: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
   sales_manager: 'text-green-400 bg-green-400/10 border-green-400/20',
   client: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
+  hr: 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20',
 };
 
 const ROLES = [
@@ -18,6 +19,7 @@ const ROLES = [
   { value: 'project_manager', label: '🎯 Project Manager' },
   { value: 'admin', label: '🔴 Admin' },
   { value: 'sales_manager', label: '💰 Sales Manager' },
+  { value: 'hr', label: '🛡️ Human Resources' },
 ];
 
 function getInitials(user: { first_name?: string; last_name?: string; email: string }) {
@@ -552,7 +554,7 @@ export default function TeamPage({ me }: { me: User | null }) {
               <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
             </div>
           </label>
-          {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+          {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'hr') && (
             <button onClick={() => setShowModal(true)} className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
               <Plus className="w-4 h-4" /> Add Member
             </button>
@@ -597,7 +599,7 @@ export default function TeamPage({ me }: { me: User | null }) {
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
-                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+                 {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'hr') && (
                     user.is_active ? (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleArchive(user.id); }} 
