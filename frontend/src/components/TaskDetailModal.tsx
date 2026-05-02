@@ -427,39 +427,53 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               </select>
             </div>
 
-            {me?.role !== 'specialist' && (
+            {(me?.role === 'admin' || me?.role === 'project_manager') ? (
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                  <div className="w-1 h-3 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div> Posting Date (Billing)
+                </label>
+                <input 
+                  type="date"
+                  value={task.posting_date || ''}
+                  onChange={e => handleUpdateField('posting_date', e.target.value || null)}
+                  className="w-full px-3 py-2.5 bg-indigo-500/5 border border-indigo-500/20 rounded-xl text-sm focus:border-indigo-500 outline-none hover:border-indigo-500/50 transition-colors font-bold"
+                  style={{ colorScheme: 'dark' }}
+                />
+                <p className="text-[9px] text-text-muted leading-tight pl-1 italic">Drives monthly reports/billing.</p>
+              </div>
+            ) : (
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-1 h-3 bg-indigo-500 rounded-full"></div> Posting Date
+                  <div className="w-1 h-3 bg-indigo-500 rounded-full opacity-50"></div> Posting Date (Billing)
                 </label>
                 <div className="w-full px-3 py-2.5 bg-surface/50 border border-border/50 rounded-xl text-sm font-mono text-indigo-400/80">
-                  {task.posting_date || new Date(task.created_at).toISOString().split('T')[0]}
+                  {task.posting_date || 'Not set'}
                 </div>
               </div>
             )}
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
-                <div className="w-1 h-3 bg-amber-500 rounded-full"></div> Due Date
+              <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1 h-3 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div> Do Date (Start)
               </label>
               <input 
                 type="date"
                 value={task.due_date || ''}
                 onChange={e => handleUpdateField('due_date', e.target.value || null)}
-                className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
+                className="w-full px-3 py-2.5 bg-amber-500/5 border border-amber-500/20 rounded-xl text-sm focus:border-amber-500 outline-none hover:border-amber-500/50 transition-colors font-bold"
                 style={{ colorScheme: 'dark' }}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
-                <div className="w-1 h-3 bg-red-500 rounded-full"></div> Final Deadline
+              <label className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1 h-3 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div> Deadline (Finish)
               </label>
               <input 
                 type="date"
                 value={task.deadline || ''}
                 onChange={e => handleUpdateField('deadline', e.target.value || null)}
-                className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
+                className="w-full px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-xl text-sm focus:border-red-500 outline-none hover:border-red-500/50 transition-colors font-bold"
                 style={{ colorScheme: 'dark' }}
               />
             </div>
@@ -491,15 +505,25 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               />
             </div>
 
-            <div className="pt-4 border-t border-border/50 space-y-1">
-              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Ownership</label>
-              <div className="flex items-center gap-2 mt-1 px-1">
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                   <User2 className="w-3 h-3 text-primary" />
+            <div className="pt-4 border-t border-border/50 space-y-3">
+              <div>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Task Created</label>
+                <div className="text-[11px] font-bold text-text-muted mt-1 px-1 flex items-center gap-2">
+                  <Activity className="w-3 h-3 opacity-50" />
+                  {new Date(task.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </div>
-                <span className="text-xs font-bold text-text">{task.created_by?.first_name || 'System'}</span>
+              </div>
+              
+              <div>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Ownership</label>
+                <div className="flex items-center gap-2 mt-1 px-1">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User2 className="w-3 h-3 text-primary" />
+                  </div>
+                  <span className="text-xs font-bold text-text">{task.created_by?.first_name || 'System'}</span>
+                </div>
+              </div>
             </div>
-          </div>
         </div>
       </div>
     </div>

@@ -250,14 +250,19 @@ export default function TasksPage({ me }: { me: User | null }) {
                   <textarea value={form.reference_link} onChange={e => setForm({ ...form, reference_link: e.target.value })} placeholder="Paste multiple links here (separated by newlines)..." rows={3} className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all placeholder:text-text-muted/30 custom-scrollbar" />
                 </div>
 
-                <div className="md:col-span-6 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Due Date</label>
+                <div className="md:col-span-4 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Do Date (Start)</label>
                   <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-sm font-bold focus:border-amber-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
 
-                <div className="md:col-span-6 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 ml-1">Final Deadline</label>
+                <div className="md:col-span-4 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 ml-1">Deadline (Finish)</label>
                   <input type="date" value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} className="w-full px-6 py-4 bg-red-500/5 border border-red-500/20 rounded-2xl text-sm font-bold focus:border-red-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
+                </div>
+
+                <div className="md:col-span-4 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 ml-1">Posting Date (Billing)</label>
+                  <input type="date" value={form.posting_date} onChange={e => setForm({ ...form, posting_date: e.target.value })} className="w-full px-6 py-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl text-sm font-bold focus:border-indigo-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
               </form>
             </div>
