@@ -11,10 +11,11 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const r = await api.getModules();
+      const r = await api.getModules({ archived: showArchived });
       setModules(r.data);
     } catch (err) {
       console.error(err);
@@ -22,7 +23,7 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
+  useEffect(() => { Promise.resolve().then(() => load()); }, [load, showArchived]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,12 +42,14 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
     } finally { setSaving(false); }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Archive this module? Tasks using this module will remain, but you won\'t be able to select it for new tasks.')) return;
-    try {
-      await api.deleteModule(id);
-      load();
     } catch { alert('Failed to delete.'); }
+  };
+  
+  const handleRestore = async (id: number) => {
+    try {
+      await api.restoreModule(id);
+      load();
+    } catch { alert('Failed to restore.'); }
   };
 
   if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" /></div>;
@@ -58,12 +61,21 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
           <h1 className="text-3xl lg:text-4xl font-black tracking-tighter">Task Modules</h1>
           <p className="text-text-muted mt-2 font-bold uppercase tracking-[0.2em] text-[10px] opacity-60">Categorize your project workflow</p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
-        >
-          <Plus className="w-4 h-4" /> New Module
-        </button>
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-3 glass px-4 py-2.5 rounded-2xl cursor-pointer hover:bg-white/5 transition-all">
+            <span className="text-[10px] font-black uppercase tracking-widest">Archives</span>
+            <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
+            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+              <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
+            </div>
+          </label>
+          <button 
+            onClick={() => setShowModal(true)}
+            className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
+          >
+            <Plus className="w-4 h-4" /> New Module
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -73,12 +85,23 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
               <div className="p-3 bg-emerald-500/10 rounded-2xl">
                 <Layers className="w-5 h-5 text-emerald-500" />
               </div>
-              <button 
-                onClick={() => handleDelete(mod.id)}
-                className="opacity-0 group-hover:opacity-100 p-2 text-error hover:bg-error/10 rounded-xl transition-all"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex gap-2">
+                {mod.is_active ? (
+                  <button 
+                    onClick={() => handleDelete(mod.id)}
+                    className="opacity-0 group-hover:opacity-100 p-2 text-error hover:bg-error/10 rounded-xl transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => handleRestore(mod.id)}
+                    className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
             <h3 className="text-lg font-bold">{mod.name}</h3>
             <p className="text-xs text-text-muted mt-1 uppercase tracking-widest font-black opacity-40">Workflow Category</p>

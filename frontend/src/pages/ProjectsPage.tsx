@@ -59,7 +59,7 @@ export default function ProjectsPage({ onNavigate, me }: { onNavigate?: (page: s
   const handleRestore = async (id: number, name: string) => {
     if (!confirm(`Restore project orbit "${name}" to active status?`)) return;
     try {
-      await api.updateProject(id, { is_active: true });
+      await api.restoreProject(id);
       alert(`Project orbit "${name}" restored successfully.`);
       load();
     } catch {

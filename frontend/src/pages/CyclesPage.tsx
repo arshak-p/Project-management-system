@@ -8,6 +8,7 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Form
   const [showModal, setShowModal] = useState(false);
@@ -15,7 +16,7 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
   const [saving, setSaving] = useState(false);
 
   const load = () => {
-    Promise.all([api.getCycles(), api.getProjects()])
+    Promise.all([api.getCycles({ archived: showArchived }), api.getProjects()])
       .then(([c, p]) => {
         setCycles(c.data);
         setProjects(p.data);
@@ -23,7 +24,7 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
       .finally(() => setIsLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [showArchived]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +40,21 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleArchive = async (id: number) => {
+    if (!confirm('Archive this cycle?')) return;
+    try {
+      await api.deleteCycle(id);
+      load();
+    } catch { alert('Archive failed.'); }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      await api.restoreCycle(id);
+      load();
+    } catch { alert('Restore failed.'); }
   };
 
   if (isLoading) return (
@@ -99,9 +115,18 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
           </h1>
           <p className="text-text-muted mt-1">Manage project sprints, campaign timelines, and monthly retainers.</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90">
-          <Plus className="w-4 h-4" /> Plan Cycle
-        </button>
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-3 glass px-4 py-2.5 rounded-2xl cursor-pointer hover:bg-white/5 transition-all">
+            <span className="text-[10px] font-black uppercase tracking-widest">Archives</span>
+            <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
+            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+              <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
+            </div>
+          </label>
+          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl font-medium shadow-[0_5px_15px_-5px_rgba(59,130,246,0.5)] hover:opacity-90">
+            <Plus className="w-4 h-4" /> Plan Cycle
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -125,6 +150,17 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
                     Recurring
                   </span>
                 )}
+                <div className="flex gap-2">
+                   {cycle.is_active ? (
+                     <button onClick={() => handleArchive(cycle.id)} className="p-2 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                        <CalendarRange className="w-4 h-4" />
+                     </button>
+                   ) : (
+                     <button onClick={() => handleRestore(cycle.id)} className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all">
+                        <Plus className="w-4 h-4" />
+                     </button>
+                   )}
+                </div>
              </div>
              <h3 className="font-bold text-lg leading-tight mb-2">{cycle.name}</h3>
              
