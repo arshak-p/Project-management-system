@@ -355,38 +355,38 @@ export default function TasksPage({ me }: { me: User | null }) {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-center gap-4 pt-4 border-t border-white/5">
-          <div className="grid grid-cols-2 lg:flex items-center gap-4 flex-1 w-full">
+        <div className="flex flex-col lg:flex-row items-end gap-4 pt-4 border-t border-white/5">
+          <div className="grid grid-cols-2 lg:flex items-end gap-4 flex-1 w-full">
              {me?.role !== 'specialist' && (
                <div className="flex flex-col flex-1">
-                 <label className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-1 ml-1">Post Date</label>
-                 <input type="date" value={filterPostingDate} onChange={e => setFilterPostingDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+                 <label className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-2 ml-1">Post Date</label>
+                 <input type="date" value={filterPostingDate} onChange={e => setFilterPostingDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
                </div>
              )}
              <div className="flex flex-col flex-1">
-               <label className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-1 ml-1">Due Date</label>
-               <input type="date" value={filterDueDate} onChange={e => setFilterDueDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <label className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-2 ml-1">Due Date</label>
+               <input type="date" value={filterDueDate} onChange={e => setFilterDueDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
              <div className="flex flex-col flex-1">
-               <label className="text-[9px] font-black uppercase tracking-widest text-red-500 mb-1 ml-1">Deadline</label>
-               <input type="date" value={filterDeadline} onChange={e => setFilterDeadline(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <label className="text-[9px] font-black uppercase tracking-widest text-red-500 mb-2 ml-1">Deadline</label>
+               <input type="date" value={filterDeadline} onChange={e => setFilterDeadline(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
              <div className="flex flex-col flex-1">
-               <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-1 ml-1">Created From</label>
-               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-2 ml-1">Created From</label>
+               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
              <div className="flex flex-col flex-1">
-               <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-1 ml-1">Created To</label>
-               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3.5 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-2 ml-1">Created To</label>
+               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
           </div>
-          <div className="flex items-center gap-3 w-full lg:w-auto self-end">
+          <div className="flex items-center gap-2 w-full lg:w-auto h-[44px]">
              <button 
                onClick={() => {
                  const d = new Date().toISOString().split('T')[0];
                  setStartDate(d); setEndDate(d);
                }}
-               className="flex-1 lg:flex-none px-6 py-3.5 glass border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all"
+               className="flex-1 lg:flex-none h-full px-5 glass border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/5 transition-all whitespace-nowrap"
              >
                Today
              </button>
@@ -397,13 +397,13 @@ export default function TasksPage({ me }: { me: User | null }) {
                  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
                  setStartDate(start); setEndDate(end);
                }}
-               className="flex-1 lg:flex-none px-6 py-3.5 glass border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all"
+               className="flex-1 lg:flex-none h-full px-5 glass border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/5 transition-all whitespace-nowrap"
              >
                Month
              </button>
              <button 
                onClick={() => { setStartDate(''); setEndDate(''); setFilterProject(''); setFilterState(''); setFilterAssignee(''); setFilterModule(''); setFilterPostingDate(''); setFilterDueDate(''); setFilterDeadline(''); setSearch(''); }}
-               className="flex-1 lg:flex-none px-6 py-3.5 bg-error/10 text-error border border-error/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-error/20 transition-all"
+               className="flex-1 lg:flex-none h-full px-5 bg-error/10 text-error border border-error/20 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-error/20 transition-all whitespace-nowrap"
              >
                Reset All
              </button>
