@@ -677,7 +677,7 @@ class AnalyticsSummaryView(APIView):
         )
         completed_counts = dict(
             wis.filter(
-                state__slug__in=['completed', 'launched', 'done'], 
+                state__slug__in=['completed-launched', 'completed', 'launched', 'done'], 
                 updated_at__date__gte=start_trend
             )
             .values("updated_at__date")
@@ -696,7 +696,7 @@ class AnalyticsSummaryView(APIView):
             })
 
         completed_or_launched = wis.filter(
-            Q(state__slug__in=['completed', 'launched', 'done'])
+            Q(state__slug__in=['completed-launched', 'completed', 'launched', 'done'])
         ).count()
         
         # Heuristic Efficiency: (Completed * 60) / Total Time

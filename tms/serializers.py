@@ -112,7 +112,7 @@ class UserSerializer(serializers.ModelSerializer):
         # In a real heavy app we would cache this.
         wis = WorkItem.objects.filter(assignee=obj)
         total_time = TimeLog.objects.filter(work_item__in=wis).aggregate(total=Sum('minutes'))['total'] or 0
-        completed = wis.filter(state__slug__in=['completed', 'launched', 'done']).count()
+        completed = wis.filter(state__slug__in=['completed-launched', 'completed', 'launched', 'done']).count()
         
         if total_time > 0:
             return min(100, int((completed * 90) / total_time * 100))
