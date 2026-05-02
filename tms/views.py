@@ -186,6 +186,17 @@ class ProjectViewSet(SalesSafeViewSet):
         instance.is_active = False
         instance.save(update_fields=["is_active"])
 
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        u = self.request.user
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
+            raise PermissionDenied("Only admins and project managers can restore projects.")
+        instance = self.get_object()
+        instance.is_active = True
+        instance._activity_user = u
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "project restored"})
+
 
 class ModuleViewSet(SalesSafeViewSet):
     serializer_class = ModuleSerializer
@@ -204,6 +215,13 @@ class ModuleViewSet(SalesSafeViewSet):
     def perform_destroy(self, instance):
         instance.is_active = False
         instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        instance = self.get_object()
+        instance.is_active = True
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "module restored"})
 
 
 class StateViewSet(SalesSafeViewSet):
@@ -246,6 +264,13 @@ class StateViewSet(SalesSafeViewSet):
     def perform_destroy(self, instance):
         instance.is_active = False
         instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        instance = self.get_object()
+        instance.is_active = True
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "state restored"})
 
 
 class LabelViewSet(SalesSafeViewSet):
