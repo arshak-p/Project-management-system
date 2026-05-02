@@ -402,7 +402,10 @@ export default function TasksPage({ me }: { me: User | null }) {
                Month
              </button>
              <button 
-               onClick={() => { setStartDate(''); setEndDate(''); setFilterProject(''); setFilterState(''); setFilterAssignee(''); setFilterModule(''); setFilterPostingDate(''); setFilterDueDate(''); setFilterDeadline(''); setSearch(''); }}
+               onClick={() => { 
+                 setStartDate(''); setEndDate(''); setFilterProject(''); setFilterState(''); setFilterAssignee(''); setFilterModule(''); setFilterPostingDate(''); setFilterDueDate(''); setFilterDeadline(''); setSearch(''); 
+                 setShowCompleted(false); setShowArchived(false);
+               }}
                className="flex-1 lg:flex-none h-full px-5 bg-error/10 text-error border border-error/20 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-error/20 transition-all whitespace-nowrap"
              >
                Reset All

@@ -90,6 +90,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
   const getTasksForDay = (day: number) => {
     const filtered = getFilteredTasks();
     return filtered.filter(t => {
+      // Prioritize Posting Date for calendar placement as per user request
       const targetDate = t.posting_date || t.deadline || t.due_date;
       if (!targetDate) return false;
       const d = new Date(targetDate);

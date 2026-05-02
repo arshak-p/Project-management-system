@@ -62,12 +62,12 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black tracking-tight mb-2">Agency Data Backups</h1>
-          <p className="text-text-muted">Monthly project snapshots ready for your approval and local download.</p>
+          <h1 className="text-3xl lg:text-4xl font-black tracking-tight mb-2">Agency Data Backups</h1>
+          <p className="text-sm text-text-muted">Monthly project snapshots ready for your approval and local download.</p>
         </div>
-        <div className="p-4 glass rounded-[2rem] flex items-center gap-4 border-primary/20">
+        <div className="p-4 glass rounded-[2rem] flex items-center gap-4 border-primary/20 w-full md:w-auto">
           <ShieldCheck className="w-8 h-8 text-primary" />
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest opacity-50">Security Protocol</p>
