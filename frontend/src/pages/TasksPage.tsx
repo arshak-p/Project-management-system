@@ -422,11 +422,10 @@ export default function TasksPage({ me }: { me: User | null }) {
                 <p className="font-bold text-lg">No tasks found</p>
               </div>
             )}
-            {filtered.map(task => (
               <div 
                 key={task.id} 
                 onClick={() => setSelectedTaskId(task.id)} 
-                className={`flex flex-col md:flex-row md:items-center gap-3 md:gap-4 px-5 py-4 hover:bg-surface/30 transition-all group cursor-pointer relative overflow-hidden ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''}`}
+                className={`flex flex-col md:flex-row md:items-center gap-3 md:gap-6 px-4 py-5 md:px-6 md:py-4 hover:bg-surface/30 transition-all group cursor-pointer relative overflow-hidden border-b border-white/5 md:border-b-0 ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''}`}
                 style={{ 
                   borderLeft: `4px solid ${task.is_client_approved ? '#10b981' : (['client-review', 'completed-launched'].includes(task.state_slug || '') ? '#3b82f6' : (states.find(s => s.id === task.state)?.color || '#3b82f6'))}`,
                   backgroundColor: `${task.is_client_approved ? '#10b981' : (['client-review', 'completed-launched'].includes(task.state_slug || '') ? '#3b82f6' : (states.find(s => s.id === task.state)?.color || '#3b82f6'))}05`
