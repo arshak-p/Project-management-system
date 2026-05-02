@@ -193,48 +193,7 @@ class VerifyOTPView(APIView):
             }
         })
 
-class SendCreationOTPView(APIView):
-    """Send OTP to a brand new email before user creation."""
-    permission_classes = [permissions.IsAuthenticated, IsHRManagement]
-
-    def post(self, request):
-        email = request.data.get('email', '').strip()
-        if not email:
-            return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Generate 6-digit OTP
-        otp_code = f"{random.randint(100000, 999999)}"
-        EmailOTP.objects.create(email=email, otp=otp_code)
-
-        # Instant Async Creation OTP
-        send_reliable_email_async(
-            subject='Colour Parrot: Verify Team Member Email',
-            message=f'You are being added to the Colour Parrot TMS. Your verification code is: {otp_code}.',
-            recipient_list=[email]
-        )
-        return Response({
-            'detail': f'Code sent to email. (Admin Backup Code: {otp_code})',
-            'otp_fallback': otp_code
         })
 
 
-class VerifyCreationOTPView(APIView):
-    """Verify OTP for a new email before creation."""
-    permission_classes = [permissions.IsAuthenticated, IsHRManagement]
-
-    def post(self, request):
-        email = request.data.get('email', '').strip()
-        otp_code = request.data.get('otp', '').strip()
-
-        if not email or not otp_code:
-            return Response({'detail': 'Email and OTP are required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        otp_record = EmailOTP.objects.filter(email=email, otp=otp_code, is_used=False).first()
-
-        if not otp_record or not otp_record.is_valid():
-            return Response({'detail': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        otp_record.is_used = True
-        otp_record.save()
-
-        return Response({'detail': 'Email verified successfully.', 'verified': True})
+# --- END OF CURRENT AUTH VIEWS ---
