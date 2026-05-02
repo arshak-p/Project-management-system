@@ -90,8 +90,9 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
   const getTasksForDay = (day: number) => {
     const filtered = getFilteredTasks();
     return filtered.filter(t => {
-      if (!t.due_date) return false;
-      const d = new Date(t.due_date);
+      const targetDate = t.posting_date || t.deadline || t.due_date;
+      if (!targetDate) return false;
+      const d = new Date(targetDate);
       return d.getDate() === day && d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
     });
   };
@@ -228,13 +229,16 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                                 <div 
                                   key={t.id} 
                                   onClick={(e) => { e.stopPropagation(); setSelectedTaskId(t.id); }}
-                                  className={`px-2 py-1.5 rounded-xl text-[9px] font-black truncate border transition-all ${
+                                  className={`px-2 py-1.5 rounded-xl text-[9px] font-black truncate border transition-all flex justify-between items-center gap-2 ${
                                     t.priority === 'urgent' ? 'bg-error/10 text-error border-error/20 hover:bg-error/20' : 
                                     t.priority === 'high' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 hover:bg-orange-500/20' : 
                                     'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
                                   }`}
                                 >
-                                  {t.title}
+                                  <span>{t.title}</span>
+                                  {t.due_date && (
+                                    <span className="bg-white/10 px-1 rounded-md opacity-60 text-[7px] whitespace-nowrap">DO: {new Date(t.due_date).getDate()}</span>
+                                  )}
                                 </div>
                               ))}
                               {dayTasks.length > 3 && (
@@ -282,9 +286,15 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                             <span className={`w-2 h-2 rounded-full ${t.priority === 'urgent' ? 'bg-error shadow-glow-error' : 'bg-primary shadow-glow'}`}></span>
                           </div>
                           <p className="text-xs font-bold leading-relaxed">{t.title}</p>
-                          <div className="flex items-center gap-3 mt-3 opacity-40 group-hover:opacity-100 transition-opacity">
-                            <Clock className="w-3 h-3" />
-                            <span className="text-[9px] font-black uppercase tracking-widest">{t.priority} priority</span>
+                          <div className="flex flex-col gap-2 mt-3">
+                            <div className="flex items-center gap-3 opacity-40 group-hover:opacity-100 transition-opacity">
+                              <CalendarIcon className="w-3 h-3 text-emerald-500" />
+                              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Post: {t.posting_date ? new Date(t.posting_date).toLocaleDateString() : 'TBD'}</span>
+                            </div>
+                            <div className="flex items-center gap-3 opacity-40 group-hover:opacity-100 transition-opacity">
+                              <Clock className="w-3 h-3 text-primary" />
+                              <span className="text-[9px] font-black uppercase tracking-widest text-primary">Start: {t.due_date ? new Date(t.due_date).toLocaleDateString() : 'TBD'}</span>
+                            </div>
                           </div>
                         </div>
                       ))
@@ -316,14 +326,15 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
           <div className="bento-card p-8 bg-gradient-to-br from-primary/10 to-transparent">
              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted mb-4 italic">Upcoming Milestones</h4>
              <div className="space-y-4">
-                {tasks.filter(t => t.due_date && new Date(t.due_date) > new Date()).slice(0, 5).map(t => (
+                {tasks.filter(t => (t.posting_date || t.deadline || t.due_date) && new Date(t.posting_date || t.deadline || t.due_date!) > new Date()).slice(0, 5).map(t => (
                   <div key={t.id} className="flex items-center gap-4 group cursor-pointer" onClick={() => setSelectedTaskId(t.id)}>
                     <div className="w-1.5 h-10 bg-primary/20 rounded-full overflow-hidden">
                       <div className="w-full h-1/2 bg-primary"></div>
                     </div>
                     <div>
                       <p className="text-[11px] font-bold line-clamp-1 group-hover:text-primary transition-colors">{t.title}</p>
-                      <p className="text-[9px] font-black text-text-muted uppercase tracking-widest mt-0.5">{new Date(t.due_date!).toLocaleDateString()}</p>
+                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Post: {t.posting_date ? new Date(t.posting_date).toLocaleDateString() : 'TBD'}</p>
+                      <p className="text-[8px] font-black text-text-muted/60 uppercase tracking-widest">Start: {t.due_date ? new Date(t.due_date).toLocaleDateString() : 'N/A'}</p>
                     </div>
                   </div>
                 ))}
