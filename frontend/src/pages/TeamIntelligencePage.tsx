@@ -226,7 +226,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                       </div>
                       <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
                          <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Efficiency</span>
-                         <span className="text-4xl font-black text-white">92%</span>
+                         <span className="text-4xl font-black text-white">{memberTasks.length > 0 ? '92%' : 'N/A'}</span>
                       </div>
                    </div>
                 </div>
@@ -236,39 +236,47 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                       <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-text-muted mb-10 flex items-center gap-3 italic">
                          <TrendingUp className="w-4 h-4 text-primary" /> Sector Velocity Trend
                       </h3>
-                      <div className="h-[200px] w-full">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={trendData}>
-                               <defs>
-                                  <linearGradient id="colorUnits" x1="0" y1="0" x2="0" y2="1">
-                                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                  </linearGradient>
-                               </defs>
-                               <XAxis dataKey="date" hide />
-                               <Tooltip 
-                                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }}
-                               />
-                               <Area type="monotone" dataKey="units" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUnits)" />
-                            </AreaChart>
-                         </ResponsiveContainer>
-                      </div>
+                      <div className="h-[200px] w-full flex items-center justify-center">
+                         {trendData.length > 0 && trendData.some(d => d.units > 0) ? (
+                           <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={trendData}>
+                                 <defs>
+                                    <linearGradient id="colorUnits" x1="0" y1="0" x2="0" y2="1">
+                                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                    </linearGradient>
+                                 </defs>
+                                 <XAxis dataKey="date" hide />
+                                 <Tooltip 
+                                    contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }}
+                                 />
+                                 <Area type="monotone" dataKey="units" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUnits)" />
+                              </AreaChart>
+                           </ResponsiveContainer>
+                         ) : (
+                           <div className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-30 italic">No Velocity Recorded</div>
+                         )}
+                       </div>
                    </div>
 
                    <div className="glass p-8 rounded-[2.5rem]">
                       <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-text-muted mb-10 flex items-center gap-3 italic">
                          <Briefcase className="w-4 h-4 text-[#8b5cf6]" /> Project Saturation
                       </h3>
-                      <div className="h-[200px] w-full">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                               <Pie data={projectData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} dataKey="value">
-                                  {projectData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                               </Pie>
-                               <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }} />
-                            </PieChart>
-                         </ResponsiveContainer>
-                      </div>
+                      <div className="h-[200px] w-full flex items-center justify-center">
+                         {projectData.length > 0 ? (
+                           <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                 <Pie data={projectData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} dataKey="value">
+                                    {projectData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                 </Pie>
+                                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }} />
+                              </PieChart>
+                           </ResponsiveContainer>
+                         ) : (
+                           <div className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-30 italic">Sector Saturation Zero</div>
+                         )}
+                       </div>
                    </div>
                 </div>
 
@@ -280,7 +288,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                       <span className="text-[10px] font-black text-text-muted bg-white/5 px-4 py-1.5 rounded-full">{memberTasks.length} Operations Total</span>
                    </div>
                    <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
-                      {memberTasks.map(task => (
+                      {memberTasks.length > 0 ? memberTasks.map(task => (
                         <div 
                           key={task.id} 
                           onClick={() => setSelectedTaskId(task.id)}
@@ -301,7 +309,11 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                               <ExternalLink className="w-4 h-4 text-text-muted/20 group-hover:text-primary transition-all" />
                            </div>
                         </div>
-                      ))}
+                      )) : (
+                        <div className="p-10 text-center">
+                           <p className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-40 italic">Awaiting Mission Parameters...</p>
+                        </div>
+                      )}
                    </div>
                 </div>
              </motion.div>
