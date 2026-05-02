@@ -70,34 +70,34 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
       {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-3xl lg:text-5xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary via-[#8b5cf6] to-[#d946ef]">
+        <div className="px-1 md:px-0">
+          <h1 className="text-2xl lg:text-5xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary via-[#8b5cf6] to-[#d946ef]">
             Command Center
           </h1>
-          <p className="text-[9px] lg:text-[10px] text-text-muted mt-2 font-bold tracking-widest uppercase opacity-60 italic">Real-time Analytics // Active Operations</p>
+          <p className="text-[8px] lg:text-[10px] text-text-muted mt-2 font-bold tracking-widest uppercase opacity-60 italic">Real-time Analytics // Active Operations</p>
         </div>
         <div className="flex items-center gap-4">
            {/* Time Filter Toggle */}
-           <div className="glass p-1 rounded-2xl border border-white/5 flex items-center shadow-inner">
+           <div className="glass p-1 rounded-2xl border border-white/5 flex items-center shadow-inner scale-90 md:scale-100">
              <button
                onClick={() => setViewMode('month')}
-               className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+               className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all ${
                  viewMode === 'month' 
                    ? 'bg-primary text-white shadow-glow' 
                    : 'text-text-muted hover:text-white hover:bg-white/5'
                }`}
              >
-               This Month
+               Month
              </button>
              <button
                onClick={() => setViewMode('all')}
-               className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+               className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all ${
                  viewMode === 'all' 
                    ? 'bg-primary text-white shadow-glow' 
                    : 'text-text-muted hover:text-white hover:bg-white/5'
                }`}
              >
-               All Time
+               All
              </button>
            </div>
 
@@ -168,13 +168,13 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
               <motion.span 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-6xl lg:text-8xl font-black tracking-tighter text-text block"
+                className="text-5xl lg:text-8xl font-black tracking-tighter text-text block"
               >
                 {analytics?.totals?.completed_or_launched || 0}
               </motion.span>
-              <h3 className="text-xl lg:text-2xl font-black text-text-muted">Tactical Units Launched</h3>
+              <h3 className="text-lg lg:text-2xl font-black text-text-muted uppercase tracking-tighter">Units Launched</h3>
               <p className="text-[10px] lg:text-xs text-text-muted/60 mt-4 leading-relaxed max-w-xs">
-                Successfully deployed operations across all designated project sectors.
+                Successfully deployed operations across project sectors.
               </p>
             </div>
           </div>
@@ -231,13 +231,13 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <div className="lg:col-span-3 glass rounded-[3rem] p-10">
-          <div className="flex items-center justify-between mb-10">
-            <h3 className="font-black text-xs uppercase tracking-[0.3em] text-text-muted italic">Operational Flux Trend</h3>
-            <span className="text-[10px] font-black text-primary px-3 py-1 bg-primary/10 rounded-full">Last 30 Cycles</span>
+       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 md:gap-8">
+        <div className="lg:col-span-3 glass rounded-[2rem] md:rounded-[3rem] p-6 md:p-10">
+          <div className="flex items-center justify-between mb-8 md:mb-10">
+            <h3 className="font-black text-[10px] md:text-xs uppercase tracking-[0.2em] md:tracking-[0.3em] text-text-muted italic">Operational Flux</h3>
+            <span className="text-[8px] md:text-[10px] font-black text-primary px-3 py-1 bg-primary/10 rounded-full">Trend</span>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[200px] md:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData}>
                 <defs>
@@ -277,9 +277,9 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
           </div>
         </div>
 
-        <div className="lg:col-span-2 glass rounded-[3rem] p-10">
-          <h3 className="font-black text-xs uppercase tracking-[0.3em] text-text-muted mb-10 italic">Stage Distribution</h3>
-          <div className="h-[300px] w-full">
+         <div className="lg:col-span-2 glass rounded-[2rem] md:rounded-[3rem] p-6 md:p-10">
+          <h3 className="font-black text-[10px] md:text-xs uppercase tracking-[0.2em] md:tracking-[0.3em] text-text-muted mb-8 md:mb-10 italic">Stage Distribution</h3>
+          <div className="h-[250px] md:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
@@ -315,12 +315,12 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
           </div>
         </div>
 
-        <div className="lg:col-span-5 glass rounded-[3rem] p-10">
-          <div className="flex items-center justify-between mb-10 px-2">
-             <h3 className="font-black text-xs uppercase tracking-[0.3em] text-text-muted italic flex items-center gap-3">
-                <ActivityIcon className="w-4 h-4 text-primary" /> Sector Activity Stream
+         <div className="lg:col-span-5 glass rounded-[2rem] md:rounded-[3rem] p-6 md:p-10">
+          <div className="flex items-center justify-between mb-8 md:mb-10 px-1 md:px-2">
+             <h3 className="font-black text-[10px] md:text-xs uppercase tracking-[0.2em] md:tracking-[0.3em] text-text-muted italic flex items-center gap-2 md:gap-3">
+                <ActivityIcon className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" /> Sector Activity Stream
              </h3>
-             <button onClick={() => onNavigate?.('activity')} className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline decoration-primary/40 underline-offset-8">Analyze Full Log</button>
+             <button onClick={() => onNavigate?.('activity')} className="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-widest hover:underline decoration-primary/40 underline-offset-8">Analyze Full Log</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
              {recentActivity.map((a) => (
