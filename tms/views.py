@@ -181,9 +181,11 @@ class ProjectViewSet(SalesSafeViewSet):
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
+        from django.db.models.functions import Coalesce
+        from django.db.models import Value
         include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
         qs = access.projects_for_user(self.request.user, include_archived=include_archived)
-        return qs.annotate(total_minutes=Sum("work_items__time_logs__minutes"))
+        return qs.annotate(total_minutes=Coalesce(Sum("work_items__time_logs__minutes"), Value(0)))
 
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
