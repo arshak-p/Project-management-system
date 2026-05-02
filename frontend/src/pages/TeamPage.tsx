@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import type { User, JobTitle } from '../api';
-import { Loader2, Users, Shield, User2, Mail, Plus, X, Phone, Briefcase, Eye, EyeOff, Database, Pencil, CalendarRange, Copy, Check } from 'lucide-react';
+import { Loader2, Users, Shield, User2, Mail, Plus, X, Phone, Briefcase, Eye, EyeOff, Database, Pencil, CalendarRange, Copy, Check, TrendingUp } from 'lucide-react';
 
 const ROLE_COLORS: Record<string, string> = {
   admin: 'text-red-400 bg-red-400/10 border-red-400/20',
@@ -637,6 +637,13 @@ export default function TeamPage({ me }: { me: User | null }) {
                   <User2 className="w-3 h-3" /> {(user.role || 'specialist').replace('_', ' ')}
                 </span>
                 <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-2 gap-2 text-center">
+                  <div className="flex flex-col items-center">
+                    <p className="text-[10px] text-text-muted uppercase tracking-widest mb-1">Efficiency</p>
+                    <div className="flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20">
+                      <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-sm font-black text-white">{user.efficiency ?? 0}%</span>
+                    </div>
+                  </div>
                   <div>
                     <p className="text-xs text-text-muted">Status</p>
                     <span className={`text-[10px] font-black uppercase tracking-widest ${user.is_active ? 'text-emerald-500' : 'text-amber-500'}`}>

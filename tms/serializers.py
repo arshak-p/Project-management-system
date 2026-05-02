@@ -73,6 +73,7 @@ class UserBriefSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     department_id = serializers.IntegerField(allow_null=True, required=False)
     client_project_id = serializers.IntegerField(allow_null=True, required=False)
+    efficiency = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -92,6 +93,7 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "date_joined",
             "date_of_birth",
+            "efficiency",
         )
         read_only_fields = ("id",)
         extra_kwargs = {"password": {"write_only": True, "required": False, "allow_blank": True}}
@@ -101,6 +103,22 @@ class UserSerializer(serializers.ModelSerializer):
         if value:
             validate_password(value)
         return value
+
+    def get_efficiency(self, obj):
+        from tms.models import WorkItem, TimeLog
+        from django.db.models import Sum
+        
+        # This is a potentially heavy operation, so we only do it for detailed views or list as needed
+        # In a real heavy app we would cache this.
+        wis = WorkItem.objects.filter(assignee=obj)
+        total_time = TimeLog.objects.filter(work_item__in=wis).aggregate(total=Sum('minutes'))['total'] or 0
+        completed = wis.filter(state__slug__in=['completed', 'launched', 'done']).count()
+        
+        if total_time > 0:
+            return min(100, int((completed * 90) / total_time * 100))
+        elif completed > 0:
+            return 100
+        return 0
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
