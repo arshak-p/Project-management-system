@@ -270,7 +270,6 @@ class StateViewSet(SalesSafeViewSet):
                 )
         
         # Ensure all states are active if they exist but are hidden
-        State.objects.all().update(is_active=True)
         
         return super().list(request, *args, **kwargs)
 
