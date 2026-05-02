@@ -454,7 +454,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
 
             <div className="space-y-2">
               <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                <div className="w-1 h-3 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div> Start Date (Do)
+                <div className="w-1 h-3 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div> Start Date
               </label>
               <input 
                 type="date"

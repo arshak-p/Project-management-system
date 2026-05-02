@@ -237,6 +237,9 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                                   }`}
                                 >
                                   <span>{t.title}</span>
+                                  {t.due_date && (
+                                    <span className="bg-white/10 px-1 rounded-md opacity-60 text-[7px] whitespace-nowrap">START: {new Date(t.due_date).getDate()}</span>
+                                  )}
                                 </div>
                               ))}
                               {dayTasks.length > 2 && (

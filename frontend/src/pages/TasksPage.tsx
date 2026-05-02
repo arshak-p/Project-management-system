@@ -251,7 +251,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                 </div>
 
                 <div className="md:col-span-4 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Start Date (Do)</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Task Start Date</label>
                   <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-sm font-bold focus:border-amber-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
 
@@ -364,7 +364,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                </div>
              )}
              <div className="flex flex-col flex-1">
-               <label className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-2 ml-1">Due Date</label>
+               <label className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-2 ml-1">Start Date</label>
                <input type="date" value={filterDueDate} onChange={e => setFilterDueDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
              <div className="flex flex-col flex-1">
