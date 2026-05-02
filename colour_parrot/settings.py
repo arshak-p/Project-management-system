@@ -246,15 +246,9 @@ EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() in ("1", "true"
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "workflowsecuritycolourparrot@gmail.com")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "jdrdkielehphvcsy")
 
-# Robust default from email to prevent crashes
-if EMAIL_HOST_USER:
-    DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", f"Colour Parrot <{EMAIL_HOST_USER}>")
-else:
-    DEFAULT_FROM_EMAIL = "Colour Parrot <noreply@c1r9rt-workflow.in>"
-
-# Console fallback for local development OR production without SMTP credentials
-if not EMAIL_HOST_USER or os.environ.get("EMAIL_BACKEND_CONSOLE", "false").lower() == "true":
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Forced SMTP for Production Reliability
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+DEFAULT_FROM_EMAIL = f"Colour Parrot <{EMAIL_HOST_USER}>"
 
 CELERY_BEAT_SCHEDULE = {
     "run-monthly-backup-at-1st": {
