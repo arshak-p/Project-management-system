@@ -193,9 +193,6 @@ class VerifyOTPView(APIView):
             }
         })
 
-        })
-
-
 # --- NEW RECONSTRUCTED VERIFICATION VIEWS ---
 
 class SendOTPView(APIView):
