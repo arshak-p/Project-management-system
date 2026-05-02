@@ -124,7 +124,16 @@ class UserViewSet(SalesSafeViewSet):
 
     def perform_destroy(self, instance):
         instance.is_active = False
+        instance._activity_user = self.request.user
         instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        instance = self.get_object()
+        instance.is_active = True
+        instance._activity_user = request.user
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "user restored"})
 
     @action(detail=False, methods=["get"])
     def me(self, request):
