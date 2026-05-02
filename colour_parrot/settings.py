@@ -259,10 +259,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "tms.tasks.check_deadlines",
         "schedule": crontab(hour=9, minute=0),
     },
-    # "daily-start-date-check": {
-    #     "task": "tms.tasks.check_scheduled_tasks",
-    #     "schedule": crontab(hour=9, minute=15),
-    # },
+    "daily-do-date-check": {
+        "task": "tms.tasks.check_do_dates",
+        "schedule": crontab(hour=9, minute=0),
+    },
     "daily-birthday-check": {
         "task": "tms.tasks.check_birthdays",
         "schedule": crontab(hour=9, minute=0),
