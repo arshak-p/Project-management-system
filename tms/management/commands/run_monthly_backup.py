@@ -89,9 +89,9 @@ class Command(BaseCommand):
         task_writer = csv.writer(task_csv)
         task_writer.writerow([
             "Task Code", "Title", "Project Name", "Module/Scope", "Current State", "Priority", 
-            "Specialist Name", "Created At (System)", "Start Date (Do)", "Deadline (Finish)", 
-            "Posting Date (Billing)", "Rework Count", "Internal Schedule", "State Durations (Minutes)", 
-            "Reference Links", "Description"
+            "Specialist Name", "Total Minutes Logged", "Latest Work Note", "Created At (System)", 
+            "Start Date (Do)", "Deadline (Finish)", "Posting Date (Billing)", "Rework Count", 
+            "Internal Schedule", "State Durations (Minutes)", "Reference Links", "Description"
         ])
         
         # We backup ALL tasks but highlight current status
@@ -99,6 +99,11 @@ class Command(BaseCommand):
         self.stdout.write(f"Exporting {all_tasks.count()} total tasks to Master Sheet...")
         
         for t in all_tasks:
+            # Calculate total effort
+            total_mins = TimeLog.objects.filter(work_item=t).aggregate(total=Sum('minutes'))['total'] or 0
+            latest_log = TimeLog.objects.filter(work_item=t).order_by('-logged_at').first()
+            latest_note = latest_log.note if latest_log else ""
+
             # Format state durations for readability
             state_info = " | ".join([f"{s}: {m}m" for s, m in (t.state_durations or {}).items()])
             
@@ -109,6 +114,8 @@ class Command(BaseCommand):
                 t.state.name if t.state else "N/A",
                 t.priority,
                 t.assignee.get_full_name() if t.assignee else "Unassigned",
+                total_mins,
+                latest_note,
                 t.created_at.strftime("%Y-%m-%d %H:%M"),
                 t.due_date or "",
                 t.deadline or "",
