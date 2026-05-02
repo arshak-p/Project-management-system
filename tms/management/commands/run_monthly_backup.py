@@ -157,6 +157,20 @@ class Command(BaseCommand):
         for c in WorkItemComment.objects.all().select_related('work_item', 'author'):
             comment_w.writerow([c.work_item.task_code, c.author.get_full_name(), c.body, c.created_at.strftime("%Y-%m-%d %H:%M")])
 
+        # 4. Universal Activity Audit Sheet
+        activity_csv = io.StringIO()
+        activity_w = csv.writer(activity_csv)
+        activity_w.writerow(["User", "Action", "Entity Type", "Entity ID", "Timestamp"])
+        from tms.models import ActivityLog
+        for a in ActivityLog.objects.all().select_related('user'):
+            activity_w.writerow([
+                a.user.get_full_name() if a.user else "System",
+                a.action,
+                a.entity_type,
+                a.entity_id,
+                a.created_at.strftime("%Y-%m-%d %H:%M")
+            ])
+
         # Send Email to the system email account (the 5GB vault)
         vault_email = settings.EMAIL_HOST_USER or settings.DEFAULT_FROM_EMAIL
         if vault_email:
@@ -168,8 +182,9 @@ class Command(BaseCommand):
                         "Included Attachments:\n"
                         "1. MASTER_TASK_SHEET.csv - Every task and tactical date.\n"
                         "2. EFFORT_LOGS.csv - Minute-by-minute team logs.\n"
-                        "3. COMMUNICATION_LOGS.csv - All task discussions.\n\n"
-                        "This email serves as your secure, human-readable cloud vault."
+                        "3. COMMUNICATION_LOGS.csv - All task discussions.\n"
+                        "4. ACTIVITY_HISTORY.csv - Full audit trail of all actions.\n\n"
+                        "This email serves as your secure, human-readable cloud vault. Permanent Storage is active."
                     ),
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     to=[vault_email],
@@ -177,6 +192,7 @@ class Command(BaseCommand):
                 email.attach(f"MASTER_TASK_SHEET_{month_str}.csv", task_csv.getvalue(), "text/csv")
                 email.attach(f"EFFORT_LOGS_{month_str}.csv", time_csv.getvalue(), "text/csv")
                 email.attach(f"COMMUNICATION_LOGS_{month_str}.csv", comment_csv.getvalue(), "text/csv")
+                email.attach(f"ACTIVITY_HISTORY_{month_str}.csv", activity_csv.getvalue(), "text/csv")
                 email.send(fail_silently=False)
                 self.stdout.write(self.style.SUCCESS(f"Successfully emailed MASTER sheets to {vault_email}"))
             except Exception as e:
@@ -185,7 +201,7 @@ class Command(BaseCommand):
         notify_roles(
             roles=[User.Role.ADMIN, User.Role.PROJECT_MANAGER],
             title="📊 Monthly Agency Backup Ready & Emailed",
-            body=f"Backup for {month_str} has been automatically sent to your verification email inbox. We've also performed a {retention_months}-month retention cleanup.",
+            body=f"Backup for {month_str} has been automatically sent to your verification email inbox. All activities and data are stored permanently.",
             link="/backups" 
         )
 
