@@ -275,6 +275,14 @@ export const api = {
     apiClient.post(`/modules/${id}/restore/`),
   restoreState: (id: number) =>
     apiClient.post(`/states/${id}/restore/`),
+  restoreDepartment: (id: number) =>
+    apiClient.post(`/departments/${id}/restore/`),
+  restoreJobTitle: (id: number) =>
+    apiClient.post(`/job-titles/${id}/restore/`),
+  restoreLabel: (id: number) =>
+    apiClient.post(`/labels/${id}/restore/`),
+  restoreCycle: (id: number) =>
+    apiClient.post(`/cycles/${id}/restore/`),
   getJobTitles: () => apiClient.get('/job-titles/'),
   createJobTitle: (data: object) => apiClient.post('/job-titles/', data),
   updateJobTitle: (id: number, data: object) => apiClient.patch(`/job-titles/${id}/`, data),

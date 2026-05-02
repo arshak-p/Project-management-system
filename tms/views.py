@@ -70,6 +70,17 @@ class DepartmentViewSet(SalesSafeViewSet):
             return qs
         return qs.filter(is_active=True)
 
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        instance = self.get_object()
+        instance.is_active = True
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "department restored"})
+
 
 class JobTitleViewSet(SalesSafeViewSet):
     serializer_class = JobTitleSerializer
@@ -93,7 +104,14 @@ class JobTitleViewSet(SalesSafeViewSet):
 
     def perform_destroy(self, instance):
         instance.is_active = False
-        instance.save()
+        instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        instance = self.get_object()
+        instance.is_active = True
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "job title restored"})
 
 
 class UserViewSet(SalesSafeViewSet):
