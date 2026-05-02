@@ -12,10 +12,13 @@ from accounts.models import User, EmailOTP
 from accounts.serializers import CustomTokenObtainPairSerializer
 from tms.permissions import IsAdminRole, IsHRManagement
 
-import asyncio
 from django.core.mail import EmailMessage
+from concurrent.futures import ThreadPoolExecutor
 
-async def send_reliable_email_async(subject, message, recipient_list):
+# Solid Foundation: Thread pool for background delivery
+email_executor = ThreadPoolExecutor(max_workers=4)
+
+def send_reliable_email_async(subject, message, recipient_list):
     def send():
         try:
             email = EmailMessage(
@@ -26,10 +29,11 @@ async def send_reliable_email_async(subject, message, recipient_list):
             )
             email.send(fail_silently=False)
         except Exception as e:
-            print(f"Async Email Failed: {str(e)}")
+            # We log to stdout for Render logs
+            print(f"SMTP ERROR: {str(e)}")
             
-    # Native asyncio background task
-    asyncio.create_task(asyncio.to_thread(send))
+    # Hand off to thread and return immediately
+    email_executor.submit(send)
     return True
 
 
@@ -45,7 +49,7 @@ class CreateUserView(APIView):
     """Admin-only: create a new team member with a password."""
     permission_classes = [permissions.IsAuthenticated, IsHRManagement]
 
-    async def post(self, request):
+    def post(self, request):
         data = request.data
         email = data.get('email', '').strip()
         password = data.get('password', '')
@@ -92,7 +96,7 @@ class CreateUserView(APIView):
         user.save()
 
         # Instant Async Welcome Email
-        await send_reliable_email_async(
+        send_reliable_email_async(
             subject='Welcome to Colour Parrot - Your Account is Ready!',
             message=(
                 f'Hello {first_name},\n\n'
@@ -121,7 +125,7 @@ class RequestOTPView(APIView):
     """Generate and send a 6-digit OTP to the user's email."""
     permission_classes = [permissions.AllowAny]
 
-    async def post(self, request):
+    def post(self, request):
         email = request.data.get('email', '').strip()
         if not email:
             return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -138,7 +142,7 @@ class RequestOTPView(APIView):
 
         # Send Email (Fallback to console if SMTP not configured)
         # Instant Async OTP Email
-        await send_reliable_email_async(
+        send_reliable_email_async(
             subject='Colour Parrot Security Code',
             message=f'Your secure login code is: {otp_code}. It will expire in 10 minutes.',
             recipient_list=[email]
@@ -186,7 +190,7 @@ class SendCreationOTPView(APIView):
     """Send OTP to a brand new email before user creation."""
     permission_classes = [permissions.IsAuthenticated, IsHRManagement]
 
-    async def post(self, request):
+    def post(self, request):
         email = request.data.get('email', '').strip()
         if not email:
             return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -196,7 +200,7 @@ class SendCreationOTPView(APIView):
         EmailOTP.objects.create(email=email, otp=otp_code)
 
         # Instant Async Creation OTP
-        await send_reliable_email_async(
+        send_reliable_email_async(
             subject='Colour Parrot: Verify Team Member Email',
             message=f'You are being added to the Colour Parrot TMS. Your verification code is: {otp_code}.',
             recipient_list=[email]
@@ -211,7 +215,7 @@ class VerifyCreationOTPView(APIView):
     """Verify OTP for a new email before creation."""
     permission_classes = [permissions.IsAuthenticated, IsHRManagement]
 
-    async def post(self, request):
+    def post(self, request):
         email = request.data.get('email', '').strip()
         otp_code = request.data.get('otp', '').strip()
 
