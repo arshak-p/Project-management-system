@@ -64,10 +64,10 @@ def check_do_dates():
     
     count = 0
     for task in starting_today:
-        # 1. Notify the Specialist (Do Date)
+        # 1. Notify the Specialist (Start Date / Do)
         notify_user(
             task.assignee.id,
-            title="🚀 Do-Day! Time to start work",
+            title="🚀 Start-Day (Do)! Time to begin",
             body=f"Task '{task.task_code}' is scheduled for you to START today. Good luck!",
             link=f"/task/{task.id}"
         )

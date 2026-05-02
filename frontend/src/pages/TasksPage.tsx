@@ -251,7 +251,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                 </div>
 
                 <div className="md:col-span-4 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Do Date (Start)</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Start Date (Do)</label>
                   <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-sm font-bold focus:border-amber-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
 
@@ -485,9 +485,9 @@ export default function TasksPage({ me }: { me: User | null }) {
                         </span>
                       ) : null;
                     })()}
-                    {me?.role !== 'specialist' && task.posting_date && <span className="flex items-center gap-1 opacity-60">📅 {task.posting_date}</span>}
-                    {task.due_date && <span className="flex items-center gap-1 opacity-60">🚩 {task.due_date}</span>}
-                    {task.deadline && <span className="flex items-center gap-1 opacity-60">💀 {task.deadline}</span>}
+                    {me?.role !== 'specialist' && task.posting_date && <span className="flex items-center gap-1 opacity-80 text-indigo-400">📅 Billing: {task.posting_date}</span>}
+                    {task.due_date && <span className="flex items-center gap-1 opacity-80 text-amber-500">🚩 Start: {task.due_date}</span>}
+                    {task.deadline && <span className="flex items-center gap-1 opacity-80 text-red-500">💀 Deadline: {task.deadline}</span>}
                     <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[10px] font-bold text-text-muted">
                       👤 {task.assignee?.first_name || task.assignee?.email || 'Unassigned'}
                     </span>
