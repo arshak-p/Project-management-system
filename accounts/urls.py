@@ -2,7 +2,8 @@ from django.urls import path
 
 from accounts.views import (
     LoginView, RefreshView, CreateUserView, 
-    RequestOTPView, VerifyOTPView
+    RequestOTPView, VerifyOTPView,
+    SendOTPView, VerifyOTPActionView
 )
 
 urlpatterns = [
@@ -11,4 +12,6 @@ urlpatterns = [
     path('create-user/', CreateUserView.as_view(), name='create_user'),
     path('request-otp/', RequestOTPView.as_view(), name='request_otp'),
     path('verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
+    path('send-creation-otp/', SendOTPView.as_view(), name='send_creation_otp'),
+    path('verify-creation-otp/', VerifyOTPActionView.as_view(), name='verify_creation_otp'),
 ]

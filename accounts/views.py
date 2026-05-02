@@ -196,4 +196,60 @@ class VerifyOTPView(APIView):
         })
 
 
-# --- END OF CURRENT AUTH VIEWS ---
+# --- NEW RECONSTRUCTED VERIFICATION VIEWS ---
+
+class SendOTPView(APIView):
+    """
+    Directly dispatch a 6-digit verification code to any email.
+    Used during member creation to verify identity.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsHRManagement]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip()
+        if not email:
+            return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_code = f"{random.randint(100000, 999999)}"
+        
+        # Save to database for verification
+        EmailOTP.objects.create(email=email, otp=otp_code)
+
+        # Direct High-Priority Transmission (No silent fail)
+        try:
+            send_mail(
+                subject='Colour Parrot: Tactical Clearance Code',
+                message=f'You are being recruited to the Colour Parrot Command Center. Your clearance code is: {otp_code}',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            return Response({'detail': 'Clearance code dispatched successfully.', 'otp': otp_code})
+        except Exception as e:
+            return Response({
+                'detail': f'SMTP Transmission Failure: {str(e)}',
+                'error_type': 'communication_failure'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class VerifyOTPActionView(APIView):
+    """
+    Verify the dispatched code to finalize member clearance.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsHRManagement]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip()
+        otp_code = request.data.get('otp', '').strip()
+
+        if not email or not otp_code:
+            return Response({'detail': 'Email and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_record = EmailOTP.objects.filter(email=email, otp=otp_code, is_used=False).first()
+
+        if not otp_record or not otp_record.is_valid():
+            return Response({'detail': 'Invalid or expired clearance code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_record.is_used = True
+        otp_record.save()
+
+        return Response({'detail': 'Identity verified. Member cleared for creation.', 'verified': True})
