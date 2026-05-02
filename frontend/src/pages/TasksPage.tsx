@@ -92,6 +92,8 @@ export default function TasksPage({ me }: { me: User | null }) {
         assignee_id: form.assignee ? Number(form.assignee) : null,
         due_date: form.due_date || null,
         deadline: form.deadline || null,
+        posting_date: form.posting_date || null,
+        scheduled_date: form.scheduled_date || null,
         reference_link: form.reference_link || null,
       });
       setShowForm(false);

@@ -97,8 +97,14 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
     }
     window.dispatchEvent(new CustomEvent('cp-task-updated'));
 
+    // Fix: Ensure empty strings for dates are sent as null to satisfy Django DateField
+    let cleanValue = value;
+    if ((field === 'posting_date' || field === 'due_date' || field === 'deadline' || field === 'scheduled_date') && value === '') {
+      cleanValue = null;
+    }
+
     try {
-      await api.updateTask(taskId, { [field]: value });
+      await api.updateTask(taskId, { [field]: cleanValue });
       api.getTask(taskId).then(res => setTask(res.data)).catch(() => {});
     } catch (e) {
       console.error('Failed to update task', e);

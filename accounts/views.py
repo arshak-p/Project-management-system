@@ -12,20 +12,24 @@ from accounts.models import User, EmailOTP
 from accounts.serializers import CustomTokenObtainPairSerializer
 from tms.permissions import IsAdminRole, IsHRManagement
 
-from django.core.mail import send_mail
+import threading
 
 def send_reliable_email_async(subject, message, recipient_list):
-    """Simplified synchronous sender for maximum Render stability."""
-    try:
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=recipient_list,
-            fail_silently=False,
-        )
-    except Exception as e:
-        print(f"SMTP DIRECT ERROR: {str(e)}")
+    """Fires the email into a background thread and returns instantly."""
+    def send():
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"THREADED SMTP ERROR: {str(e)}")
+
+    thread = threading.Thread(target=send, daemon=True)
+    thread.start()
     return True
 
 
