@@ -3,6 +3,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 import threading
 from django.contrib.auth.password_validation import validate_password
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -33,6 +35,7 @@ def send_reliable_email_async(subject, message, recipient_list):
     return True
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
@@ -117,6 +120,7 @@ class CreateUserView(APIView):
 
 from django.utils import timezone
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RequestOTPView(APIView):
     """Generate and send a 6-digit OTP to the user's email."""
     permission_classes = [permissions.AllowAny]
@@ -146,6 +150,7 @@ class RequestOTPView(APIView):
         return Response({'detail': 'OTP sent successfully.'})
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class VerifyOTPView(APIView):
     """Verify OTP and issue JWT tokens."""
     permission_classes = [permissions.AllowAny]
