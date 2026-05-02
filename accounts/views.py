@@ -168,6 +168,12 @@ class VerifyOTPView(APIView):
 
         # Get user and issue tokens
         user = User.objects.get(email=email)
+        
+        # Mark as verified
+        if not user.is_verified:
+            user.is_verified = True
+            user.save()
+
         from rest_framework_simplejwt.tokens import RefreshToken
         refresh = RefreshToken.for_user(user)
         

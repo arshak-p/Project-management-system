@@ -14,6 +14,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         user = self.user
+        
+        if not user.is_verified:
+            from rest_framework import exceptions
+            raise exceptions.PermissionDenied({
+                "detail": "Your account has not been verified. Please check your email for a verification code.",
+                "verification_required": True,
+                "email": user.email
+            })
+
         data["user"] = {
             "id": user.id,
             "email": user.email,
