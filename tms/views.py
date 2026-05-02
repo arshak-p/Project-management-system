@@ -91,6 +91,24 @@ class JobTitleViewSet(SalesSafeViewSet):
             return qs
         return qs.filter(is_active=True)
 
+    def list(self, request, *args, **kwargs):
+        if not JobTitle.objects.exists():
+            DEFAULTS = [
+                'Agency Manager',
+                'Creative Director',
+                'Project Manager',
+                'Team Lead',
+                'Senior Strategist',
+                'Content Creator',
+                'Graphic Designer',
+                'Video Editor',
+                'Social Media Manager',
+                'HR Manager',
+            ]
+            for title in DEFAULTS:
+                JobTitle.objects.get_or_create(name=title, defaults={'is_active': True})
+        return super().list(request, *args, **kwargs)
+
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
@@ -610,6 +628,11 @@ class AnalyticsSummaryView(APIView):
         project_slug = request.query_params.get("project")
         if project_slug:
             wis = wis.filter(project__slug=project_slug)
+            
+        assignee_id = request.query_params.get("assignee")
+        if assignee_id:
+            wis = wis.filter(assignee_id=assignee_id)
+
         dept_id = request.query_params.get("department")
         if dept_id:
             wis = wis.filter(
