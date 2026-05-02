@@ -677,7 +677,7 @@ class AnalyticsSummaryView(APIView):
         )
         completed_counts = dict(
             wis.filter(
-                state__slug__in=["launched", "completed-launched"], 
+                state__slug__in=['completed', 'launched', 'done'], 
                 updated_at__date__gte=start_trend
             )
             .values("updated_at__date")
