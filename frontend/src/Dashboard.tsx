@@ -216,7 +216,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="h-screen w-full bg-background text-text flex overflow-hidden font-inter relative"
+      className="h-screen w-full bg-background text-text block md:flex overflow-hidden font-inter relative"
     >
        <AnimatePresence>
         {sidebarOpen && (
@@ -297,8 +297,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col w-full min-w-0 bg-background overflow-hidden relative">
-        <header className="h-24 flex items-center justify-between px-10">
+        <div className="flex-1 flex flex-col w-screen md:w-auto min-w-0 md:min-w-0 bg-background overflow-hidden relative">
+        <header className="h-16 md:h-24 flex items-center justify-between px-2 md:px-10">
           <div className="flex items-center gap-6">
             <button onClick={() => setSidebarOpen(true)} className="md:hidden p-3 glass rounded-2xl">
               <Menu className="w-5 h-5" />
@@ -330,7 +330,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         </header>
         
-        <main className="flex-1 overflow-y-auto px-6 lg:px-10 pb-24 lg:pb-10 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto px-4 md:px-10 pb-24 md:pb-10 custom-scrollbar">
           <div className="max-w-7xl mx-auto">
              <AnimatePresence mode="wait">
                 <motion.div
