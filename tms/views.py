@@ -31,7 +31,10 @@ from tms.models import (
     WorkItemComment,
     Backup,
 )
-from tms.permissions import BlockSalesWrites, IsAdminRole, IsPMOrAdmin, IsLeadPMOrAdmin, IsHRManagement
+from tms.permissions import (
+    BlockSalesWrites, IsAdminRole, IsPMOrAdmin, IsLeadPMOrAdmin, 
+    IsHRManagement, IsAgencyManagerOrHR, IsPMReadOrAbove
+)
 from tms.serializers import (
     ActivityLogSerializer,
     BackupSerializer,
