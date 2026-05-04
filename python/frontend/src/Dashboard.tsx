@@ -283,6 +283,14 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         </nav>
 
         <div className="p-4 mt-auto border-t border-white/5 bg-black/10 rounded-b-[2.5rem]">
+          {/* Version Tag for Deployment Tracking */}
+          <div className="px-6 py-4">
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">HR Analytics Live</span>
+            </div>
+          </div>
+
           <motion.button 
             whileHover={{ x: 4 }}
             whileTap={{ scale: 0.98 }}
