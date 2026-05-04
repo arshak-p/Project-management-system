@@ -143,12 +143,9 @@ class UserViewSet(SalesSafeViewSet):
         return qs
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve"):
-            return [permissions.IsAuthenticated(), IsLeadPMOrAdmin() | IsHRManagement()]
-        if self.action in ("update", "partial_update", "create", "destroy"):
-            return [permissions.IsAuthenticated(), IsHRManagement()]
-        if self.action in ("create", "destroy"):
-            return [permissions.IsAuthenticated(), IsHRManagement()]
+        if self.action in ("list", "retrieve", "update", "partial_update", "create", "destroy"):
+            # Allow Managers (PM/Admin/Lead) AND HR to manage users
+            return [permissions.IsAuthenticated(), (IsLeadPMOrAdmin | IsHRManagement)()]
         if self.action == "assignable":
             return [permissions.IsAuthenticated(), BlockSalesWrites()]
         if self.action == "me":
