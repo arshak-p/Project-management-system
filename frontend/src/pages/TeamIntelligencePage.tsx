@@ -24,7 +24,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [dateRange, setDateRange] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('monthly');
+  const [dateRange, setDateRange] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('all');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
 
   useEffect(() => {
