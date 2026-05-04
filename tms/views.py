@@ -646,13 +646,21 @@ class AnalyticsSummaryView(APIView):
             
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
-        if start_date:
-            wis = wis.filter(created_at__date__gte=start_date)
-        if end_date:
-            wis = wis.filter(created_at__date__lte=end_date)
+        
+        log_filter = Q()
+        if start_date: log_filter &= Q(created_at__date__gte=start_date)
+        if end_date: log_filter &= Q(created_at__date__lte=end_date)
+            
+        if start_date or end_date:
+            created_ids = wis.filter(log_filter).values_list('id', flat=True)
+            logged_ids = TimeLog.objects.filter(log_filter).values_list('work_item_id', flat=True)
+            wis = wis.filter(id__in=set(created_ids) | set(logged_ids))
 
         total = wis.count()
-        total_time = TimeLog.objects.filter(work_item__in=wis).aggregate(total=Sum('minutes'))['total'] or 0
+        time_logs_in_range = TimeLog.objects.filter(log_filter)
+        if assignee_id:
+            time_logs_in_range = time_logs_in_range.filter(user_id=assignee_id)
+        total_time = time_logs_in_range.aggregate(total=Sum('minutes'))['total'] or 0
         terminal = wis.filter(state__slug__in=["launched", "completed-launched"]).count()
         by_state = list(
             wis.values("state__slug", "state__name").annotate(c=Count("id")).order_by()
