@@ -59,24 +59,52 @@ def projects_for_user(user: User, include_archived: bool = False) -> QuerySet:
     qs = Project.objects.all()
     if not include_archived:
         qs = qs.filter(is_active=True)
+
     if not user.is_authenticated:
         return qs.none()
     if user.is_superuser or user.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.SALES_MANAGER, User.Role.HR):
         return qs
     if user.role == User.Role.CLIENT:
         pid = user_client_project_id(user)
-        return qs.filter(pk=pid) if pid else qs.none()
+        if pid:
+            return qs.filter(id=pid)
+        return qs.none()
     if user.role == User.Role.TEAM_HEAD:
+        # Team heads see projects where they or their team members are active
         dept_id = user_department_id(user)
-        if not dept_id:
-            return qs.filter(work_items__assignee=user).distinct()
-        return qs.filter(
-            Q(work_items__department_id=dept_id)
-            | Q(work_items__assignee__tms_profile__department_id=dept_id)
-        ).distinct()
+        if dept_id:
+            return qs.filter(department_id=dept_id)
+        return qs.filter(members=user)
     if user.role == User.Role.SPECIALIST:
-        return qs.filter(work_items__assignee=user).distinct()
+        return qs.filter(members=user)
     return qs.none()
+
+def users_for_user(user: User, include_archived: bool = False) -> QuerySet[User]:
+    """
+    Agency Manager, HR, PM: All users.
+    Team Head: Only users sharing their Job Title (Team).
+    """
+    from accounts.models import User as AccountUser
+    qs = AccountUser.objects.filter(is_superuser=False)
+    if not include_archived:
+        qs = qs.filter(is_active=True)
+
+    if not user.is_authenticated:
+        return qs.none()
+    
+    # Agency Manager (Admin), HR, and Project Manager can see everyone
+    if user.is_superuser or user.role in (AccountUser.Role.ADMIN, AccountUser.Role.PROJECT_MANAGER, AccountUser.Role.HR):
+        return qs
+
+    # Team Head: Only see members with the same Job Title
+    if user.role == AccountUser.Role.TEAM_HEAD:
+        user_title = getattr(user, "title", "")
+        if user_title:
+            return qs.filter(title=user_title)
+        return qs.filter(id=user.id) # Fallback to just themselves
+
+    # Specialists and others: Only see themselves
+    return qs.filter(id=user.id)
 
 def can_edit_work_item(user: User, work_item: WorkItem) -> bool:
     if not user.is_authenticated:

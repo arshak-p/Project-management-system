@@ -137,15 +137,15 @@ class UserViewSet(SalesSafeViewSet):
 
     def get_queryset(self):
         include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
-        qs = User.objects.filter(is_superuser=False).select_related("tms_profile").prefetch_related()
-        if not include_archived:
-            qs = qs.filter(is_active=True)
-        return qs
+        return access.users_for_user(self.request.user, include_archived=include_archived).select_related("tms_profile")
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve", "update", "partial_update", "create", "destroy"):
-            # Allow Managers (PM/Admin/Lead) AND HR to manage users
-            return [permissions.IsAuthenticated(), (IsLeadPMOrAdmin | IsHRManagement)()]
+        if self.action in ("list", "retrieve"):
+            # Agency Manager, HR, PM, and Team Head can list users (filtered by queryset)
+            return [permissions.IsAuthenticated(), (IsPMReadOrAbove | IsLeadPMOrAdmin)()]
+        if self.action in ("update", "partial_update", "create", "destroy", "restore"):
+            # ONLY Agency Manager (Admin) and HR can create/update/remove/recover
+            return [permissions.IsAuthenticated(), IsAgencyManagerOrHR()]
         if self.action == "assignable":
             return [permissions.IsAuthenticated(), BlockSalesWrites()]
         if self.action == "me":
@@ -611,7 +611,7 @@ class AnalyticsSummaryView(APIView):
     Query params: project (slug), department (id).
     """
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, (IsLeadPMOrAdmin | IsHRManagement)()]
 
     def get(self, request):
         u = request.user
