@@ -94,6 +94,7 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
             "date_of_birth",
             "efficiency",
+            "last_active",
         )
         read_only_fields = ("id",)
         extra_kwargs = {"password": {"write_only": True, "required": False, "allow_blank": True}}

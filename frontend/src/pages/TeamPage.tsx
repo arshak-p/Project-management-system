@@ -622,8 +622,13 @@ export default function TeamPage({ me }: { me: User | null }) {
               )}
               <div className={`h-1 bg-gradient-to-r ${getAvatarGradient(i)}`}></div>
               <div className="p-6 text-center">
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${getAvatarGradient(i)} flex items-center justify-center text-2xl font-black text-white mx-auto mb-4 shadow-lg group-hover:scale-105 transition-transform`}>
-                  {getInitials(user)}
+                <div className="relative w-16 h-16 mx-auto mb-4 group-hover:scale-105 transition-transform">
+                  <div className={`w-full h-full rounded-2xl bg-gradient-to-br ${getAvatarGradient(i)} flex items-center justify-center text-2xl font-black text-white shadow-lg`}>
+                    {getInitials(user)}
+                  </div>
+                  {user.last_active && (new Date().getTime() - new Date(user.last_active).getTime() < 300000) && (
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-[#0d0f14] rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse" title="Online Now" />
+                  )}
                 </div>
                 <h3 className="font-bold text-base text-text truncate">
                   {user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'No Name Set'}
@@ -650,9 +655,11 @@ export default function TeamPage({ me }: { me: User | null }) {
                       {user.is_active ? '🟢 Operational' : '🟡 Offline Log'}
                     </span>
                   </div>
-                  <div>
-                    <p className="text-xs text-text-muted">Joined</p>
-                    <p className="text-xs font-medium">{user.date_joined ? new Date(user.date_joined).toLocaleDateString() : 'N/A'}</p>
+                  <div className="col-span-2 mt-2 pt-2 border-t border-border/30">
+                    <p className="text-[10px] text-text-muted uppercase tracking-widest mb-0.5">Last Seen</p>
+                    <p className="text-[10px] font-bold text-white/80">
+                      {user.last_active ? new Date(user.last_active).toLocaleString() : 'Never logged activity'}
+                    </p>
                   </div>
                 </div>
               </div>
