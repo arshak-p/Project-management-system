@@ -29,6 +29,7 @@ export interface User {
   is_superuser?: boolean;
   is_staff?: boolean;
   efficiency?: number;
+  last_active?: string;
 }
 
 export interface Project {

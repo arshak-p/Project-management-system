@@ -174,20 +174,20 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       }
     };
 
-    ws.onopen = () => {
+    (ws as any).onopen = () => {
       // Send heartbeat every 30 seconds to update 'last_active'
       const interval = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'heartbeat' }));
         }
       }, 30000);
-      ws._heartbeatInterval = interval;
+      (ws as any)._heartbeatInterval = interval;
     };
 
     ws.onerror = () => console.warn("Notification Socket error. Retrying in background.");
     
     return () => {
-      if (ws._heartbeatInterval) clearInterval(ws._heartbeatInterval);
+      if ((ws as any)._heartbeatInterval) clearInterval((ws as any)._heartbeatInterval);
       ws.close();
     };
   }, []);
