@@ -681,13 +681,18 @@ class AnalyticsSummaryView(APIView):
         days_to_show = 29 if start_date else 89
         start_trend = (now - timezone.timedelta(days=days_to_show)).date()
         
-        # Get all counts grouped by date
+        # Activity trend: Based on TimeLogs created per day
+        activity_logs = TimeLog.objects.filter(created_at__date__gte=start_trend)
+        if assignee_id:
+            activity_logs = activity_logs.filter(user_id=assignee_id)
+            
         created_counts = dict(
-            wis.filter(created_at__date__gte=start_trend)
-            .values("created_at__date")
+            activity_logs.values("created_at__date")
             .annotate(c=Count("id"))
             .values_list("created_at__date", "c")
         )
+        
+        # Completion trend: Based on tasks reaching terminal states per day
         completed_counts = dict(
             wis.filter(
                 state__slug__in=['completed-launched', 'completed', 'launched', 'done'], 
