@@ -243,7 +243,7 @@ class WorkItem(models.Model):
     is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
-        ordering = ["project_id", "state_id", "board_position", "-updated_at"]
+        ordering = ["-scheduled_date", "-updated_at"]
         unique_together = [("project", "task_code")]
         indexes = [
             models.Index(fields=["project", "state"]),
