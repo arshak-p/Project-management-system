@@ -163,7 +163,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10">
            {/* Sidebar: Member List */}
            <div className="md:col-span-4 lg:col-span-3 space-y-4 max-h-[40vh] md:max-h-[75vh] overflow-y-auto custom-scrollbar pr-2 order-2 md:order-1">
-            {['admin', 'project_manager', 'team_head', 'specialist'].map(role => {
+            {['admin', 'project_manager', 'hr', 'team_head', 'specialist', 'sales_manager'].map(role => {
               const roleUsers = filteredUsers.filter(u => u.role === role);
               if (roleUsers.length === 0) return null;
               
@@ -195,6 +195,11 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                 </div>
               );
             })}
+            {filteredUsers.length === 0 && !isLoading && (
+              <div className="text-center py-10 glass rounded-3xl border-dashed border-white/5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted/40 italic">No Operators in Sector</p>
+              </div>
+            )}
         </div>
 
         {/* Main Detail Area */}
