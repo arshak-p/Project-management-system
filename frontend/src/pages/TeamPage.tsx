@@ -554,8 +554,8 @@ export default function TeamPage({ me }: { me: User | null }) {
               <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
             </div>
           </label>
-          {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'hr') && (
-            <button onClick={() => setShowModal(true)} className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+          {(me?.is_superuser || me?.role === 'admin' || me?.role === 'hr') && (
+            <button onClick={() => { setForm(defaultForm); setEditingUser(null); setIsEmailVerified(false); setShowModal(true); }} className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
               <Plus className="w-4 h-4" /> Add Member
             </button>
           )}
@@ -590,7 +590,7 @@ export default function TeamPage({ me }: { me: User | null }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filtered.map((user, i) => (
             <div key={user.id} className={`glass rounded-2xl border border-border/50 hover:border-primary/30 transition-all group overflow-hidden relative ${!user.is_active ? 'opacity-60 grayscale-[0.6]' : ''}`}>
-              {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+              {(me?.is_superuser || me?.role === 'admin' || me?.role === 'hr') && (
                 <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-10">
                    <button 
                     onClick={(e) => { e.stopPropagation(); openEdit(user); }} 
@@ -599,7 +599,7 @@ export default function TeamPage({ me }: { me: User | null }) {
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
-                 {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'hr') && (
+                 {(me?.is_superuser || me?.role === 'admin' || me?.role === 'hr') && (
                     user.is_active ? (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleArchive(user.id); }} 
