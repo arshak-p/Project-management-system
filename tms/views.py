@@ -144,7 +144,7 @@ class UserViewSet(SalesSafeViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [permissions.IsAuthenticated(), IsHRManagement()]
+            return [permissions.IsAuthenticated(), IsLeadPMOrAdmin() | IsHRManagement()]
         if self.action in ("update", "partial_update", "create", "destroy"):
             return [permissions.IsAuthenticated(), IsHRManagement()]
         if self.action in ("create", "destroy"):
@@ -793,6 +793,12 @@ class BackupViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         return [permissions.IsAuthenticated(), IsAdminRole()]
 
+    @action(detail=False, methods=["post"], url_path="trigger-manual")
+    def trigger_manual(self, request):
+        from django.core.management import call_command
+        call_command('run_monthly_backup')
+        return Response({"status": "Manual backup generation triggered."})
+
     @action(detail=True, methods=["post"], url_path="approve-and-download")
     def approve_and_download(self, request, pk=None):
         backup = self.get_object()
@@ -819,9 +825,23 @@ class BackupViewSet(viewsets.ModelViewSet):
 
                 t_out = io.StringIO()
                 t_w = csv.writer(t_out)
-                t_w.writerow(['Task Code', 'Title', 'State', 'Priority', 'Module', 'Assignee', 'Created At', 'Posting Date', 'Scheduled Date', 'Due Date', 'Deadline', 'Reference Link', 'Description'])
+                t_w.writerow(['Task Code', 'Title', 'State', 'Priority', 'Module', 'Assignee', 'Status', 'Created Date', 'Post Date', 'Start Date', 'Deadline', 'Reference Link', 'Description'])
                 for item in WorkItem.objects.filter(project=project).select_related('state', 'module', 'assignee'):
-                    t_w.writerow([item.task_code, item.title, item.state.name, item.priority, item.module.name if item.module else "", item.assignee.get_full_name() if item.assignee else "Unassigned", item.created_at, item.posting_date or "", item.scheduled_date or "", item.due_date or "", item.deadline or "", item.reference_link or "", item.description])
+                    t_w.writerow([
+                        item.task_code, 
+                        item.title, 
+                        item.state.name, 
+                        item.priority, 
+                        item.module.name if item.module else "", 
+                        item.assignee.get_full_name() if item.assignee else "Unassigned", 
+                        "Active" if item.is_active else "Archived/Removed",
+                        item.created_at, 
+                        item.posting_date or "", 
+                        item.due_date or "", 
+                        item.deadline or "", 
+                        item.reference_link or "", 
+                        item.description
+                    ])
                 zip_file.writestr(f"{prefix}Tasks_Detailed.csv", t_out.getvalue())
 
                 c_out = io.StringIO()
@@ -844,6 +864,21 @@ class BackupViewSet(viewsets.ModelViewSet):
                 for a in WorkItemAttachment.objects.filter(work_item__project=project).select_related('uploaded_by', 'work_item'):
                     a_w.writerow([a.work_item.task_code, a.file_name, a.size_bytes, a.uploaded_by.get_full_name()])
                 zip_file.writestr(f"{prefix}Attachments_Manifest.csv", a_out.getvalue())
+
+                # Activity Log Export
+                act_out = io.StringIO()
+                act_w = csv.writer(act_out)
+                act_w.writerow(['Date', 'User', 'Action', 'Entity Type', 'Entity ID', 'Details'])
+                for entry in ActivityLog.objects.filter(project=project).select_related('user'):
+                    act_w.writerow([
+                        entry.created_at, 
+                        entry.user.get_full_name() if entry.user else "System", 
+                        entry.action, 
+                        entry.entity_type, 
+                        entry.entity_id, 
+                        str(entry.payload) if entry.payload else ""
+                    ])
+                zip_file.writestr(f"{prefix}System_Activity_Log.csv", act_out.getvalue())
 
             # 7. Suggestion 2: BEAUTIFUL PDF PERFORMANCE REPORT
             try:

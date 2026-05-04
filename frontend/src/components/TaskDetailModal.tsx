@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState } from '../api';
-import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars, Link2 } from 'lucide-react';
+import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars, Link2, ShieldAlert, Database, Trash2 } from 'lucide-react';
 import { getWsUrl } from '../config';
 
 
@@ -264,13 +264,28 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                         <div className="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center text-xs font-bold shrink-0 mt-1">
                           {c.author?.first_name?.charAt(0) || c.author?.email?.charAt(0).toUpperCase() || 'U'}
                         </div>
-                        <div className="flex-1">
-                          <div className="glass p-4 rounded-2xl rounded-tl-none border border-border/50 inline-block">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-sm">{c.author?.first_name || c.author?.email}</span>
-                              <span className="text-xs text-text-muted">{new Date(c.created_at).toLocaleString()}</span>
+                        <div className="flex-1 group/comment">
+                          <div className="flex items-start gap-2">
+                            <div className="glass p-4 rounded-2xl rounded-tl-none border border-border/50 inline-block relative">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold text-sm">{c.author?.first_name || c.author?.email}</span>
+                                <span className="text-xs text-text-muted">{new Date(c.created_at).toLocaleString()}</span>
+                              </div>
+                              <p className="text-sm whitespace-pre-wrap">{c.body}</p>
                             </div>
-                            <p className="text-sm whitespace-pre-wrap">{c.body}</p>
+                            {(me?.is_superuser || me?.role === 'admin' || me?.id === c.author?.id) && (
+                              <button 
+                                onClick={async () => {
+                                  if (confirm('Delete this comment?')) {
+                                    await api.deleteComment(c.id);
+                                    loadData();
+                                  }
+                                }}
+                                className="p-2 text-text-muted hover:text-error opacity-0 group-hover/comment:opacity-100 transition-all"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -297,10 +312,25 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                   <div className="flex-1 overflow-y-auto space-y-3 mb-6">
                     {timeLogs.length === 0 && <p className="text-text-muted text-sm text-center py-4">No time logged against this task yet.</p>}
                     {timeLogs.map(tl => (
-                      <div key={tl.id} className="glass p-3 rounded-xl border border-border/50 flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{tl.note || 'No description'}</p>
-                          <p className="text-xs text-text-muted mt-0.5">{tl.user?.first_name || tl.user?.email} • {new Date(tl.created_at).toLocaleDateString()}</p>
+                      <div key={tl.id} className="glass p-3 rounded-xl border border-border/50 flex items-center justify-between group/timelog">
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <p className="text-sm font-medium">{tl.note || 'No description'}</p>
+                            <p className="text-xs text-text-muted mt-0.5">{tl.user?.first_name || tl.user?.email} • {new Date(tl.created_at).toLocaleDateString()}</p>
+                          </div>
+                          {(me?.is_superuser || me?.role === 'admin' || me?.id === tl.user?.id) && (
+                            <button 
+                              onClick={async () => {
+                                if (confirm('Delete this time log?')) {
+                                  await api.deleteTimeLog(tl.id);
+                                  loadData();
+                                }
+                              }}
+                              className="p-1.5 text-text-muted hover:text-error opacity-0 group-hover/timelog:opacity-100 transition-all"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                         <span className="font-mono text-sm font-bold">{Math.floor(tl.minutes / 60)}h {tl.minutes % 60}m</span>
                       </div>
@@ -370,7 +400,25 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                               {a.size_bytes && <span> • {(a.size_bytes / 1024).toFixed(0)} KB</span>}
                             </p>
                           </div>
-                          <Download className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors shrink-0 mx-2" />
+                          <div className="flex items-center gap-2">
+                             <a href={a.file} target="_blank" rel="noopener noreferrer" title="Download Asset" className="p-2 text-text-muted hover:text-primary transition-colors">
+                               <Download className="w-5 h-5" />
+                             </a>
+                             {(me?.is_superuser || me?.role === 'admin' || me?.id === a.uploaded_by?.id) && (
+                               <button 
+                                 onClick={async (e) => {
+                                   e.preventDefault();
+                                   if (confirm('Delete this attachment?')) {
+                                     await api.deleteAttachment(a.id);
+                                     loadData();
+                                   }
+                                 }}
+                                 className="p-2 text-text-muted hover:text-error transition-colors"
+                               >
+                                 <Trash2 className="w-5 h-5" />
+                               </button>
+                             )}
+                          </div>
                         </a>
                       ))}
                     </div>
@@ -503,6 +551,38 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                 rows={3}
                 className="w-full px-3 py-2.5 bg-surface/50 border border-border rounded-xl text-xs focus:border-primary outline-none hover:border-primary/50 transition-colors custom-scrollbar"
               />
+            </div>
+
+            <div className="pt-4 border-t border-border/50 space-y-3">
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                <ShieldAlert className="w-3.5 h-3.5" /> Action Matrix
+              </label>
+              <div className="space-y-2">
+                <button 
+                  onClick={async () => {
+                    if (confirm('Archive this task? It will be removed from active boards.')) {
+                      await api.updateTask(task.id, { is_active: false });
+                      onClose();
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all"
+                >
+                  <Database className="w-4 h-4" /> Archive Task
+                </button>
+                {(me?.is_superuser || me?.role === 'admin') && (
+                  <button 
+                    onClick={async () => {
+                      if (confirm('💣 PERMANENT DELETE: This cannot be undone. All logs and comments will be erased. Continue?')) {
+                        await api.deleteTask(task.id);
+                        onClose();
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" /> Hard Delete
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="pt-4 border-t border-border/50 space-y-3">

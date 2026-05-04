@@ -31,7 +31,7 @@ def work_items_for_user(user: User, include_archived: bool = False, lightweight:
 
     if not user.is_authenticated:
         return base.none()
-    if user.is_superuser or user.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER):
+    if user.is_superuser or user.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.HR):
         return base
     if user.role == User.Role.SALES_MANAGER:
         return base
@@ -61,7 +61,7 @@ def projects_for_user(user: User, include_archived: bool = False) -> QuerySet:
         qs = qs.filter(is_active=True)
     if not user.is_authenticated:
         return qs.none()
-    if user.is_superuser or user.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.SALES_MANAGER):
+    if user.is_superuser or user.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.SALES_MANAGER, User.Role.HR):
         return qs
     if user.role == User.Role.CLIENT:
         pid = user_client_project_id(user)

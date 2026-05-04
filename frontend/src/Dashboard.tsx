@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Briefcase, CheckCircle2, Users,
   LogOut, Bell, LayoutGrid, Menu, X,
   ClipboardList, UserCircle, ArrowLeft, Sun, Moon,
-  Clock3, CalendarRange, Activity, Map as MapIcon, BrainCircuit, ShieldCheck, Download, Layers,
+  Clock3, CalendarRange, Activity, Map as MapIcon, BrainCircuit, ShieldCheck, Download, Layers, Workflow,
   Loader2
 } from 'lucide-react';
 
@@ -30,9 +30,10 @@ const TeamIntelligencePage = lazy(() => import('./pages/TeamIntelligencePage'));
 const BackupsPage = lazy(() => import('./pages/BackupsPage'));
 const ModulesPage = lazy(() => import('./pages/ModulesPage'));
 const TeamHeadDashboard = lazy(() => import('./pages/TeamHeadDashboard'));
+const WorkflowPage = lazy(() => import('./pages/WorkflowPage'));
 import { getWsUrl } from './config';
 
-type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence' | 'backups' | 'modules';
+type Page = 'overview' | 'projects' | 'tasks' | 'team' | 'kanban' | 'my_tasks' | 'notifications' | 'profile' | 'timesheets' | 'cycles' | 'activity' | 'job_titles' | 'roadmap' | 'calendar' | 'strategist' | 'intelligence' | 'backups' | 'modules' | 'workflow';
 
 const ADMIN_NAV = [
   { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -48,6 +49,7 @@ const ADMIN_NAV = [
   { id: 'intelligence', label: 'Team Info', icon: <ShieldCheck className="w-5 h-5" /> },
   { id: 'job_titles', label: 'Job Titles', icon: <Briefcase className="w-5 h-5" /> },
   { id: 'modules', label: 'Task Modules', icon: <Layers className="w-5 h-5" /> },
+  { id: 'workflow', label: 'Task Workflow', icon: <Workflow className="w-5 h-5" /> },
   { id: 'roadmap', label: 'Agency Roadmap', icon: <MapIcon className="w-5 h-5" /> },
   { id: 'backups', label: 'Data Backups', icon: <Download className="w-5 h-5" /> },
 ];
@@ -119,7 +121,11 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
        api.getNotifications().then(r => {
          const all = r.data.filter((n: any) => !n.read);
          setUnreadCount(all.length);
-         setNotifications(all.slice(0, 3));
+         setNotifications(prev => {
+           const top3 = all.slice(0, 3);
+           if (prev.length === top3.length && prev.every((p, i) => p.id === top3[i].id)) return prev;
+           return top3;
+         });
        });
     }, 5000); 
     return () => clearInterval(hb);
@@ -277,6 +283,14 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         </nav>
 
         <div className="p-4 mt-auto border-t border-white/5 bg-black/10 rounded-b-[2.5rem]">
+          {/* Version Tag for Deployment Tracking */}
+          <div className="px-6 py-4">
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">HR Analytics Live</span>
+            </div>
+          </div>
+
           <motion.button 
             whileHover={{ x: 4 }}
             whileTap={{ scale: 0.98 }}
@@ -319,6 +333,15 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
 
           <div className="flex items-center gap-6">
+            <button 
+              onClick={() => handleNav('notifications')}
+              className="relative p-3 glass rounded-full hover:border-primary/50 transition-all text-text-muted hover:text-white group flex items-center justify-center"
+            >
+              <Bell className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              {unreadCount > 0 && (
+                <span className="absolute top-[6px] right-[6px] w-[10px] h-[10px] bg-rose-500 rounded-full border-2 border-background animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
+              )}
+            </button>
             {me && (
               <button onClick={() => handleNav('profile')} className="flex items-center gap-4 p-2 pl-6 glass rounded-full hover:border-primary/50 transition-all">
                 <p className="text-xs font-black tracking-tight uppercase opacity-60">{me.first_name || 'User'}</p>
@@ -351,8 +374,11 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                   }>
                     {page === 'overview' && (isTeamHead ? <TeamHeadDashboard me={me} /> : <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />)}
                     {page === 'projects' && <ProjectsPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />}
-                    {page === 'cycles' && <CyclesPage me={me} />}
                     {page === 'tasks' && <TasksPage me={me} />}
+                    {page === 'cycles' && <CyclesPage me={me} />}
+                    {page === 'modules' && <ModulesPage me={me} />}
+                    {page === 'workflow' && <WorkflowPage me={me} />}
+                    {page === 'backups' && <BackupsPage me={me} />}
                     {page === 'kanban' && <KanbanPage me={me} />}
                     {page === 'team' && <TeamPage me={me} />}
                     {page === 'timesheets' && <TimesheetsPage me={me} />}
@@ -364,9 +390,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                     {page === 'strategist' && <StrategistPage me={me} />}
                     {page === 'intelligence' && <TeamIntelligencePage me={me} />}
                     {page === 'job_titles' && <JobTitlesPage me={me} />}
-                    { page === 'roadmap' && <AgencyRoadmap me={me} /> }
-                    { page === 'backups' && <BackupsPage me={me} /> }
-                    { page === 'modules' && <ModulesPage me={me} /> }
+                    {page === 'roadmap' && <AgencyRoadmap me={me} />}
                   </Suspense>
                 </motion.div>
              </AnimatePresence>

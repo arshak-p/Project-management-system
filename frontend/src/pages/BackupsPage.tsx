@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api';
 import type { User } from '../api';
 import { motion } from 'framer-motion';
-import { Download, CheckCircle2, Clock, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { Download, CheckCircle2, Clock, AlertCircle, Loader2 } from 'lucide-react';
 
 interface Backup {
   id: number;
@@ -67,15 +67,28 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
           <h1 className="text-3xl lg:text-4xl font-black tracking-tight mb-2">Agency Data Backups</h1>
           <p className="text-sm text-text-muted">Monthly project snapshots ready for your approval and local download.</p>
         </div>
-        <div className="p-4 glass rounded-[2rem] flex items-center gap-4 border-primary/20 w-full md:w-auto">
-          <ShieldCheck className="w-8 h-8 text-primary" />
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-50">Security Protocol</p>
-            <p className="text-sm font-bold">Admin Permission Required</p>
-          </div>
+        <div className="flex gap-4">
+          <button 
+            onClick={async () => {
+              if (confirm('Generate backup for missing months now? This might take a minute.')) {
+                setIsLoading(true);
+                try {
+                  await api.triggerManualBackup();
+                  await fetchBackups();
+                  alert('Backup generation triggered successfully.');
+                } catch {
+                  alert('Failed to trigger backup.');
+                } finally {
+                  setIsLoading(false);
+                }
+              }
+            }}
+            className="hidden md:flex items-center justify-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all"
+          >
+            <Clock className="w-4 h-4" /> Generate Missing
+          </button>
         </div>
       </div>
-
       <div className="grid gap-6">
         {isLoading ? (
           <div className="flex items-center justify-center p-20">
@@ -108,8 +121,8 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
                   </div>
                   <p className="text-sm text-text-muted">
                     {backup.is_approved 
-                      ? `Approved by ${backup.approved_by_details?.first_name || 'Admin'} on ${new Date(backup.approved_at!).toLocaleDateString()}` 
-                      : 'Waiting for Agency Manager approval'}
+                      ? `Downloaded by ${backup.approved_by_details?.first_name || 'Admin'} on ${new Date(backup.approved_at!).toLocaleDateString()}` 
+                      : 'Ready for Download'}
                   </p>
                 </div>
               </div>
@@ -129,7 +142,7 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
                   ) : (
                     <Download className="w-5 h-5" />
                   )}
-                  {backup.is_approved ? 'Download Again' : 'Approve & Download'}
+                  {backup.is_approved ? 'Download Again' : 'Download Backup'}
                 </button>
               </div>
             </motion.div>
@@ -149,7 +162,7 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
           </div>
           <div className="text-sm text-amber-200/60 leading-relaxed">
             <p className="font-bold text-amber-400/80 mb-1">Data Sovereignty Notice</p>
-            By clicking "Approve & Download", the system will package all project tasks, effort logs, and client data into a ZIP archive and download it directly to your computer. Please handle these exports responsibly.
+            By clicking "Download Backup", the system will package all project tasks, effort logs, and client data into a ZIP archive and download it directly to your computer. Please handle these exports responsibly.
           </div>
         </motion.div>
       )}

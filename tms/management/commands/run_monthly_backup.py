@@ -12,13 +12,21 @@ import json
 import csv
 import io
 from django.core.mail import EmailMessage
+from django.db.models import Sum
+
 
 class Command(BaseCommand):
     help = "Performs monthly backup, retention cleanup, and agency performance summary."
 
     def handle(self, *args, **options):
         now = datetime.now()
-        month_str = now.strftime("%Y-%m")
+        # Calculate Previous Month range for targeted export
+        first_day_this_month = now.replace(day=1)
+        last_day_prev_month = first_day_this_month - timedelta(days=1)
+        first_day_prev_month = last_day_prev_month.replace(day=1)
+        
+        prev_month_str = first_day_prev_month.strftime("%Y-%m")
+        month_str = prev_month_str  # Use the previous month for the backup label
         
         # 1. Create or get the backup record for this month
         backup_req, created = Backup.objects.get_or_create(
@@ -26,12 +34,7 @@ class Command(BaseCommand):
             defaults={'is_approved': False}
         )
 
-        # Calculate Previous Month range for targeted export
-        first_day_this_month = now.replace(day=1)
-        last_day_prev_month = first_day_this_month - timedelta(days=1)
-        first_day_prev_month = last_day_prev_month.replace(day=1)
-        
-        prev_month_str = first_day_prev_month.strftime("%Y-%m")
+        # Removed duplicated block
         
         if not created and backup_req.is_approved:
             self.stdout.write(self.style.WARNING(f"Backup for {month_str} already approved."))
@@ -53,11 +56,14 @@ class Command(BaseCommand):
                     "-U", db_settings.get('USER', 'postgres'),
                     "-F", "p", db_settings.get('NAME', 'colour_parrot')
                 ]
-                with open(db_path, 'w') as f:
-                    subprocess.run(dump_cmd, env=env, stdout=f, check=True)
-            self.stdout.write(self.style.SUCCESS(f"DB snapshot created at {db_path}"))
+                try:
+                    with open(db_path, 'w') as f:
+                        subprocess.run(dump_cmd, env=env, stdout=f, check=True)
+                    self.stdout.write(self.style.SUCCESS(f"DB snapshot created at {db_path}"))
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f"DB snapshot failed (pg_dump might be missing): {e}"))
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"DB Snapshot failed: {str(e)}"))
+            self.stdout.write(self.style.ERROR(f"Error checking DB settings: {e}"))
 
         # Retention logic disabled per User Request: "Never delete any data"
         self.stdout.write(self.style.NOTICE("Skipping retention cleanup: Permanent Storage Mode Active."))

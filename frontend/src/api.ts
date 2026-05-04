@@ -46,6 +46,8 @@ export interface TaskState {
   name: string;
   slug: string;
   color: string;
+  description?: string;
+  is_active: boolean;
   sort_order?: number;
 }
 
@@ -243,12 +245,17 @@ export const api = {
   recordView: (id: number) => apiClient.post(`work-items/${id}/record-view/`),
   getComments: (taskId: number) => apiClient.get(`comments/?work_item=${taskId}`),
   createComment: (data: object) => apiClient.post('comments/', data),
+  deleteComment: (id: number) => apiClient.delete(`comments/${id}/`),
   getAttachments: (taskId: number) => apiClient.get(`attachments/?work_item=${taskId}`),
   createAttachment: (data: FormData) => apiClient.post('attachments/', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  deleteAttachment: (id: number) => apiClient.delete(`attachments/${id}/`),
   getTimeLogs: (taskId: number) => apiClient.get(`time-logs/?work_item=${taskId}`),
   createTimeLog: (data: object) => apiClient.post('time-logs/', data),
-  getStates: () => apiClient.get('states/'),
+  deleteTimeLog: (id: number) => apiClient.delete(`time-logs/${id}/`),
+  getStates: (params?: object) => apiClient.get('states/', { params }),
   createState: (data: object) => apiClient.post('states/', data),
+  updateState: (id: number, data: object) => apiClient.patch(`states/${id}/`, data),
+  deleteState: (id: number) => apiClient.delete(`states/${id}/`),
   getModules: (params?: object) => apiClient.get('modules/', { params }),
   createModule: (data: object) => apiClient.post('modules/', data),
   updateModule: (id: number, data: object) => apiClient.patch(`modules/${id}/`, data),
@@ -294,6 +301,7 @@ export const api = {
   deleteJobTitle: (id: number) => apiClient.delete(`/job-titles/${id}/`),
   getBackups: () => apiClient.get('/backups/'),
   approveAndDownloadBackup: (id: number) => apiClient.post(`/backups/${id}/approve-and-download/`, {}, { responseType: 'blob' }),
+  triggerManualBackup: () => apiClient.post('/backups/trigger-manual/'),
   sendCreationOTP: (email: string) => apiClient.post('/auth/send-creation-otp/', { email }),
   verifyCreationOTP: (email: string, otp: string) => apiClient.post('/auth/verify-creation-otp/', { email, otp }),
 };
