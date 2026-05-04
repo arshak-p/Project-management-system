@@ -20,7 +20,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         now = datetime.now()
-        month_str = now.strftime("%Y-%m")
+        # Calculate Previous Month range for targeted export
+        first_day_this_month = now.replace(day=1)
+        last_day_prev_month = first_day_this_month - timedelta(days=1)
+        first_day_prev_month = last_day_prev_month.replace(day=1)
+        
+        prev_month_str = first_day_prev_month.strftime("%Y-%m")
+        month_str = prev_month_str  # Use the previous month for the backup label
         
         # 1. Create or get the backup record for this month
         backup_req, created = Backup.objects.get_or_create(
@@ -28,12 +34,7 @@ class Command(BaseCommand):
             defaults={'is_approved': False}
         )
 
-        # Calculate Previous Month range for targeted export
-        first_day_this_month = now.replace(day=1)
-        last_day_prev_month = first_day_this_month - timedelta(days=1)
-        first_day_prev_month = last_day_prev_month.replace(day=1)
-        
-        prev_month_str = first_day_prev_month.strftime("%Y-%m")
+        # Removed duplicated block
         
         if not created and backup_req.is_approved:
             self.stdout.write(self.style.WARNING(f"Backup for {month_str} already approved."))

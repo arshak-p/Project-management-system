@@ -144,7 +144,7 @@ class UserViewSet(SalesSafeViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [permissions.IsAuthenticated(), IsHRManagement()]
+            return [permissions.IsAuthenticated(), IsLeadPMOrAdmin() | IsHRManagement()]
         if self.action in ("update", "partial_update", "create", "destroy"):
             return [permissions.IsAuthenticated(), IsHRManagement()]
         if self.action in ("create", "destroy"):
