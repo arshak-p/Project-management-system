@@ -154,7 +154,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                 placeholder="Find Member..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 glass border border-white/5 rounded-2xl outline-none focus:border-primary transition-all text-[10px] font-black uppercase tracking-widest text-white"
+                className="w-full pl-10 pr-4 py-3 glass border border-white/5 rounded-2xl outline-none focus:border-primary transition-all text-[10px] font-black uppercase tracking-widest text-text"
               />
            </div>
         </div>

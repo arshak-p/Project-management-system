@@ -348,7 +348,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             {me && (
               <button onClick={() => handleNav('profile')} className="flex items-center gap-4 p-1 pl-6 pr-1 glass rounded-full hover:border-primary/50 transition-all border border-white/5">
                 <div className="flex flex-col items-end">
-                  <p className="text-[11px] font-black tracking-tight uppercase text-white/90">{me.first_name || 'User'}</p>
+                  <p className="text-[11px] font-black tracking-tight uppercase text-text">{me.first_name || 'User'}</p>
                   <span className="text-[7px] font-black uppercase tracking-widest text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded-md border border-primary/20 leading-none">
                     {me.role?.replace('_', ' ') || 'Specialist'}
                   </span>
