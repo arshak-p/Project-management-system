@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
-import type { Notification } from '../../api';
+import type { Notification, User } from '../../api';
 import { Bell, CheckCircle, Clock } from 'lucide-react';
 import TaskDetailModal from '../../components/TaskDetailModal';
 
-export default function NotificationsPage() {
+export default function NotificationsPage({ me }: { me: User | null }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -20,6 +20,14 @@ export default function NotificationsPage() {
       await api.markNotificationRead(id);
       load();
       // Notify other components (like Dashboard) that unread count changed
+      window.dispatchEvent(new Event('notificationRead'));
+    } catch (e) { console.error(e); }
+  };
+
+  const markAllRead = async () => {
+    try {
+      await api.markAllNotificationsRead();
+      load();
       window.dispatchEvent(new Event('notificationRead'));
     } catch (e) { console.error(e); }
   };
@@ -44,6 +52,7 @@ export default function NotificationsPage() {
         <TaskDetailModal 
           taskId={selectedTaskId} 
           onClose={() => { setSelectedTaskId(null); load(); }} 
+          me={me}
         />
       )}
       <div className="flex items-center justify-between">
@@ -51,11 +60,22 @@ export default function NotificationsPage() {
           <h1 className="text-3xl font-bold">Notifications</h1>
           <p className="text-text-muted mt-1">{unread.length} unread notification{unread.length !== 1 ? 's' : ''}</p>
         </div>
-        {unread.length > 0 && (
-          <span className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 text-sm rounded-full font-semibold">
-            {unread.length} New
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {unread.length > 0 && (
+            <button 
+              onClick={markAllRead}
+              className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 text-sm rounded-xl font-semibold hover:bg-primary/20 transition-all flex items-center gap-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Mark all as read
+            </button>
+          )}
+          {unread.length > 0 && (
+            <span className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 text-sm rounded-full font-semibold">
+              {unread.length} New
+            </span>
+          )}
+        </div>
       </div>
 
       {notifications.length === 0 ? (
@@ -84,7 +104,7 @@ export default function NotificationsPage() {
                     </div>
                     <button
                       onClick={() => markRead(n.id)}
-                      className="opacity-0 group-hover:opacity-100 flex items-center gap-1 text-xs text-primary hover:text-green-400 transition-all px-3 py-1.5 glass border border-border rounded-lg flex-shrink-0"
+                      className="opacity-100 md:opacity-0 group-hover:opacity-100 flex items-center gap-1 text-xs text-primary hover:text-green-400 transition-all px-3 py-1.5 glass border border-border rounded-lg flex-shrink-0"
                     >
                       <CheckCircle className="w-3.5 h-3.5" /> Mark read
                     </button>

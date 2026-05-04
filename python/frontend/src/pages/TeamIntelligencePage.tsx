@@ -15,7 +15,7 @@ import TaskDetailModal from '../components/TaskDetailModal';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e'];
 
-export default function TeamIntelligencePage() {
+export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [memberTasks, setMemberTasks] = useState<Task[]>([]);
@@ -24,7 +24,7 @@ export default function TeamIntelligencePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [dateRange, setDateRange] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [dateRange, setDateRange] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('monthly');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
 
   useEffect(() => {
@@ -50,6 +50,8 @@ export default function TeamIntelligencePage() {
     } else if (dateRange === 'monthly') {
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
       start = lastMonth.toISOString().split('T')[0];
+    } else if (dateRange === 'all') {
+      start = '';
     }
 
     return { start, end };
@@ -105,7 +107,7 @@ export default function TeamIntelligencePage() {
 
   return (
     <div className="space-y-10 pb-20 font-inter max-w-7xl mx-auto">
-      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />}
+      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
       
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
@@ -113,8 +115,8 @@ export default function TeamIntelligencePage() {
           <p className="text-text-muted mt-2 font-bold tracking-widest uppercase text-[10px] opacity-60 italic">Operator Review // Tactical Performance Deep-Dive</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-           <div className="flex items-center gap-1 p-1 glass rounded-2xl border border-white/5">
-              {(['daily', 'weekly', 'monthly'] as const).map(r => (
+            <div className="flex items-center gap-1 p-1 glass rounded-2xl border border-white/5">
+              {(['daily', 'weekly', 'monthly', 'all'] as const).map(r => (
                 <button 
                   key={r}
                   onClick={() => { setDateRange(r); setCustomRange({ start: '', end: '' }); }}
@@ -125,18 +127,18 @@ export default function TeamIntelligencePage() {
               ))}
            </div>
 
-           <div className="flex items-center gap-2 p-1 glass rounded-2xl border border-white/5">
+           <div className="flex flex-col sm:flex-row items-center gap-2 p-2 sm:p-1 glass rounded-2xl border border-white/5 w-full sm:w-auto">
               <input 
                 type="date" 
                 value={customRange.start}
                 onChange={(e) => setCustomRange(p => ({ ...p, start: e.target.value }))}
-                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none border-r border-white/5" 
+                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none border-b sm:border-b-0 sm:border-r border-white/5 w-full sm:w-auto" 
               />
               <input 
                 type="date" 
                 value={customRange.end}
                 onChange={(e) => setCustomRange(p => ({ ...p, end: e.target.value }))}
-                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none" 
+                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none w-full sm:w-auto" 
               />
               {(customRange.start || customRange.end) && (
                 <button onClick={() => setCustomRange({ start: '', end: '' })} className="p-1.5 hover:bg-white/5 rounded-lg">
@@ -158,29 +160,45 @@ export default function TeamIntelligencePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-4 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
-           {filteredUsers.map(user => (
-             <button 
-               key={user.id} 
-               onClick={() => setSelectedUserId(user.id)}
-               className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all group ${
-                 selectedUserId === user.id ? 'bg-primary border-primary shadow-glow text-white' : 'glass border-white/5 text-text-muted hover:border-primary/40'
-               }`}
-             >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xs font-black ${selectedUserId === user.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
-                   {user.first_name?.[0] || '?' }
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10">
+           {/* Sidebar: Member List */}
+           <div className="md:col-span-4 lg:col-span-3 space-y-4 max-h-[40vh] md:max-h-[75vh] overflow-y-auto custom-scrollbar pr-2 order-2 md:order-1">
+            {['admin', 'project_manager', 'team_head', 'specialist'].map(role => {
+              const roleUsers = filteredUsers.filter(u => u.role === role);
+              if (roleUsers.length === 0) return null;
+              
+              return (
+                <div key={role} className="space-y-2 mb-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20 mb-3 block">
+                    {role.replace('_', ' ')} Tiers ({roleUsers.length})
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
+                    {roleUsers.map(user => (
+                      <button 
+                        key={user.id} 
+                        onClick={() => setSelectedUserId(user.id)}
+                        className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all group ${
+                          selectedUserId === user.id ? 'bg-primary border-primary shadow-glow text-white' : 'glass border-white/5 text-text-muted hover:border-primary/40'
+                        }`}
+                      >
+                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black ${selectedUserId === user.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
+                            {user.first_name?.[0] || '?' }
+                         </div>
+                         <div className="text-left flex-1 min-w-0">
+                            <p className="font-extrabold text-xs truncate capitalize">{user.first_name || 'Generic Operator'} {user.last_name}</p>
+                            <p className={`text-[8px] font-black uppercase tracking-widest ${selectedUserId === user.id ? 'text-white/60' : 'text-text-muted/40'}`}>{user.role || 'Member'}</p>
+                         </div>
+                         <ChevronRight className={`w-4 h-4 transition-transform ${selectedUserId === user.id ? 'translate-x-1' : 'opacity-0'}`} />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="text-left flex-1 min-w-0">
-                   <p className="font-extrabold text-sm truncate capitalize">{user.first_name || 'Generic Operator'} {user.last_name}</p>
-                   <p className={`text-[9px] font-black uppercase tracking-widest ${selectedUserId === user.id ? 'text-white/60' : 'text-text-muted/40'}`}>{user.role || 'Member'}</p>
-                </div>
-                <ChevronRight className={`w-4 h-4 transition-transform ${selectedUserId === user.id ? 'translate-x-1' : 'opacity-0'}`} />
-             </button>
-           ))}
+              );
+            })}
         </div>
 
-        <div className="lg:col-span-8">
+        {/* Main Detail Area */}
+        <div className="md:col-span-8 lg:col-span-9 order-1 md:order-2">
            {!selectedUserId ? (
              <div className="h-full min-h-[50vh] flex flex-col items-center justify-center glass rounded-[3rem] border-dashed border-white/10 p-10 text-center">
                 <Users className="w-16 h-16 text-text-muted/10 mb-6" />
@@ -210,9 +228,17 @@ export default function TeamIntelligencePage() {
                             <span className="text-[10px] font-bold text-text-muted italic">{selectedUser?.email}</span>
                          </div>
                       </div>
-                      <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
-                         <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Efficiency</span>
-                         <span className="text-4xl font-black text-white">92%</span>
+                      <div className="flex flex-col md:flex-row items-center gap-4">
+                         <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Efficiency</span>
+                            <span className="text-4xl font-black text-white">{memberAnalytics?.totals?.efficiency !== undefined ? `${memberAnalytics.totals.efficiency}%` : 'N/A'}</span>
+                         </div>
+                         <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Workload</span>
+                            <span className="text-4xl font-black text-white">
+                               {memberAnalytics?.totals?.all ? Math.round((memberAnalytics.totals.pending / memberAnalytics.totals.all) * 100) : 0}%
+                            </span>
+                         </div>
                       </div>
                    </div>
                 </div>
@@ -222,39 +248,47 @@ export default function TeamIntelligencePage() {
                       <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-text-muted mb-10 flex items-center gap-3 italic">
                          <TrendingUp className="w-4 h-4 text-primary" /> Sector Velocity Trend
                       </h3>
-                      <div className="h-[200px] w-full">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={trendData}>
-                               <defs>
-                                  <linearGradient id="colorUnits" x1="0" y1="0" x2="0" y2="1">
-                                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                  </linearGradient>
-                               </defs>
-                               <XAxis dataKey="date" hide />
-                               <Tooltip 
-                                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }}
-                               />
-                               <Area type="monotone" dataKey="units" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUnits)" />
-                            </AreaChart>
-                         </ResponsiveContainer>
-                      </div>
+                      <div className="h-[200px] w-full flex items-center justify-center">
+                         {trendData.length > 0 && trendData.some(d => d.units > 0) ? (
+                           <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={trendData}>
+                                 <defs>
+                                    <linearGradient id="colorUnits" x1="0" y1="0" x2="0" y2="1">
+                                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                    </linearGradient>
+                                 </defs>
+                                 <XAxis dataKey="date" hide />
+                                 <Tooltip 
+                                    contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }}
+                                 />
+                                 <Area type="monotone" dataKey="units" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUnits)" />
+                              </AreaChart>
+                           </ResponsiveContainer>
+                         ) : (
+                           <div className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-30 italic">No Velocity Recorded</div>
+                         )}
+                       </div>
                    </div>
 
                    <div className="glass p-8 rounded-[2.5rem]">
                       <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-text-muted mb-10 flex items-center gap-3 italic">
                          <Briefcase className="w-4 h-4 text-[#8b5cf6]" /> Project Saturation
                       </h3>
-                      <div className="h-[200px] w-full">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                               <Pie data={projectData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} dataKey="value">
-                                  {projectData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                               </Pie>
-                               <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }} />
-                            </PieChart>
-                         </ResponsiveContainer>
-                      </div>
+                      <div className="h-[200px] w-full flex items-center justify-center">
+                         {projectData.length > 0 ? (
+                           <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                 <Pie data={projectData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} dataKey="value">
+                                    {projectData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                 </Pie>
+                                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }} />
+                              </PieChart>
+                           </ResponsiveContainer>
+                         ) : (
+                           <div className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-30 italic">Sector Saturation Zero</div>
+                         )}
+                       </div>
                    </div>
                 </div>
 
@@ -266,7 +300,7 @@ export default function TeamIntelligencePage() {
                       <span className="text-[10px] font-black text-text-muted bg-white/5 px-4 py-1.5 rounded-full">{memberTasks.length} Operations Total</span>
                    </div>
                    <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
-                      {memberTasks.map(task => (
+                      {memberTasks.length > 0 ? memberTasks.map(task => (
                         <div 
                           key={task.id} 
                           onClick={() => setSelectedTaskId(task.id)}
@@ -287,7 +321,11 @@ export default function TeamIntelligencePage() {
                               <ExternalLink className="w-4 h-4 text-text-muted/20 group-hover:text-primary transition-all" />
                            </div>
                         </div>
-                      ))}
+                      )) : (
+                        <div className="p-10 text-center">
+                           <p className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-40 italic">Awaiting Mission Parameters...</p>
+                        </div>
+                      )}
                    </div>
                 </div>
              </motion.div>

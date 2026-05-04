@@ -28,9 +28,8 @@ interface ProjectAnalytics {
   c: number;
 }
 
-export default function MyTasksPage() {
+export default function MyTasksPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [me, setMe] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'urgent' | 'due_today' | 'overdue'>('all');
   const [activeTab, setActiveTab] = useState<'tasks' | 'performance'>('tasks');
@@ -41,20 +40,27 @@ export default function MyTasksPage() {
     const personalFilter = localStorage.getItem('access_token') ? { personal: 'true' } : {};
     Promise.all([
       api.getTasks(), 
-      api.getMe(), 
       api.getAnalytics(personalFilter)
     ])
-      .then(([t, m, a]) => {
-        setMe(m.data);
+      .then(([t, a]) => {
         setAnalytics(a.data);
-        const myTasks = t.data.filter((task: Task) => (task.assignee === m.data.id || task.assignee?.id === m.data.id));
+        const myTasks = t.data.filter((task: Task) => (task.assignee?.id === me?.id));
         setTasks(myTasks);
       })
       .catch(err => console.error("Error fetching my tasks:", err))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [me?.id]);
 
-  useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
+  useEffect(() => { 
+    Promise.resolve().then(() => load()); 
+    const interval = setInterval(() => load(), 4000); // Accelerated Polling: 4s
+    const handleUpd = () => load();
+    window.addEventListener('cp-task-updated', handleUpd);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('cp-task-updated', handleUpd);
+    };
+  }, [load]);
 
   const projectChartData = useMemo(() => {
     return (analytics?.by_project as ProjectAnalytics[] | undefined)?.map((p: ProjectAnalytics) => ({
@@ -95,6 +101,7 @@ export default function MyTasksPage() {
         <TaskDetailModal 
           taskId={selectedTaskId} 
           onClose={() => { setSelectedTaskId(null); load(); }} 
+          me={me}
         />
       )}
 
@@ -259,17 +266,34 @@ export default function MyTasksPage() {
                    transition={{ delay: idx * 0.05 }}
                    onClick={() => setSelectedTaskId(t.id)}
                     className={`group p-6 glass rounded-[2rem] border-white/5 flex items-center gap-6 cursor-pointer transition-all hover:bg-white/5 ${
-                      t.priority === 'urgent' ? 'border-error/20 hover:border-error/40' : 'hover:border-primary/40'
-                    }`}
+                       t.is_client_approved ? 'border-emerald-500/40 hover:border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : (['client-review', 'completed-launched'].includes(t.state_slug || '') ? 'border-blue-500/40 hover:border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : (t.priority === 'urgent' ? 'border-error/20 hover:border-error/40' : 'hover:border-primary/40'))
+                     }`}
                  >
-                    <div className={`p-4 rounded-2xl ${t.priority === 'urgent' ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'} group-hover:shadow-glow transition-all`}>
+                    <div className={`p-4 rounded-2xl ${t.is_client_approved ? 'bg-emerald-500/10 text-emerald-500' : (['client-review', 'completed-launched'].includes(t.state_slug || '') ? 'bg-blue-500/10 text-blue-500' : (t.priority === 'urgent' ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'))} group-hover:shadow-glow transition-all`}>
                        {PRIORITY_ICONS[t.priority] || <CircleDashed className="w-5 h-5" />}
                     </div>
                     <div className="flex-1 min-w-0">
                        <div className="flex items-center gap-3 mb-2">
-                          <span className="text-[9px] font-black uppercase text-primary tracking-[0.2em]">{t.project__slug || 'GENERAL'}</span>
+                          <span className="text-[9px] font-black uppercase text-primary tracking-[0.2em]">{t.task_code} • {t.project__slug || 'GENERAL'} {t.module_slug && `• ${t.module_slug}`}</span>
                           <span className="w-1 h-1 rounded-full bg-white/10"></span>
-                          <span className="text-[9px] font-black text-text-muted/40 uppercase tracking-[0.1em]">{t.state__name}</span>
+                          <span className={`px-2 py-0.5 rounded-md font-black tracking-widest text-[8px] uppercase ${
+                             t.state_slug === 'pending' ? 'bg-slate-500/10 text-slate-400 border border-slate-500/20' :
+                             t.state_slug === 'in-progress' ? 'bg-primary/10 text-primary border border-primary/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' :
+                             t.state_slug === 'team-head-review' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+                             t.state_slug === 'client-review' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.15)]' :
+                             (t.state_slug === 're-edit' || t.state_slug === 'rework-revision') ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
+                             t.state_slug === 'completed-launched' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                             'bg-surface/50 text-text-muted/60 border border-border/30'
+                           }`}>{t.state__name || t.state_slug?.replace(/-/g, ' ')}</span>
+                          {t.is_client_approved ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.1)]">🟢 Client Approved</span>
+                          ) : ['client-review', 'completed-launched'].includes(t.state_slug || '') ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-[0_0_8px_rgba(59,130,246,0.1)]">🔵 In-House Approved</span>
+                          ) : t.state_slug === 'team-head-review' ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse">🟡 Pending Review</span>
+                          ) : t.state_slug === 'rework-revision' ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded border border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.15)] animate-pulse">🔴 Rework / Re-Edit</span>
+                          ) : null}
                        </div>
                        <h4 className="font-extrabold text-sm text-text-muted group-hover:text-white transition-colors uppercase tracking-tight truncate">{t.title}</h4>
                     </div>
@@ -278,10 +302,11 @@ export default function MyTasksPage() {
                           <p className={`text-[9px] uppercase font-black tracking-widest ${t.priority === 'urgent' ? 'text-error' : 'text-text-muted/40'}`}>
                             {t.priority}
                           </p>
-                          <div className="flex items-center justify-end gap-2 mt-1.5 text-[10px] text-text-muted font-bold">
-                             <Clock className="w-3.5 h-3.5" />
-                             {t.due_date || 'N/A'}
-                          </div>
+                           <div className="flex flex-col items-end gap-1 mt-1.5 text-[9px] text-text-muted font-bold">
+                              {me?.role !== 'specialist' && t.posting_date && <div className="flex items-center gap-1.5">📅 {t.posting_date}</div>}
+                              <div className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> {t.due_date || 'N/A'}</div>
+                              {t.deadline && <div className="flex items-center gap-1.5 text-red-500 font-black"><AlertTriangle className="w-3 h-3" /> DEADLINE: {t.deadline}</div>}
+                           </div>
                        </div>
                        <div className="w-10 h-10 rounded-xl border border-white/5 flex items-center justify-center text-text-muted/20 group-hover:border-primary/40 group-hover:text-primary transition-all group-hover:translate-x-1">
                           <ChevronRight className="w-5 h-5" />

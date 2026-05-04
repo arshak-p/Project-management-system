@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
-import type { Activity } from '../api';
 import { motion } from 'framer-motion';
-import { Activity as ActivityIcon, Clock, User, Briefcase, FileText, Database, Search } from 'lucide-react';
+import { Activity as ActivityIcon, Clock, Briefcase, FileText, Database, Search, User as UserIcon } from 'lucide-react';
+import type { User, Activity } from '../api';
 
-export default function ActivityPage() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function ActivityPage({ me: _me }: { me: User | null }) {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState('');
@@ -92,7 +93,7 @@ export default function ActivityPage() {
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center text-[10px] font-black uppercase text-primary">
-                                                {a.user?.first_name?.[0] || <User className="w-4 h-4" />}
+                                                {a.user?.first_name?.[0] || <UserIcon className="w-4 h-4" />}
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="text-sm font-black truncate">{a.user?.first_name || 'System'}</p>

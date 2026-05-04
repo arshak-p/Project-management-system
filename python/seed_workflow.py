@@ -1,57 +1,43 @@
-"""
-Seed the essential workflow States and Modules for Colour Parrot.
-Run: python manage.py seed_workflow
-"""
 import os
 import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'colour_parrot.settings')
 django.setup()
 
-from tms.models import State, Module
+from tms.models import State
 
-
-STATES = [
-    {"name": "Pending",                "slug": "pending",              "sort_order": 1},
-    {"name": "In Progress",            "slug": "in-progress",          "sort_order": 2},
-    {"name": "Team Head Review",       "slug": "team-head-review",     "sort_order": 3},
-    {"name": "Client Review",          "slug": "client-review",        "sort_order": 4},
-    {"name": "Re-edit / Re-work",      "slug": "re-edit",              "sort_order": 5},
-    {"name": "Completed / Launched",   "slug": "completed-launched",   "sort_order": 6},
+DEFAULTS = [
+    ('backlog', 'Backlog', '#64748b', 0),
+    ('to-do', 'To Do', '#6366f1', 10),
+    ('in-progress', 'In Progress', '#3b82f6', 20),
+    ('team-head-review', 'Team Head Review', '#f59e0b', 40),
+    ('client-review', 'Client Review', '#8b5cf6', 50),
+    ('rework-revision', 'Rework / Revision', '#ef4444', 60),
+    ('completed-launched', 'Completed / Launched', '#10b981', 100),
 ]
 
-MODULES = [
-    {"name": "Design",        "slug": "design",        "sort_order": 1},
-    {"name": "Development",   "slug": "development",   "sort_order": 2},
-    {"name": "Marketing",     "slug": "marketing",     "sort_order": 3},
-    {"name": "Content",       "slug": "content",       "sort_order": 4},
-    {"name": "General",       "slug": "general",       "sort_order": 5},
-]
-
-
-def seed():
-    print("\n--- Seeding Colour Parrot Workflow ---\n")
-
-    print("-- States --")
-    for s in STATES:
-        obj, created = State.objects.get_or_create(
-            slug=s["slug"],
-            defaults={"name": s["name"], "sort_order": s["sort_order"]},
+def run():
+    print("Starting Workflow Sync...")
+    for slug, name, color, order in DEFAULTS:
+        state, created = State.objects.update_or_create(
+            slug=slug,
+            defaults={
+                'name': name,
+                'color': color,
+                'sort_order': order,
+                'is_active': True
+            }
         )
-        status = "Created" if created else "Exists"
-        print(f"  {status}: {obj.name} (slug: {obj.slug})")
-
-    print("\n-- Modules --")
-    for m in MODULES:
-        obj, created = Module.objects.get_or_create(
-            slug=m["slug"],
-            defaults={"name": m["name"], "sort_order": m["sort_order"]},
-        )
-        status = "Created" if created else "Exists"
-        print(f"  {status}: {obj.name} (slug: {obj.slug})")
-
-    print("\nWorkflow seeding complete!\n")
-
+        status = "Created" if created else "Synced"
+        print(f"  - [{status}] {name} ({color})")
+    
+    # Deactivate any other states to keep the UI clean
+    valid_slugs = [d[0] for d in DEFAULTS]
+    deactivated = State.objects.exclude(slug__in=valid_slugs).update(is_active=False)
+    if deactivated:
+        print(f"Cleaned up {deactivated} old states.")
+    
+    print("Workflow Sync Complete! Your dashboard is now 100% ready.")
 
 if __name__ == "__main__":
-    seed()
+    run()

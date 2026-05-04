@@ -1,41 +1,49 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
-import type { AnalyticsSummary, Project, Activity, Notification } from '../api';
 import { motion } from 'framer-motion';
-import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight, Bell } from 'lucide-react';
+import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight, Cake, PartyPopper } from 'lucide-react';
+import type { AnalyticsSummary, Project, Activity, User } from '../api';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, Cell
 } from 'recharts';
 import TaskDetailModal from '../components/TaskDetailModal';
 
-export default function OverviewPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
+export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: string) => void, me: User | null }) {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'month' | 'all'>('all');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const load = useCallback(() => {
-    setIsLoading(true);
+    const params: any = {};
+    if (viewMode === 'month') {
+      const now = new Date();
+      params.start_date = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    }
+
     Promise.all([
-      api.getAnalytics(), 
+      api.getAnalytics(params), 
       api.getProjects(), 
-      api.getActivity(),
-      api.getNotifications()
+      api.getActivity()
     ])
-      .then(([a, p, act, n]) => {
+      .then(([a, p, act]) => {
         setAnalytics(a.data);
         setProjects(p.data);
-        setRecentActivity(act.data.slice(0, 10));
-        setNotifications(n.data.filter((notif: Notification) => !notif.read).slice(0, 3));
+        const activityCount = viewMode === 'all' ? 20 : 10;
+        setRecentActivity(act.data.slice(0, activityCount));
       })
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [viewMode]);
 
-  useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
+  useEffect(() => { 
+    load(); 
+    const interval = setInterval(() => load(), 3000); // Accelerated Polling: 3s
+    return () => clearInterval(interval);
+  }, [load]);
 
   if (isLoading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -59,66 +67,97 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
 
   return (
     <div className="space-y-10 pb-24 font-inter">
-      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />}
+      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-5xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary via-[#8b5cf6] to-[#d946ef]">
+        <div className="px-1 md:px-0">
+          <h1 className="text-2xl lg:text-5xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary via-[#8b5cf6] to-[#d946ef]">
             Command Center
           </h1>
-          <p className="text-text-muted mt-2 font-bold tracking-widest uppercase text-[10px] opacity-60 italic">Real-time Analytics // Active Operations</p>
+          <p className="text-[8px] lg:text-[10px] text-text-muted mt-2 font-bold tracking-widest uppercase opacity-60 italic">Real-time Analytics // Active Operations</p>
         </div>
-        <div className="flex items-center gap-3">
-           <div className="px-5 py-3 glass rounded-2xl border border-white/5 flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white">System Health: Optimal</span>
+        <div className="flex items-center gap-4">
+           {/* Time Filter Toggle */}
+           <div className="glass p-1 rounded-2xl border border-white/5 flex items-center shadow-inner scale-90 md:scale-100">
+             <button
+               onClick={() => setViewMode('month')}
+               className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all ${
+                 viewMode === 'month' 
+                   ? 'bg-primary text-white shadow-glow' 
+                   : 'text-text-muted hover:text-white hover:bg-white/5'
+               }`}
+             >
+               Month
+             </button>
+             <button
+               onClick={() => setViewMode('all')}
+               className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all ${
+                 viewMode === 'all' 
+                   ? 'bg-primary text-white shadow-glow' 
+                   : 'text-text-muted hover:text-white hover:bg-white/5'
+               }`}
+             >
+               All
+             </button>
+           </div>
+
+           <div className="px-4 lg:px-5 py-2.5 lg:py-3 glass rounded-xl lg:rounded-2xl border border-white/5 flex items-center gap-3">
+              <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">System Optimal</span>
            </div>
         </div>
       </div>
-
-      {notifications.length > 0 && (
-         <div className="fixed top-24 right-8 z-[100] flex flex-col gap-3 w-72 pointer-events-none">
-            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500 italic mb-1 px-4 drop-shadow-sm">Priority Alpha Alerts</h3>
-            {notifications.map(n => (
-              <motion.div 
-                key={n.id} 
-                initial={{ opacity: 0, x: 50, scale: 0.9 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                whileHover={{ scale: 1.02 }}
-                className="p-4 glass border border-amber-500/20 rounded-[1.5rem] flex items-center justify-between group hover:bg-amber-500/10 cursor-pointer transition-all shadow-2xl pointer-events-auto backdrop-blur-3xl"
-                onClick={() => onNavigate?.('notifications')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center animate-pulse">
-                    <Bell className="w-3.5 h-3.5 text-amber-500" />
-                  </div>
-                  <div className="flex-1 min-w-0 pr-2">
-                    <p className="text-[11px] font-black text-text group-hover:text-amber-500 transition-colors truncate block">
-                      {n.title}
-                    </p>
-                    <p className="text-[9px] font-bold text-text-muted opacity-60 truncate block mt-0.5">
-                      {n.body}
-                    </p>
-                  </div>
-                </div>
-                <div className="w-1 h-1 rounded-full bg-amber-500"></div>
-              </motion.div>
-            ))}
-         </div>
-      )}
+      
+      {(() => {
+        const today = new Date();
+        const monthDay = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const isBday = me?.date_of_birth && me.date_of_birth.substring(5, 10) === monthDay;
+        
+        if (!isBday) return null;
+        
+        return (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="relative overflow-hidden group mb-10"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#d946ef] opacity-20 blur-3xl group-hover:opacity-30 transition-opacity"></div>
+            <div className="relative glass border-[#ec4899]/30 rounded-[2.5rem] p-8 lg:p-12 flex flex-col lg:flex-row items-center gap-8 shadow-2xl">
+              <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-[2rem] bg-gradient-to-br from-[#ec4899] to-[#d946ef] flex items-center justify-center shadow-glow-lg animate-bounce-slow relative">
+                 <Cake className="w-12 h-12 lg:w-16 lg:h-16 text-white" />
+                 <div className="absolute -top-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
+                    <PartyPopper className="w-4 h-4 text-[#ec4899]" />
+                 </div>
+              </div>
+              <div className="text-center lg:text-left flex-1">
+                 <h2 className="text-3xl lg:text-5xl font-black tracking-tighter text-white mb-2">Happy Birthday, {me?.first_name || 'Legend'}! 🎂</h2>
+                 <p className="text-sm lg:text-base text-text-muted font-bold max-w-2xl opacity-80">
+                   Today the Command Center celebrates you. Thank you for your incredible contribution to the Colour Parrot team. Have an amazing day filled with joy and success!
+                 </p>
+              </div>
+              <div className="flex gap-4">
+                 <div className="px-6 py-4 glass border-white/10 rounded-2xl flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ec4899]">Agency Status</span>
+                    <span className="text-lg font-black text-white">Guest of Honor</span>
+                 </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div 
           whileHover={{ y: -5 }}
           onClick={() => onNavigate?.('kanban')}
-          className="md:col-span-2 glass rounded-[3rem] p-10 relative overflow-hidden group border border-primary/10 flex flex-col md:flex-row gap-10 cursor-pointer"
+          className="md:col-span-2 glass rounded-[2rem] lg:rounded-[3rem] p-6 lg:p-10 relative overflow-hidden group border border-primary/10 flex flex-col md:flex-row gap-6 lg:gap-10 cursor-pointer"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 blur-[100px] -mr-32 -mt-32 opacity-20"></div>
           
           <div className="flex-1 relative z-10">
-            <div className="flex justify-between items-start mb-10">
-              <div className="p-5 bg-primary/20 rounded-[2rem] shadow-glow">
-                <TrendingUp className="w-8 h-8 text-primary" />
+            <div className="flex justify-between items-start mb-6 lg:mb-10">
+              <div className="p-4 lg:p-5 bg-primary/20 rounded-2xl lg:rounded-[2rem] shadow-glow">
+                <TrendingUp className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
               </div>
               <div className="p-3 glass rounded-full opacity-40 group-hover:opacity-100 transition-all">
                 <ArrowUpRight className="w-5 h-5 text-text" />
@@ -129,13 +168,13 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
               <motion.span 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-8xl font-black tracking-tighter text-text block"
+                className="text-5xl lg:text-8xl font-black tracking-tighter text-text block"
               >
                 {analytics?.totals?.completed_or_launched || 0}
               </motion.span>
-              <h3 className="text-2xl font-black text-text-muted">Tactical Units Launched</h3>
-              <p className="text-xs text-text-muted/60 mt-4 leading-relaxed max-w-xs">
-                Successfully deployed operations across all designated project sectors.
+              <h3 className="text-lg lg:text-2xl font-black text-text-muted uppercase tracking-tighter">Units Launched</h3>
+              <p className="text-[10px] lg:text-xs text-text-muted/60 mt-4 leading-relaxed max-w-xs">
+                Successfully deployed operations across project sectors.
               </p>
             </div>
           </div>
@@ -192,13 +231,13 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <div className="lg:col-span-3 glass rounded-[3rem] p-10">
-          <div className="flex items-center justify-between mb-10">
-            <h3 className="font-black text-xs uppercase tracking-[0.3em] text-text-muted italic">Operational Flux Trend</h3>
-            <span className="text-[10px] font-black text-primary px-3 py-1 bg-primary/10 rounded-full">Last 30 Cycles</span>
+       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 md:gap-8">
+        <div className="lg:col-span-3 glass rounded-[2rem] md:rounded-[3rem] p-6 md:p-10">
+          <div className="flex items-center justify-between mb-8 md:mb-10">
+            <h3 className="font-black text-[10px] md:text-xs uppercase tracking-[0.2em] md:tracking-[0.3em] text-text-muted italic">Operational Flux</h3>
+            <span className="text-[8px] md:text-[10px] font-black text-primary px-3 py-1 bg-primary/10 rounded-full">Trend</span>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[200px] md:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData}>
                 <defs>
@@ -238,9 +277,9 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
           </div>
         </div>
 
-        <div className="lg:col-span-2 glass rounded-[3rem] p-10">
-          <h3 className="font-black text-xs uppercase tracking-[0.3em] text-text-muted mb-10 italic">Stage Distribution</h3>
-          <div className="h-[300px] w-full">
+         <div className="lg:col-span-2 glass rounded-[2rem] md:rounded-[3rem] p-6 md:p-10">
+          <h3 className="font-black text-[10px] md:text-xs uppercase tracking-[0.2em] md:tracking-[0.3em] text-text-muted mb-8 md:mb-10 italic">Stage Distribution</h3>
+          <div className="h-[250px] md:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
@@ -276,12 +315,12 @@ export default function OverviewPage({ onNavigate }: { onNavigate?: (page: strin
           </div>
         </div>
 
-        <div className="lg:col-span-5 glass rounded-[3rem] p-10">
-          <div className="flex items-center justify-between mb-10 px-2">
-             <h3 className="font-black text-xs uppercase tracking-[0.3em] text-text-muted italic flex items-center gap-3">
-                <ActivityIcon className="w-4 h-4 text-primary" /> Sector Activity Stream
+         <div className="lg:col-span-5 glass rounded-[2rem] md:rounded-[3rem] p-6 md:p-10">
+          <div className="flex items-center justify-between mb-8 md:mb-10 px-1 md:px-2">
+             <h3 className="font-black text-[10px] md:text-xs uppercase tracking-[0.2em] md:tracking-[0.3em] text-text-muted italic flex items-center gap-2 md:gap-3">
+                <ActivityIcon className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" /> Sector Activity Stream
              </h3>
-             <button onClick={() => onNavigate?.('activity')} className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline decoration-primary/40 underline-offset-8">Analyze Full Log</button>
+             <button onClick={() => onNavigate?.('activity')} className="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-widest hover:underline decoration-primary/40 underline-offset-8">Analyze Full Log</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
              {recentActivity.map((a) => (

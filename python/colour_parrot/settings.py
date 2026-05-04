@@ -171,6 +171,7 @@ SIMPLE_JWT = {
 
 # --- CORS & CSRF (always applied) ---
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # TEMPORARY FOR TROUBLESHOOTING
 
 CORS_ALLOWED_ORIGINS = [
     o.strip()
@@ -236,6 +237,19 @@ EXTERNAL_BACKUP_WEBHOOK = os.environ.get("EXTERNAL_BACKUP_WEBHOOK", "")
 
 from celery.schedules import crontab
 
+# --- Email Hub (SMTP) ---
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() in ("1", "true", "yes")
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() in ("1", "true", "yes")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "workflowsecuritycolourparrot@gmail.com")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+
+# Forced SMTP for Production Reliability
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+DEFAULT_FROM_EMAIL = f"Colour Parrot <{EMAIL_HOST_USER}>"
+
 CELERY_BEAT_SCHEDULE = {
     "run-monthly-backup-at-1st": {
         "task": "tms.tasks.run_monthly_backup_task",
@@ -245,9 +259,13 @@ CELERY_BEAT_SCHEDULE = {
         "task": "tms.tasks.check_deadlines",
         "schedule": crontab(hour=9, minute=0),
     },
-    "daily-start-date-check": {
-        "task": "tms.tasks.check_scheduled_tasks",
-        "schedule": crontab(hour=9, minute=15),
+    "daily-do-date-check": {
+        "task": "tms.tasks.check_do_dates",
+        "schedule": crontab(hour=9, minute=0),
+    },
+    "daily-birthday-check": {
+        "task": "tms.tasks.check_birthdays",
+        "schedule": crontab(hour=9, minute=0),
     },
 }
 

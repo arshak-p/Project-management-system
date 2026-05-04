@@ -32,3 +32,11 @@ def notify_roles(roles: list, title: str, body: str = "", link: str = "", exclud
         users = users.exclude(id=exclude_user.id)
     for u in users:
         notify_user(u.id, title=title, body=body, link=link)
+def notify_all(title: str, body: str = "", link: str = "", exclude_user_id=None):
+    """Notify every active user in the system."""
+    from accounts.models import User
+    users = User.objects.filter(is_active=True)
+    if exclude_user_id:
+        users = users.exclude(id=exclude_user_id)
+    for u in users:
+        notify_user(u.id, title=title, body=body, link=link)

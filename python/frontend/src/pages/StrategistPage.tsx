@@ -1,24 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
-import type { Project, TaskState, WorkModule } from '../api';
+import type { Project, TaskState, WorkModule, User } from '../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Target, Zap, Plus, 
   LayoutGrid, 
   ShieldCheck, 
   ChevronRight, BrainCircuit,
-  Trash2, Clock
+  Trash2
 } from 'lucide-react';
 
 interface DraftTask {
   title: string;
   project_id: string;
   due_date: string;
-  scheduled_date: string;
+  deadline: string;
   priority: string;
 }
 
-export default function StrategistPage() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function StrategistPage({ me: _me }: { me: User | null }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
   const [modules, setModules] = useState<WorkModule[]>([]);
@@ -53,7 +54,7 @@ export default function StrategistPage() {
       title: '', 
       project_id: projects[0]?.id.toString() || '', 
       due_date: new Date().toISOString().split('T')[0], 
-      scheduled_date: new Date().toISOString().split('T')[0],
+      deadline: new Date().toISOString().split('T')[0],
       priority: 'medium' 
     }]);
   };
@@ -87,7 +88,7 @@ export default function StrategistPage() {
           module: targetModule,
           priority: draft.priority,
           due_date: draft.due_date,
-          scheduled_date: draft.scheduled_date,
+          deadline: draft.deadline,
           description: 'Strategically generated via Mission Control.'
         });
       }
@@ -107,12 +108,13 @@ export default function StrategistPage() {
 
   const exportToCSV = () => {
     if (drafts.length === 0) return;
-    const headers = ['Operation Title', 'Project', 'Department Target', 'Deadline', 'Priority'];
+    const headers = ['Operation Title', 'Project', 'Department Target', 'Due Date', 'Deadline', 'Priority'];
     const rows = drafts.map(d => [
       d.title || 'Untitled',
       projects.find(p => p.id.toString() === d.project_id)?.name || 'N/A',
       modules.find(m => m.id.toString() === filterModule)?.name || 'Global',
       d.due_date,
+      d.deadline,
       d.priority.toUpperCase()
     ]);
 
@@ -202,16 +204,16 @@ export default function StrategistPage() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="glass p-5 rounded-[2rem] border border-white/5 flex flex-col md:flex-row gap-4 items-center group relative overflow-hidden"
+                      className="glass p-5 rounded-[2rem] border border-white/5 flex flex-col md:flex-row gap-6 items-center group relative overflow-hidden"
                     >
-                      <div className="flex-1 w-full space-y-1">
+                      <div className="flex-1 w-full space-y-2">
                          <input 
                            value={draft.title} 
                            onChange={(e) => updateDraft(idx, 'title', e.target.value)}
                            placeholder="Operation Title..."
-                           className="w-full bg-transparent border-none outline-none font-black text-lg placeholder:opacity-20"
+                           className="w-full bg-transparent border-none outline-none font-black text-xl placeholder:opacity-20"
                          />
-                         <div className="flex items-center gap-4">
+                         <div className="flex items-center gap-4 flex-wrap">
                             <select 
                               value={draft.project_id} 
                               onChange={(e) => updateDraft(idx, 'project_id', e.target.value)}
@@ -220,23 +222,26 @@ export default function StrategistPage() {
                               {projects.map(p => <option key={p.id} value={p.id} className="bg-background">{p.name}</option>)}
                             </select>
                             <span className="text-text-muted/20 text-xs">|</span>
-                            <input 
-                              type="date" 
-                              title="Due Date"
-                              value={draft.due_date}
-                              onChange={(e) => updateDraft(idx, 'due_date', e.target.value)}
-                              className="bg-transparent border-none outline-none text-[10px] font-black text-text-muted uppercase tracking-widest cursor-pointer"
-                              style={{ colorScheme: 'dark' }}
-                            />
-                            <span className="text-text-muted/20 text-xs">|</span>
-                            <div className="flex items-center gap-1">
-                               <Clock className="w-3.5 h-3.5 text-primary/50" />
+                            <div className="flex items-center gap-2">
+                               <span className="text-[8px] opacity-40 font-bold uppercase tracking-widest">DUE</span>
                                <input 
                                  type="date" 
-                                 title="Scheduled Work Date"
-                                 value={draft.scheduled_date}
-                                 onChange={(e) => updateDraft(idx, 'scheduled_date', e.target.value)}
-                                 className="bg-transparent border-none outline-none text-[10px] font-black text-primary uppercase tracking-widest cursor-pointer"
+                                 title="Due Date"
+                                 value={draft.due_date}
+                                 onChange={(e) => updateDraft(idx, 'due_date', e.target.value)}
+                                 className="bg-transparent border-none outline-none text-[10px] font-black text-amber-500 uppercase tracking-widest cursor-pointer"
+                                 style={{ colorScheme: 'dark' }}
+                               />
+                            </div>
+                            <span className="text-text-muted/20 text-xs">|</span>
+                            <div className="flex items-center gap-2">
+                               <span className="text-[8px] opacity-40 font-bold uppercase tracking-widest text-red-500">DEADLINE</span>
+                               <input 
+                                 type="date" 
+                                 title="Final Deadline"
+                                 value={draft.deadline}
+                                 onChange={(e) => updateDraft(idx, 'deadline', e.target.value)}
+                                 className="bg-transparent border-none outline-none text-[10px] font-black text-red-500 uppercase tracking-widest cursor-pointer"
                                  style={{ colorScheme: 'dark' }}
                                />
                             </div>
@@ -254,6 +259,7 @@ export default function StrategistPage() {
                           <option value="urgent" className="bg-background">URGENT</option>
                           <option value="high" className="bg-background">HIGH</option>
                           <option value="medium" className="bg-background">MEDIUM</option>
+                          <option value="low" className="bg-background">LOW</option>
                         </select>
                         <button 
                           onClick={() => removeDraft(idx)}
@@ -264,8 +270,7 @@ export default function StrategistPage() {
                       </div>
                       <div className="absolute left-0 top-0 w-1 h-full bg-primary/40 group-hover:bg-primary transition-colors"></div>
                     </motion.div>
-                  ))
-                }
+                  ))}
                 </AnimatePresence>
               )}
             </div>

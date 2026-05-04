@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
+from tms.notify import notify_user
 
 from tms import access
 from tms.models import (
@@ -30,7 +31,7 @@ from tms.models import (
     WorkItemComment,
     Backup,
 )
-from tms.permissions import BlockSalesWrites, IsAdminRole, IsPMOrAdmin
+from tms.permissions import BlockSalesWrites, IsAdminRole, IsPMOrAdmin, IsLeadPMOrAdmin, IsHRManagement
 from tms.serializers import (
     ActivityLogSerializer,
     BackupSerializer,
@@ -60,13 +61,53 @@ class SalesSafeViewSet(viewsets.ModelViewSet):
 
 
 class DepartmentViewSet(SalesSafeViewSet):
-    queryset = Department.objects.filter(is_active=True)
     serializer_class = DepartmentSerializer
+
+    def get_queryset(self):
+        qs = Department.objects.all()
+        # Include archived if targeting a specific ID for recovery or requested
+        if self.kwargs.get('pk') or self.request.query_params.get("archived") == "true":
+            return qs
+        return qs.filter(is_active=True)
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        instance = self.get_object()
+        instance.is_active = True
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "department restored"})
 
 
 class JobTitleViewSet(SalesSafeViewSet):
-    queryset = JobTitle.objects.filter(is_active=True)
     serializer_class = JobTitleSerializer
+
+    def get_queryset(self):
+        qs = JobTitle.objects.all()
+        if self.kwargs.get('pk') or self.request.query_params.get("archived") == "true":
+            return qs
+        return qs.filter(is_active=True)
+
+    def list(self, request, *args, **kwargs):
+        if not JobTitle.objects.exists():
+            DEFAULTS = [
+                'Agency Manager',
+                'Creative Director',
+                'Project Manager',
+                'Team Lead',
+                'Senior Strategist',
+                'Content Creator',
+                'Graphic Designer',
+                'Video Editor',
+                'Social Media Manager',
+                'HR Manager',
+            ]
+            for title in DEFAULTS:
+                JobTitle.objects.get_or_create(name=title, defaults={'is_active': True})
+        return super().list(request, *args, **kwargs)
 
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
@@ -81,24 +122,33 @@ class JobTitleViewSet(SalesSafeViewSet):
 
     def perform_destroy(self, instance):
         instance.is_active = False
-        instance.save()
+        instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        instance = self.get_object()
+        instance.is_active = True
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "job title restored"})
 
 
 class UserViewSet(SalesSafeViewSet):
     serializer_class = UserSerializer
 
     def get_queryset(self):
-        include_archived = self.request.query_params.get("archived") == "true"
+        include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
         qs = User.objects.filter(is_superuser=False).select_related("tms_profile").prefetch_related()
         if not include_archived:
             qs = qs.filter(is_active=True)
         return qs
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve", "update", "partial_update"):
-            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
+        if self.action in ("list", "retrieve"):
+            return [permissions.IsAuthenticated(), IsHRManagement()]
+        if self.action in ("update", "partial_update", "create", "destroy"):
+            return [permissions.IsAuthenticated(), IsHRManagement()]
         if self.action in ("create", "destroy"):
-            return [permissions.IsAuthenticated(), IsAdminRole()]
+            return [permissions.IsAuthenticated(), IsHRManagement()]
         if self.action == "assignable":
             return [permissions.IsAuthenticated(), BlockSalesWrites()]
         if self.action == "me":
@@ -110,10 +160,24 @@ class UserViewSet(SalesSafeViewSet):
 
     def perform_destroy(self, instance):
         instance.is_active = False
+        instance._activity_user = self.request.user
         instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        instance = self.get_object()
+        instance.is_active = True
+        instance._activity_user = request.user
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "user restored"})
 
     @action(detail=False, methods=["get"])
     def me(self, request):
+        try:
+            from tms.tasks import check_birthdays
+            check_birthdays()
+        except Exception:
+            pass
         ser = UserSerializer(request.user, context={"request": request})
         return Response(ser.data)
 
@@ -135,9 +199,11 @@ class ProjectViewSet(SalesSafeViewSet):
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
-        include_archived = self.request.query_params.get("archived") == "true"
+        from django.db.models.functions import Coalesce
+        from django.db.models import Value
+        include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
         qs = access.projects_for_user(self.request.user, include_archived=include_archived)
-        return qs.annotate(total_minutes=Sum("work_items__time_logs__minutes"))
+        return qs.annotate(total_minutes=Coalesce(Sum("work_items__time_logs__minutes"), Value(0)))
 
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
@@ -158,10 +224,26 @@ class ProjectViewSet(SalesSafeViewSet):
         instance.is_active = False
         instance.save(update_fields=["is_active"])
 
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        u = self.request.user
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
+            raise PermissionDenied("Only admins and project managers can restore projects.")
+        instance = self.get_object()
+        instance.is_active = True
+        instance._activity_user = u
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "project restored"})
+
 
 class ModuleViewSet(SalesSafeViewSet):
-    queryset = Module.objects.filter(is_active=True)
     serializer_class = ModuleSerializer
+
+    def get_queryset(self):
+        qs = Module.objects.all()
+        if self.kwargs.get('pk') or self.request.query_params.get("archived") == "true":
+            return qs
+        return qs.filter(is_active=True)
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -171,11 +253,45 @@ class ModuleViewSet(SalesSafeViewSet):
     def perform_destroy(self, instance):
         instance.is_active = False
         instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        instance = self.get_object()
+        instance.is_active = True
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "module restored"})
 
 
 class StateViewSet(SalesSafeViewSet):
-    queryset = State.objects.filter(is_active=True)
     serializer_class = StateSerializer
+
+    def get_queryset(self):
+        qs = State.objects.all()
+        if self.kwargs.get('pk') or self.request.query_params.get("archived") == "true":
+            return qs
+        return qs.filter(is_active=True)
+
+    def list(self, request, *args, **kwargs):
+        # SELF-SEEDING BRAIN: If empty, create the Elite Workflow states automatically
+        if not State.objects.exists():
+            DEFAULTS = [
+                ('backlog', 'Pending', '#64748b', 0),
+                ('to-do', 'To Do', '#6366f1', 10),
+                ('in-progress', 'In Progress', '#3b82f6', 20),
+                ('team-head-review', 'Team Head Review', '#f59e0b', 40),
+                ('client-review', 'Client Review', '#8b5cf6', 50),
+                ('rework-revision', 'Rework / Revision', '#ef4444', 60),
+                ('completed-launched', 'Completed / Launched', '#10b981', 100),
+            ]
+            for slug, name, color, order in DEFAULTS:
+                State.objects.get_or_create(
+                    slug=slug,
+                    defaults={'name': name, 'color': color, 'sort_order': order, 'is_active': True}
+                )
+        
+        # Ensure all states are active if they exist but are hidden
+        
+        return super().list(request, *args, **kwargs)
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -186,10 +302,22 @@ class StateViewSet(SalesSafeViewSet):
         instance.is_active = False
         instance.save(update_fields=["is_active"])
 
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        instance = self.get_object()
+        instance.is_active = True
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "state restored"})
+
 
 class LabelViewSet(SalesSafeViewSet):
-    queryset = Label.objects.filter(is_active=True)
     serializer_class = LabelSerializer
+
+    def get_queryset(self):
+        qs = Label.objects.all()
+        if self.kwargs.get('pk') or self.request.query_params.get("archived") == "true":
+            return qs
+        return qs.filter(is_active=True)
 
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -206,8 +334,11 @@ class CycleViewSet(SalesSafeViewSet):
 
     def get_queryset(self):
         u = self.request.user
-        qs = Cycle.objects.filter(is_active=True).select_related("project")
-        projects = access.projects_for_user(u)
+        include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
+        qs = Cycle.objects.all().select_related("project")
+        if not include_archived:
+            qs = qs.filter(is_active=True)
+        projects = access.projects_for_user(u, include_archived=include_archived)
         return qs.filter(project__in=projects)
 
     def perform_destroy(self, instance):
@@ -227,11 +358,11 @@ class CycleMemberViewSet(SalesSafeViewSet):
 
 class WorkItemViewSet(SalesSafeViewSet):
     serializer_class = WorkItemSerializer
-    filterset_fields = ("project", "state", "module", "assignee", "cycle")
+    filterset_fields = ("project", "state", "module", "assignee", "cycle", "posting_date", "due_date", "deadline")
     search_fields = ("title", "task_code", "description")
 
     def get_queryset(self):
-        include_archived = self.request.query_params.get("archived") == "true"
+        include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
         qs = access.work_items_for_user(self.request.user, include_archived=include_archived)
         slug = self.request.query_params.get("project_slug")
         if slug:
@@ -244,9 +375,9 @@ class WorkItemViewSet(SalesSafeViewSet):
             u.is_superuser
             or u.role == User.Role.ADMIN
             or u.role == User.Role.PROJECT_MANAGER
-            or u.role == User.Role.TEAM_HEAD
+            or u.role == User.Role.HR
         ):
-            raise PermissionDenied("Only admins and project managers can create tasks.")
+            raise PermissionDenied("Only managers or HR can create tasks.")
         serializer.save(_activity_user=u)
 
     def perform_update(self, serializer):
@@ -261,20 +392,78 @@ class WorkItemViewSet(SalesSafeViewSet):
             try:
                 new_state = State.objects.get(pk=new_state_id)
                 if new_state.slug in ("client-review", "completed-launched") and new_state.id != inst.state_id:
-                    if not (u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER)):
-                        raise PermissionDenied("Only Project Managers or Admins can approve work for Client Review or Completion.")
+                    if not (u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD)):
+                        raise PermissionDenied("Only Leads, Managers or Admins can approve work for Client Review or Completion.")
+                
+                # Notify Team Head when work is done and ready for review
+                if new_state.slug == "team-head-review" and inst.state_id != new_state.id:
+                    ths = User.objects.filter(role=User.Role.TEAM_HEAD, is_active=True)
+                    if inst.assignee and inst.assignee.title:
+                        ths = ths.filter(title=inst.assignee.title)
+                        for th in ths:
+                            notify_user(
+                                user_id=th.id,
+                                title="Task Ready for Review 📋",
+                                body=f"Task '{inst.task_code}' has been moved to Team Head Review by {u.get_full_name() or u.email}.",
+                                link=f"/task/{inst.id}"
+                            )
             except State.DoesNotExist:
                 pass
+
+        # If TEAM_HEAD, restrict editing to ONLY the state field.
+        # If TEAM_HEAD, restrict editing to ONLY the state field and tactical dates.
+        if u.role == User.Role.TEAM_HEAD and not u.is_superuser:
+            allowed_fields = ["state", "posting_date", "due_date", "deadline", "scheduled_date", "board_position"]
+            data = self.request.data
+            
+            update_fields = ["updated_at"]
+            modified = False
+            
+            if "state" in data:
+                inst.state_id = data["state"]
+                update_fields.append("state_id")
+                modified = True
+            
+            if "board_position" in data:
+                inst.board_position = data["board_position"]
+                update_fields.append("board_position")
+                modified = True
+            
+            for f in ["posting_date", "due_date", "deadline", "scheduled_date"]:
+                if f in data:
+                    val = data[f]
+                    if val == "": val = None
+                    setattr(inst, f, val)
+                    update_fields.append(f)
+                    modified = True
+            
+            if modified:
+                inst._activity_user = u
+                inst.save(update_fields=update_fields)
+                return
+            else:
+                raise PermissionDenied("Team Heads are permitted to update status and tactical dates.")
 
         serializer.save(_activity_user=u)
 
     def perform_destroy(self, instance):
         u = self.request.user
-        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
-            raise PermissionDenied("Only admins and project managers can delete tasks.")
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.HR]):
+            raise PermissionDenied("Only managers or HR can delete tasks.")
         instance._activity_user = u
         instance.is_active = False
         instance.save(update_fields=["is_active"])
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        u = self.request.user
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.HR]):
+            raise PermissionDenied("Only managers or HR can restore tasks.")
+        instance = self.get_object()
+        instance.is_active = True
+        instance._activity_user = u
+        instance.save(update_fields=["is_active"])
+        return Response({"status": "work item restored"})
 
     @action(detail=True, methods=["post"], url_path="record-view")
     def record_view(self, request, pk=None):
@@ -282,8 +471,8 @@ class WorkItemViewSet(SalesSafeViewSet):
         u = request.user
         # Don't notify if the viewer is the creator or if there is no creator
         if item.created_by and u != item.created_by:
-            Notification.objects.create(
-                user=item.created_by,
+            notify_user(
+                user_id=item.created_by.id,
                 title="Task Viewed",
                 body=f"'{u.get_full_name() or u.email}' is currently viewing task: {item.task_code}",
                 link=f"/task/{item.id}"
@@ -384,6 +573,11 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         n.save(update_fields=["read"])
         return Response({"status": "ok"})
 
+    @action(detail=False, methods=["post"], url_path="mark-all-read")
+    def mark_all_read(self, request):
+        Notification.objects.filter(user=request.user, read=False).update(read=True)
+        return Response({"status": "ok"})
+
 
 class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -424,7 +618,7 @@ class AnalyticsSummaryView(APIView):
 
     def get(self, request):
         u = request.user
-        wis = access.work_items_for_user(u)
+        wis = access.work_items_for_user(u, lightweight=True)
         
         # Performance/Personal toggle
         is_personal = request.query_params.get("personal") == "true"
@@ -434,6 +628,11 @@ class AnalyticsSummaryView(APIView):
         project_slug = request.query_params.get("project")
         if project_slug:
             wis = wis.filter(project__slug=project_slug)
+            
+        assignee_id = request.query_params.get("assignee")
+        if assignee_id:
+            wis = wis.filter(assignee_id=assignee_id)
+
         dept_id = request.query_params.get("department")
         if dept_id:
             wis = wis.filter(
@@ -464,51 +663,64 @@ class AnalyticsSummaryView(APIView):
             wis.values("project_id", "project__slug", "project__name").annotate(c=Count("id")).order_by("-c")
         )
 
-        # Optimized Historical trend (last 30 days) - Query once, process in Python
+        # Dynamic Historical trend: 30 days for 'Month' mode, 90 days for 'All Time' mode
         now = timezone.now()
-        start_30 = (now - timezone.timedelta(days=29)).date()
+        days_to_show = 29 if start_date else 89
+        start_trend = (now - timezone.timedelta(days=days_to_show)).date()
         
-        # Get all counts grouped by date in 2 clever queries
+        # Get all counts grouped by date
         created_counts = dict(
-            wis.filter(created_at__date__gte=start_30)
+            wis.filter(created_at__date__gte=start_trend)
             .values("created_at__date")
             .annotate(c=Count("id"))
             .values_list("created_at__date", "c")
         )
         completed_counts = dict(
             wis.filter(
-                state__slug__in=["launched", "completed-launched"], 
-                updated_at__date__gte=start_30
+                state__slug__in=['completed-launched', 'completed', 'launched', 'done'], 
+                updated_at__date__gte=start_trend
             )
             .values("updated_at__date")
             .annotate(c=Count("id"))
             .values_list("updated_at__date", "c")
         )
 
-        last_30_days = []
-        for i in range(29, -1, -1):
+        trend_list = []
+        for i in range(days_to_show, -1, -1):
             day = (now - timezone.timedelta(days=i)).date()
             day_str = day.strftime("%Y-%m-%d")
-            last_30_days.append({
+            trend_list.append({
                 "date": day_str,
                 "created": created_counts.get(day, 0),
                 "completed": completed_counts.get(day, 0)
             })
 
+        completed_or_launched = wis.filter(
+            Q(state__slug__in=['completed-launched', 'completed', 'launched', 'done'])
+        ).count()
+        
+        # Heuristic Efficiency: (Completed * 60) / Total Time
+        efficiency = 0
+        if total_time > 0:
+            efficiency = min(100, int((completed_or_launched * 90) / total_time * 100))
+        elif completed_or_launched > 0:
+            efficiency = 100
+
         return Response(
             {
                 "generated_at": timezone.now().isoformat(),
                 "totals": {
-                    "all": total, 
-                    "completed_or_launched": terminal, 
-                    "pending": total - terminal,
-                    "total_time_minutes": total_time
+                    "all": total,
+                    "completed_or_launched": completed_or_launched,
+                    "pending": total - completed_or_launched,
+                    "total_time_minutes": total_time,
+                    "efficiency": efficiency,
                 },
                 "by_state": by_state,
                 "by_module": by_module,
                 "by_project": by_project,
                 "assignee_workload": workload,
-                "historical_trend": last_30_days,
+                "historical_trend": trend_list,
             }
         )
 
@@ -581,6 +793,12 @@ class BackupViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         return [permissions.IsAuthenticated(), IsAdminRole()]
 
+    @action(detail=False, methods=["post"], url_path="trigger-manual")
+    def trigger_manual(self, request):
+        from django.core.management import call_command
+        call_command('run_monthly_backup')
+        return Response({"status": "Manual backup generation triggered."})
+
     @action(detail=True, methods=["post"], url_path="approve-and-download")
     def approve_and_download(self, request, pk=None):
         backup = self.get_object()
@@ -607,9 +825,23 @@ class BackupViewSet(viewsets.ModelViewSet):
 
                 t_out = io.StringIO()
                 t_w = csv.writer(t_out)
-                t_w.writerow(['Task Code', 'Title', 'State', 'Priority', 'Module', 'Assignee', 'Created At', 'Description'])
+                t_w.writerow(['Task Code', 'Title', 'State', 'Priority', 'Module', 'Assignee', 'Status', 'Created Date', 'Post Date', 'Start Date', 'Deadline', 'Reference Link', 'Description'])
                 for item in WorkItem.objects.filter(project=project).select_related('state', 'module', 'assignee'):
-                    t_w.writerow([item.task_code, item.title, item.state.name, item.priority, item.module.name if item.module else "", item.assignee.get_full_name() if item.assignee else "Unassigned", item.created_at, item.description])
+                    t_w.writerow([
+                        item.task_code, 
+                        item.title, 
+                        item.state.name, 
+                        item.priority, 
+                        item.module.name if item.module else "", 
+                        item.assignee.get_full_name() if item.assignee else "Unassigned", 
+                        "Active" if item.is_active else "Archived/Removed",
+                        item.created_at, 
+                        item.posting_date or "", 
+                        item.due_date or "", 
+                        item.deadline or "", 
+                        item.reference_link or "", 
+                        item.description
+                    ])
                 zip_file.writestr(f"{prefix}Tasks_Detailed.csv", t_out.getvalue())
 
                 c_out = io.StringIO()
@@ -632,6 +864,21 @@ class BackupViewSet(viewsets.ModelViewSet):
                 for a in WorkItemAttachment.objects.filter(work_item__project=project).select_related('uploaded_by', 'work_item'):
                     a_w.writerow([a.work_item.task_code, a.file_name, a.size_bytes, a.uploaded_by.get_full_name()])
                 zip_file.writestr(f"{prefix}Attachments_Manifest.csv", a_out.getvalue())
+
+                # Activity Log Export
+                act_out = io.StringIO()
+                act_w = csv.writer(act_out)
+                act_w.writerow(['Date', 'User', 'Action', 'Entity Type', 'Entity ID', 'Details'])
+                for entry in ActivityLog.objects.filter(project=project).select_related('user'):
+                    act_w.writerow([
+                        entry.created_at, 
+                        entry.user.get_full_name() if entry.user else "System", 
+                        entry.action, 
+                        entry.entity_type, 
+                        entry.entity_id, 
+                        str(entry.payload) if entry.payload else ""
+                    ])
+                zip_file.writestr(f"{prefix}System_Activity_Log.csv", act_out.getvalue())
 
             # 7. Suggestion 2: BEAUTIFUL PDF PERFORMANCE REPORT
             try:

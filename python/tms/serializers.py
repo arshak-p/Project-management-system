@@ -1,4 +1,4 @@
-"""Serializers for TMS API — nested reads, validated writes, client approval rules."""
+"""Serializers for TMS API - nested reads, validated writes, client approval rules."""
 from django.db import transaction
 from rest_framework import serializers
 
@@ -73,6 +73,7 @@ class UserBriefSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     department_id = serializers.IntegerField(allow_null=True, required=False)
     client_project_id = serializers.IntegerField(allow_null=True, required=False)
+    efficiency = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -82,6 +83,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "password",
             "role",
             "title",
             "phone",
@@ -90,8 +92,33 @@ class UserSerializer(serializers.ModelSerializer):
             "client_project_id",
             "is_active",
             "date_joined",
+            "date_of_birth",
+            "efficiency",
         )
         read_only_fields = ("id",)
+        extra_kwargs = {"password": {"write_only": True, "required": False, "allow_blank": True}}
+
+    def validate_password(self, value):
+        from django.contrib.auth.password_validation import validate_password
+        if value:
+            validate_password(value)
+        return value
+
+    def get_efficiency(self, obj):
+        from tms.models import WorkItem, TimeLog
+        from django.db.models import Sum
+        
+        # This is a potentially heavy operation, so we only do it for detailed views or list as needed
+        # In a real heavy app we would cache this.
+        wis = WorkItem.objects.filter(assignee=obj)
+        total_time = TimeLog.objects.filter(work_item__in=wis).aggregate(total=Sum('minutes'))['total'] or 0
+        completed = wis.filter(state__slug__in=['completed-launched', 'completed', 'launched', 'done']).count()
+        
+        if total_time > 0:
+            return min(100, int((completed * 90) / total_time * 100))
+        elif completed > 0:
+            return 100
+        return 0
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -102,10 +129,22 @@ class UserSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         u_actor = validated_data.pop("_activity_user", None)
+        password = validated_data.pop("password", None)
         dept_id = validated_data.pop("department_id", _UNSET)
         cp_id = validated_data.pop("client_project_id", _UNSET)
+        
+        # Backend Safety Net: Convert empty strings to None for date fields
+        if "date_of_birth" in validated_data and validated_data["date_of_birth"] == "":
+            validated_data["date_of_birth"] = None
+        if "date_joined" in validated_data and validated_data["date_joined"] == "":
+            validated_data["date_joined"] = None
+        
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
+        
+        if password:
+            instance.set_password(password)
+            
         if u_actor: instance._activity_user = u_actor
         instance.save()
         if dept_id is not _UNSET or cp_id is not _UNSET:
@@ -123,7 +162,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ("id", "name", "slug", "description", "created_at", "updated_at", "is_active", "total_minutes")
+        fields = ("id", "name", "slug", "description", "color", "created_at", "updated_at", "is_active", "total_minutes")
 
     def create(self, validated_data):
         u = validated_data.pop('_activity_user', None)
@@ -150,7 +189,7 @@ class ModuleSerializer(serializers.ModelSerializer):
 class StateSerializer(serializers.ModelSerializer):
     class Meta:
         model = State
-        fields = ("id", "name", "slug", "sort_order", "is_active")
+        fields = ("id", "name", "slug", "color", "sort_order", "is_active")
 
 
 class LabelSerializer(serializers.ModelSerializer):
@@ -249,6 +288,8 @@ class WorkItemSerializer(serializers.ModelSerializer):
         required=False,
     )
     state_slug = serializers.SlugField(source="state.slug", read_only=True)
+    state__name = serializers.CharField(source="state.name", read_only=True)
+    project__slug = serializers.SlugField(source="project.slug", read_only=True)
     module_slug = serializers.SlugField(source="module.slug", read_only=True)
     label_details = LabelSerializer(source="labels", many=True, read_only=True)
     total_minutes = serializers.SerializerMethodField()
@@ -263,13 +304,18 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "description",
             "state",
             "state_slug",
+            "state__name",
+            "project__slug",
             "priority",
             "module",
             "module_slug",
             "assignee",
             "assignee_id",
+            "posting_date",
             "due_date",
+            "deadline",
             "scheduled_date",
+            "reference_link",
             "cycle",
             "department",
             "labels",
@@ -279,6 +325,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "is_active",
+            "is_client_approved",
             "total_minutes",
         )
         read_only_fields = ("task_code", "created_by", "created_at", "updated_at", "total_minutes")
@@ -290,8 +337,8 @@ class WorkItemSerializer(serializers.ModelSerializer):
         request = self.context["request"]
         user = request.user
         
-        # Admin and PM have full control
-        if user.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]:
+        # Admin, PM and Team Heads have management control
+        if user.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD]:
             return attrs
 
         state = attrs.get("state")

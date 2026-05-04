@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models, transaction
 
+
 class Department(models.Model):
     name = models.CharField(max_length=120, unique=True)
     slug = models.SlugField(max_length=64, unique=True)
@@ -20,6 +21,7 @@ class Department(models.Model):
     def __str__(self) -> str:
         return self.name
 
+
 class JobTitle(models.Model):
     name = models.CharField(max_length=120, unique=True)
     is_active = models.BooleanField(default=True, db_index=True)
@@ -31,10 +33,12 @@ class JobTitle(models.Model):
     def __str__(self) -> str:
         return self.name
 
+
 class Project(models.Model):
     name = models.CharField(max_length=160)
     slug = models.SlugField(max_length=80, unique=True)
     description = models.TextField(blank=True)
+    color = models.CharField(max_length=7, default="#6366f1")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True, db_index=True)
@@ -44,6 +48,7 @@ class Project(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
 
 class UserProfile(models.Model):
     user = models.OneToOneField(
@@ -70,6 +75,7 @@ class UserProfile(models.Model):
         verbose_name = "User profile"
         verbose_name_plural = "User profiles"
 
+
 class ProjectMember(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="memberships")
     user = models.ForeignKey(
@@ -79,6 +85,7 @@ class ProjectMember(models.Model):
 
     class Meta:
         unique_together = [("project", "user")]
+
 
 class ProjectTaskSequence(models.Model):
     project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name="task_sequence")
@@ -92,6 +99,7 @@ class ProjectTaskSequence(models.Model):
         self.save(update_fields=["last_number"])
         return f"{prefix}-{self.last_number}"
 
+
 class Module(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=64, unique=True)
@@ -104,10 +112,12 @@ class Module(models.Model):
     def __str__(self) -> str:
         return self.name
 
+
 class State(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=64, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    color = models.CharField(max_length=7, default="#94a3b8")
     is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
@@ -115,6 +125,7 @@ class State(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
 
 class Label(models.Model):
     key = models.SlugField(max_length=64, unique=True)
@@ -130,6 +141,7 @@ class Label(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
 
 class Cycle(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="cycles")
@@ -154,6 +166,7 @@ class Cycle(models.Model):
     def __str__(self) -> str:
         return f"{self.project.slug}: {self.name}"
 
+
 class CycleMember(models.Model):
     cycle = models.ForeignKey(Cycle, on_delete=models.CASCADE, related_name="cycle_members")
     user = models.ForeignKey(
@@ -163,6 +176,7 @@ class CycleMember(models.Model):
 
     class Meta:
         unique_together = [("cycle", "user")]
+
 
 class WorkItem(models.Model):
     class Priority(models.TextChoices):
@@ -190,6 +204,8 @@ class WorkItem(models.Model):
         related_name="assigned_work_items",
     )
     due_date = models.DateField(null=True, blank=True)
+    deadline = models.DateField(null=True, blank=True)
+    posting_date = models.DateField(null=True, blank=True)
     cycle = models.ForeignKey(
         Cycle,
         null=True,
@@ -205,11 +221,16 @@ class WorkItem(models.Model):
         related_name="work_items",
     )
     scheduled_date = models.DateField(null=True, blank=True, help_text="Date when work is planned to start")
+    reference_link = models.TextField(blank=True, null=True, help_text="Store multiple links separated by spaces or newlines")
     labels = models.ManyToManyField(Label, blank=True, related_name="work_items")
     board_position = models.PositiveIntegerField(
         default=0,
     )
+    rework_count = models.PositiveIntegerField(default=0, help_text="Total number of times this task was sent back for revision")
+    state_durations = models.JSONField(default=dict, help_text="Total minutes spent in each state: {'state_name': minutes}")
+    last_state_change = models.DateTimeField(null=True, blank=True, help_text="Timestamp of the most recent state transition")
     timer_start = models.DateTimeField(null=True, blank=True, help_text="Timestamp when the last In Progress session started")
+    is_client_approved = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -228,6 +249,8 @@ class WorkItem(models.Model):
             models.Index(fields=["project", "state"]),
             models.Index(fields=["assignee"]),
             models.Index(fields=["due_date"]),
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["updated_at"]),
         ]
 
     def __str__(self) -> str:
@@ -243,9 +266,13 @@ class WorkItem(models.Model):
             return seq.next_code()
 
     def save(self, *args, **kwargs):
+        if not self.pk and not self.posting_date:
+            from django.utils import timezone
+            self.posting_date = timezone.now().date()
         if not self.task_code:
             self.task_code = self.allocate_task_code(self.project)
         super().save(*args, **kwargs)
+
 
 class WorkItemComment(models.Model):
     work_item = models.ForeignKey(WorkItem, on_delete=models.CASCADE, related_name="comments")
@@ -258,8 +285,10 @@ class WorkItemComment(models.Model):
     class Meta:
         ordering = ["created_at"]
 
+
 def attachment_upload_to(instance: "WorkItemAttachment", filename: str) -> str:
     return f"work_items/{instance.work_item_id}/{filename}"
+
 
 class WorkItemAttachment(models.Model):
     work_item = models.ForeignKey(WorkItem, on_delete=models.CASCADE, related_name="attachments")
@@ -271,6 +300,7 @@ class WorkItemAttachment(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="uploaded_attachments"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
 
 class TimeLog(models.Model):
     work_item = models.ForeignKey(WorkItem, on_delete=models.CASCADE, related_name="time_logs")
@@ -284,6 +314,12 @@ class TimeLog(models.Model):
 
     class Meta:
         ordering = ["-logged_at"]
+        indexes = [
+            models.Index(fields=["logged_at"]),
+            models.Index(fields=["user"]),
+            models.Index(fields=["work_item"]),
+        ]
+
 
 class Notification(models.Model):
     user = models.ForeignKey(
@@ -322,6 +358,10 @@ class ActivityLog(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_at"]),
+        ]
+
 
 class Backup(models.Model):
     month = models.CharField(max_length=7)  # YYYY-MM
@@ -338,7 +378,9 @@ class Backup(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_at"]),
+        ]
 
     def __str__(self):
         return f"Backup {self.month}"
-

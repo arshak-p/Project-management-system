@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
-import type { Project, Task, TaskState } from '../api';
+import type { Project, Task, TaskState, User } from '../api';
 import { Loader2, ChevronRight } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 
-export default function AgencyRoadmap() {
+export default function AgencyRoadmap({ me }: { me: User | null }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
@@ -35,7 +35,7 @@ export default function AgencyRoadmap() {
 
   return (
     <div className="space-y-10 pb-20">
-      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />}
+      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
       
       <div>
         <h1 className="text-4xl font-black tracking-tight">Agency Roadmap</h1>

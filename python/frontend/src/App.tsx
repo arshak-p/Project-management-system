@@ -43,7 +43,7 @@ function App() {
         if (err.response?.status === 401) {
           setError("Invalid email or password.");
         } else if (err.response?.status === 403) {
-          setError("Access blocked (CSRF). Please try again.");
+          setError("Access blocked. Please try again.");
         } else if (err.response) {
           setError(`Server error (${err.response.status}). Please try again.`);
         } else if (err.code === 'ERR_NETWORK') {
@@ -72,14 +72,14 @@ function App() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
       {/* Dynamic Background Elements */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary opacity-20 rounded-full blur-[120px]"></div>
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#8b5cf6] opacity-20 rounded-full blur-[120px]"></div>
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary opacity-10 rounded-full blur-[120px]"></div>
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#8b5cf6] opacity-10 rounded-full blur-[120px]"></div>
       
       <motion.div 
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl relative z-10"
+        className="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl relative z-10 border border-white/5"
       >
         <div className="text-center mb-8">
           <img 
@@ -95,20 +95,20 @@ function App() {
           <div id="login-fallback-logo" className="hidden w-16 h-16 bg-gradient-to-br from-primary to-[#8b5cf6] rounded-2xl items-center justify-center mx-auto mb-5 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
             <span className="text-2xl font-black text-white">CP</span>
           </div>
-          <h1 className="text-3xl font-bold text-text mb-2">Colour Parrot</h1>
-          <p className="text-text-muted">Sign in to your account</p>
+          <h1 className="text-3xl font-black text-text mb-2 tracking-tighter">Colour Parrot</h1>
+          <p className="text-text-muted text-sm font-medium">Sign in to your account</p>
         </div>
 
         {error && (
           <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
             <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-error/90">{error}</p>
+            <p className="text-sm text-error/90 font-medium">{error}</p>
           </div>
         )}
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-muted ml-1">Email address</label>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1 opacity-50">Email address</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-text-muted group-focus-within:text-primary transition-colors">
                 <Mail className="w-5 h-5" />
@@ -117,15 +117,15 @@ function App() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text placeholder-text-muted/50 transition-all outline-none"
-                placeholder="you@your.com"
+                className="w-full pl-11 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text placeholder-text-muted/50 transition-all outline-none text-sm font-bold"
+                placeholder="you@agency.com"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-muted ml-1">Password</label>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1 opacity-50">Password</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-text-muted group-focus-within:text-primary transition-colors">
                 <Lock className="w-5 h-5" />
@@ -134,8 +134,8 @@ function App() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-11 pr-12 py-3 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text placeholder-text-muted/50 transition-all outline-none"
-                placeholder="Enter your password"
+                className="w-full pl-11 pr-12 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text placeholder-text-muted/50 transition-all outline-none text-sm font-bold"
+                placeholder="Enter security key"
                 required
               />
               <button
@@ -144,7 +144,7 @@ function App() {
                 className="absolute inset-y-0 right-0 pr-4 flex items-center text-text-muted hover:text-primary transition-colors"
                 tabIndex={-1}
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
@@ -152,18 +152,9 @@ function App() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 bg-gradient-to-r from-primary to-[#8b5cf6] hover:opacity-90 text-white rounded-xl font-medium transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(59,130,246,0.5)] flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed group relative overflow-hidden mt-8"
+            className="w-full py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-glow flex items-center justify-center disabled:opacity-70 mt-8"
           >
-            <span className="relative z-10 flex items-center gap-2">
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </span>
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : 'Enter Dashboard'}
           </button>
         </form>
 
@@ -173,3 +164,4 @@ function App() {
 }
 
 export default App;
+;

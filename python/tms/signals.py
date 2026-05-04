@@ -36,17 +36,39 @@ def handle_user_save(sender, instance: User, created: bool, **kwargs):
 
 @receiver(pre_save, sender=WorkItem)
 def track_work_item_state(sender, instance: WorkItem, **kwargs):
+    now = timezone.now()
     if instance.pk:
         try:
             old_inst = WorkItem.objects.get(pk=instance.pk)
             instance._old_state_id = old_inst.state_id
             instance._old_assignee_id = old_inst.assignee_id
+            
+            # --- Analytics: Track Time in States ---
+            if old_inst.state_id != instance.state_id:
+                # 1. Update Durations
+                last_change = old_inst.last_state_change or old_inst.created_at
+                duration = now - last_change
+                minutes = int(duration.total_seconds() // 60)
+                
+                state_name = old_inst.state.name
+                durations = old_inst.state_durations or {}
+                durations[state_name] = durations.get(state_name, 0) + minutes
+                instance.state_durations = durations
+                instance.last_state_change = now
+
+                # 2. Track Rework Counts
+                rework_slugs = ['re-edit', 'rework-revision']
+                if instance.state.slug in rework_slugs:
+                    instance.rework_count = old_inst.rework_count + 1
+                    
         except WorkItem.DoesNotExist:
             instance._old_state_id = None
             instance._old_assignee_id = None
+            instance.last_state_change = now
     else:
         instance._old_state_id = None
         instance._old_assignee_id = None
+        instance.last_state_change = now
 
 
 @receiver(post_save, sender=WorkItem)
@@ -66,6 +88,9 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
             "task_code": instance.task_code,
             "title": instance.title,
             "state_id": instance.state_id,
+            "posting_date": str(instance.posting_date) if instance.posting_date else None,
+            "due_date": str(instance.due_date) if instance.due_date else None,
+            "deadline": str(instance.deadline) if instance.deadline else None,
         },
     )
 
@@ -99,6 +124,53 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                 instance.created_by.id,
                 title=notif_title,
                 body=notif_body,
+                link=f"/task/{instance.id}"
+            )
+
+    # --- Workflow Specific Notifications ---
+    if not created and actor and instance.state:
+        old_state_id = getattr(instance, "_old_state_id", None)
+        if old_state_id != instance.state.id:
+            slug = instance.state.slug
+            
+            # 1. Notify Team Heads for Review
+            if slug == 'team-head-review':
+                notify_roles(
+                    [User.Role.PROJECT_MANAGER],
+                    title="Review Required",
+                    body=f"Task {instance.task_code} is ready for internal review.",
+                    link=f"/task/{instance.id}",
+                    exclude_user=actor
+                )
+            
+            # 2. Notify PMs for Client Review
+            elif slug == 'client-review':
+                notify_roles(
+                    [User.Role.PROJECT_MANAGER, User.Role.ADMIN],
+                    title="Ready for Client",
+                    body=f"Task {instance.task_code} is ready for client review (Purple Phase).",
+                    link=f"/task/{instance.id}",
+                    exclude_user=actor
+                )
+
+            # 3. Notify Completion
+            elif slug == 'completed-launched':
+                 notify_user(
+                    instance.created_by.id if instance.created_by else instance.assignee.id,
+                    title="Project Launched! 🚀",
+                    body=f"Task {instance.task_code} has been officially launched.",
+                    link=f"/task/{instance.id}"
+                )
+
+    # --- Client Approval Success Notification ---
+    if not created and actor and instance.is_client_approved:
+        # Check if it was just approved
+        # Note: In a production app we'd track the old boolean value, but for now we notify on save if true
+        if instance.assignee and actor.id != instance.assignee.id:
+            notify_user(
+                instance.assignee.id,
+                title="Client Approved! ✅",
+                body=f"Great job! The client has approved '{instance.title}'.",
                 link=f"/task/{instance.id}"
             )
 
