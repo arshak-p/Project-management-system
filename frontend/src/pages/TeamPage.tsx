@@ -572,7 +572,7 @@ export default function TeamPage({ me }: { me: User | null }) {
 
       <div className="relative">
         <Users className="w-4 h-4 absolute left-4 top-3.5 text-text-muted" />
-        <input type="text" placeholder="Search by name, email or role..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+        <input type="text" placeholder="Search by name, email or role..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm text-text focus:border-primary outline-none transition-all" />
       </div>
 
       {isLoading ? (

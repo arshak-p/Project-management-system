@@ -57,7 +57,6 @@ const ADMIN_NAV = [
 const USER_NAV = [
   { id: 'my_tasks', label: 'My Tasks', icon: <ClipboardList className="w-5 h-5" /> },
   { id: 'kanban', label: 'My Board', icon: <LayoutGrid className="w-5 h-5" /> },
-  { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
   { id: 'profile', label: 'Profile', icon: <UserCircle className="w-5 h-5" /> },
 ];
 
@@ -67,7 +66,6 @@ const TEAM_HEAD_NAV = [
   { id: 'kanban', label: 'Team Board', icon: <LayoutGrid className="w-5 h-5" /> },
   { id: 'intelligence', label: 'My Team', icon: <Users className="w-5 h-5" /> },
   { id: 'my_tasks', label: 'My Tasks', icon: <ClipboardList className="w-5 h-5" /> },
-  { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
   { id: 'profile', label: 'Profile', icon: <UserCircle className="w-5 h-5" /> },
 ];
 
@@ -75,7 +73,6 @@ const HR_NAV = [
   { id: 'team', label: 'Team Members', icon: <Users className="w-5 h-5" /> },
   { id: 'intelligence', label: 'Team Info', icon: <ShieldCheck className="w-5 h-5" /> },
   { id: 'job_titles', label: 'Job Titles', icon: <Briefcase className="w-5 h-5" /> },
-  { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
   { id: 'profile', label: 'Profile', icon: <UserCircle className="w-5 h-5" /> },
 ];
 
@@ -296,13 +293,6 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         </nav>
 
         <div className="p-4 mt-auto border-t border-white/5 bg-black/10 rounded-b-[2.5rem]">
-          {/* Version Tag for Deployment Tracking */}
-          <div className="px-6 py-4">
-            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">HR Analytics Live</span>
-            </div>
-          </div>
 
           <motion.button 
             whileHover={{ x: 4 }}
