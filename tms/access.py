@@ -74,9 +74,9 @@ def projects_for_user(user: User, include_archived: bool = False) -> QuerySet:
         dept_id = user_department_id(user)
         if dept_id:
             return qs.filter(department_id=dept_id)
-        return qs.filter(members=user)
+        return qs.filter(memberships__user=user)
     if user.role == User.Role.SPECIALIST:
-        return qs.filter(members=user)
+        return qs.filter(memberships__user=user)
     return qs.none()
 
 def users_for_user(user: User, include_archived: bool = False) -> QuerySet[User]:
