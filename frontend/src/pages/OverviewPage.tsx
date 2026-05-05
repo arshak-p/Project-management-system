@@ -62,7 +62,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
 
   const trendData = analytics?.historical_trend?.map(t => ({
     date: new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    units: t.created
+    units: t.activity
   })) || [];
 
   return (

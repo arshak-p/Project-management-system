@@ -95,7 +95,8 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const trendData = useMemo(() => {
     return memberAnalytics?.historical_trend?.map(t => ({
       date: new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      units: t.created
+      activity: t.activity,
+      velocity: t.velocity
     })) || [];
   }, [memberAnalytics]);
 
@@ -254,24 +255,29 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                          <TrendingUp className="w-4 h-4 text-primary" /> Sector Velocity Trend
                       </h3>
                       <div className="h-[200px] w-full flex items-center justify-center">
-                         {trendData.length > 0 && trendData.some(d => d.units > 0) ? (
+                         {trendData.length > 0 && trendData.some(d => d.activity > 0 || d.velocity > 0) ? (
                            <ResponsiveContainer width="100%" height="100%">
                               <AreaChart data={trendData}>
                                  <defs>
-                                    <linearGradient id="colorUnits" x1="0" y1="0" x2="0" y2="1">
+                                    <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                    </linearGradient>
+                                    <linearGradient id="colorVelocity" x1="0" y1="0" x2="0" y2="1">
+                                       <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                                       <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
                                     </linearGradient>
                                  </defs>
                                  <XAxis dataKey="date" hide />
                                  <Tooltip 
                                     contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }}
                                  />
-                                 <Area type="monotone" dataKey="units" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUnits)" />
+                                 <Area type="monotone" dataKey="activity" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorActivity)" name="Active Engagement" />
+                                 <Area type="monotone" dataKey="velocity" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorVelocity)" name="Mission Success" />
                               </AreaChart>
                            </ResponsiveContainer>
                          ) : (
-                           <div className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-30 italic">No Velocity Recorded</div>
+                           <div className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-30 italic">Awaiting Sector Movement...</div>
                          )}
                        </div>
                    </div>

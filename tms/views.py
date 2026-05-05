@@ -710,10 +710,11 @@ class AnalyticsSummaryView(APIView):
         for i in range(days_to_show, -1, -1):
             day = (now - timezone.timedelta(days=i)).date()
             day_str = day.strftime("%Y-%m-%d")
+            # We provide both velocity (completions) and activity (logs)
             trend_list.append({
                 "date": day_str,
-                "created": created_counts.get(day, 0),
-                "completed": completed_counts.get(day, 0)
+                "velocity": completed_counts.get(day, 0),
+                "activity": created_counts.get(day, 0)
             })
 
         completed_or_launched = wis.filter(

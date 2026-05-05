@@ -132,8 +132,8 @@ export interface AnalyticsSummary {
   assignee_workload: unknown[];
   historical_trend: {
     date: string;
-    created: number;
-    completed: number;
+    velocity: number;
+    activity: number;
   }[];
 }
 
