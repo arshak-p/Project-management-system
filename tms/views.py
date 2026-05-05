@@ -150,7 +150,7 @@ class UserViewSet(SalesSafeViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
             # Agency Manager, HR, PM, and Team Head can list users (filtered by queryset)
-            return [permissions.IsAuthenticated(), (IsPMReadOrAbove | IsLeadPMOrAdmin)()]
+            return [permissions.IsAuthenticated, IsPMReadOrAbove | IsLeadPMOrAdmin]
         if self.action in ("update", "partial_update", "create", "destroy", "restore"):
             # ONLY Agency Manager (Admin) and HR can create/update/remove/recover
             return [permissions.IsAuthenticated(), IsAgencyManagerOrHR()]
@@ -619,7 +619,7 @@ class AnalyticsSummaryView(APIView):
     Query params: project (slug), department (id).
     """
 
-    permission_classes = [permissions.IsAuthenticated, (IsLeadPMOrAdmin | IsHRManagement)()]
+    permission_classes = [permissions.IsAuthenticated, IsLeadPMOrAdmin | IsHRManagement]
 
     def get(self, request):
         u = request.user
