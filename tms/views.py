@@ -651,13 +651,15 @@ class AnalyticsSummaryView(APIView):
         if start_date: log_filter &= Q(created_at__date__gte=start_date)
         if end_date: log_filter &= Q(created_at__date__lte=end_date)
             
+        total = wis.count()
+        
         if start_date or end_date:
             # When filtering by date, we only want tasks active in that range
             created_ids = list(wis.filter(log_filter).values_list('id', flat=True))
             logged_ids = list(TimeLog.objects.filter(log_filter).values_list('work_item_id', flat=True))
-            wis = wis.filter(id__in=set(created_ids) | set(logged_ids))
-
-        total = wis.count()
+            active_ids = set(created_ids) | set(logged_ids)
+            wis = wis.filter(id__in=active_ids)
+            total = wis.count() # Update total for the filtered view
         time_logs_in_range = TimeLog.objects.filter(log_filter)
         if assignee_id:
             time_logs_in_range = time_logs_in_range.filter(user_id=assignee_id)
