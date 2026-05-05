@@ -49,3 +49,24 @@ class IsHRManagement(permissions.BasePermission):
     def has_permission(self, request, view):
         u = request.user
         return bool(u and u.is_authenticated and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.HR]))
+
+class IsLeadPMOrManagement(permissions.BasePermission):
+    """Stable combined class: Admin, PM, Team Head, or HR."""
+    def has_permission(self, request, view):
+        u = request.user
+        if not (u and u.is_authenticated): return False
+        return bool(u.is_superuser or getattr(u, "role", None) in [
+            User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD, User.Role.HR
+        ])
+
+class IsUserListAuthorized(permissions.BasePermission):
+    """Stable combined class for User list: PM Read-Only or Admin/HR Full."""
+    def has_permission(self, request, view):
+        u = request.user
+        if not (u and u.is_authenticated): return False
+        role = getattr(u, "role", None)
+        if u.is_superuser or role in [User.Role.ADMIN, User.Role.HR, User.Role.TEAM_HEAD]:
+            return True
+        if role == User.Role.PROJECT_MANAGER:
+            return request.method in permissions.SAFE_METHODS
+        return False

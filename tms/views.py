@@ -33,7 +33,8 @@ from tms.models import (
 )
 from tms.permissions import (
     BlockSalesWrites, IsAdminRole, IsPMOrAdmin, IsLeadPMOrAdmin, 
-    IsHRManagement, IsAgencyManagerOrHR, IsPMReadOrAbove
+    IsHRManagement, IsAgencyManagerOrHR, IsPMReadOrAbove,
+    IsLeadPMOrManagement, IsUserListAuthorized
 )
 from tms.serializers import (
     ActivityLogSerializer,
@@ -150,7 +151,7 @@ class UserViewSet(SalesSafeViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
             # Agency Manager, HR, PM, and Team Head can list users (filtered by queryset)
-            return [permissions.IsAuthenticated, IsPMReadOrAbove | IsLeadPMOrAdmin]
+            return [permissions.IsAuthenticated, IsUserListAuthorized]
         if self.action in ("update", "partial_update", "create", "destroy", "restore"):
             # ONLY Agency Manager (Admin) and HR can create/update/remove/recover
             return [permissions.IsAuthenticated(), IsAgencyManagerOrHR()]
@@ -619,7 +620,7 @@ class AnalyticsSummaryView(APIView):
     Query params: project (slug), department (id).
     """
 
-    permission_classes = [permissions.IsAuthenticated, IsLeadPMOrAdmin | IsHRManagement]
+    permission_classes = [permissions.IsAuthenticated, IsLeadPMOrManagement]
 
     def get(self, request):
         u = request.user
