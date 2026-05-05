@@ -13,7 +13,6 @@ import {
 } from 'recharts';
 import TaskDetailModal from '../components/TaskDetailModal';
 
-const COLORS = ['#3b82f6', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e'];
 
 export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const [users, setUsers] = useState<User[]>([]);
@@ -86,9 +85,10 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const selectedUser = users.find(u => u.id === selectedUserId);
 
   const projectData = useMemo(() => {
-    return (memberAnalytics?.by_project as { project__name: string, c: number }[])?.map((p) => ({
+    return (memberAnalytics?.by_project as { project__name: string, project__color: string, c: number }[])?.map((p) => ({
       name: p.project__name,
-      value: p.c
+      value: p.c,
+      color: p.project__color || '#3b82f6'
     })) || [];
   }, [memberAnalytics]);
 
@@ -291,7 +291,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                            <ResponsiveContainer width="100%" height="100%">
                               <PieChart>
                                  <Pie data={projectData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} dataKey="value">
-                                    {projectData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                    {projectData.map((p: any, i) => <Cell key={i} fill={p.color} />)}
                                  </Pie>
                                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }} />
                               </PieChart>

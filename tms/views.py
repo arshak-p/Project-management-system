@@ -676,7 +676,7 @@ class AnalyticsSummaryView(APIView):
         )
         by_module = list(wis.values("module__slug", "module__name").annotate(c=Count("id")))
         by_project = list(
-            wis.values("project_id", "project__slug", "project__name").annotate(c=Count("id")).order_by("-c")
+            wis.values("project_id", "project__slug", "project__name", "project__color").annotate(c=Count("id")).order_by("-c")
         )
 
         # Dynamic Historical trend: 30 days for 'Month' mode, 90 days for 'All Time' mode
