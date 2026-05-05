@@ -162,8 +162,8 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
       </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10">
-           {/* Sidebar: Member List */}
-           <div className="md:col-span-4 lg:col-span-3 space-y-4 max-h-[40vh] md:max-h-[75vh] overflow-y-auto custom-scrollbar pr-2 order-2 md:order-1">
+           {/* Sidebar: Member List - Made Sticky */}
+           <div className="md:col-span-4 lg:col-span-3 space-y-4 md:sticky md:top-10 max-h-[40vh] md:max-h-[85vh] overflow-y-auto custom-scrollbar pr-2 order-2 md:order-1">
             {['admin', 'project_manager', 'hr', 'team_head', 'specialist', 'sales_manager'].map(role => {
               const roleUsers = filteredUsers.filter(u => u.role === role);
               if (roleUsers.length === 0) return null;
