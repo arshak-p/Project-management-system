@@ -77,7 +77,7 @@ class DepartmentViewSet(SalesSafeViewSet):
     def get_permissions(self):
         if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
             return [permissions.IsAuthenticated(), IsAgencyManagerOrHR()]
-        return [p() for p in super().get_permissions()]
+        return super().get_permissions()
 
     def perform_destroy(self, instance):
         instance.is_active = False
@@ -121,7 +121,7 @@ class JobTitleViewSet(SalesSafeViewSet):
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
             return [permissions.IsAuthenticated(), IsAgencyManagerOrHR()]
-        return [p() for p in super().get_permissions()]
+        return super().get_permissions()
 
     def perform_create(self, serializer):
         serializer.save(_activity_user=self.request.user)
@@ -214,7 +214,7 @@ class ProjectViewSet(SalesSafeViewSet):
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
-        return [p() for p in super().get_permissions()]
+        return super().get_permissions()
 
     def perform_create(self, serializer):
         serializer.save(_activity_user=self.request.user)
