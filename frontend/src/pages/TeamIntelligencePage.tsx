@@ -92,6 +92,19 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
     })) || [];
   }, [memberAnalytics]);
 
+  const uniqueTitles = useMemo(() => {
+    const titles = new Set<string>();
+    users.forEach(u => {
+      if (u.title) titles.add(u.title);
+      else titles.add('Team Member');
+    });
+    return Array.from(titles).sort((a, b) => {
+      if (a === 'Team Member') return 1;
+      if (b === 'Team Member') return -1;
+      return a.localeCompare(b);
+    });
+  }, [users]);
+
   const trendData = useMemo(() => {
     return memberAnalytics?.historical_trend?.map(t => ({
       date: new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -164,38 +177,38 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10">
            {/* Sidebar: Member List - Locked in Position with Viewport Sync */}
            <div className="md:col-span-4 lg:col-span-3 space-y-4 md:sticky md:top-20 md:self-start h-[calc(100vh-140px)] overflow-y-auto custom-scrollbar pr-2 order-2 md:order-1">
-            {['admin', 'project_manager', 'hr', 'team_head', 'specialist', 'sales_manager'].map(role => {
-              const roleUsers = filteredUsers.filter(u => u.role === role);
-              if (roleUsers.length === 0) return null;
-              
-              return (
-                <div key={role} className="space-y-2 mb-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20 mb-3 block">
-                    {role.replace('_', ' ')} Tiers ({roleUsers.length})
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
-                    {roleUsers.map(user => (
-                      <button 
-                        key={user.id} 
-                        onClick={() => setSelectedUserId(user.id)}
-                        className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all group ${
-                          selectedUserId === user.id ? 'bg-primary border-primary shadow-glow text-white' : 'glass border-white/5 text-text-muted hover:border-primary/40'
-                        }`}
-                      >
-                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black ${selectedUserId === user.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
-                            {user.first_name?.[0] || '?' }
-                         </div>
-                         <div className="text-left flex-1 min-w-0">
-                            <p className="font-extrabold text-xs truncate capitalize">{user.first_name || 'Generic Operator'} {user.last_name}</p>
-                            <p className={`text-[8px] font-black uppercase tracking-widest ${selectedUserId === user.id ? 'text-white/60' : 'text-text-muted/40'}`}>{user.role || 'Member'}</p>
-                         </div>
-                         <ChevronRight className={`w-4 h-4 transition-transform ${selectedUserId === user.id ? 'translate-x-1' : 'opacity-0'}`} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+             {uniqueTitles.map(title => {
+               const titleUsers = filteredUsers.filter(u => (u.title || 'Team Member') === title);
+               if (titleUsers.length === 0) return null;
+               
+               return (
+                 <div key={title} className="space-y-2 mb-4">
+                   <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20 mb-3 block">
+                     {title} Tiers ({titleUsers.length})
+                   </h4>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
+                     {titleUsers.map(user => (
+                       <button 
+                         key={user.id} 
+                         onClick={() => setSelectedUserId(user.id)}
+                         className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all group ${
+                           selectedUserId === user.id ? 'bg-primary border-primary shadow-glow text-white' : 'glass border-white/5 text-text-muted hover:border-primary/40'
+                         }`}
+                       >
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black ${selectedUserId === user.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
+                             {user.first_name?.[0] || '?' }
+                          </div>
+                          <div className="text-left flex-1 min-w-0">
+                             <p className="font-extrabold text-xs truncate capitalize">{user.first_name || 'Generic Operator'} {user.last_name}</p>
+                             <p className={`text-[8px] font-black uppercase tracking-widest ${selectedUserId === user.id ? 'text-white/60' : 'text-text-muted/40'}`}>{user.title || user.role.replace('_', ' ')}</p>
+                          </div>
+                          <ChevronRight className={`w-4 h-4 transition-transform ${selectedUserId === user.id ? 'translate-x-1' : 'opacity-0'}`} />
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+               );
+             })}
             {filteredUsers.length === 0 && !isLoading && (
               <div className="text-center py-10 glass rounded-3xl border-dashed border-white/5">
                 <p className="text-[10px] font-black uppercase tracking-widest text-text-muted/40 italic">No Operators in Sector</p>
