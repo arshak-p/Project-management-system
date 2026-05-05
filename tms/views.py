@@ -619,7 +619,7 @@ class AnalyticsSummaryView(APIView):
     Query params: project (slug), department (id).
     """
 
-    permission_classes = [permissions.IsAuthenticated, IsLeadPMOrManagement]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         u = request.user

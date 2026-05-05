@@ -223,9 +223,13 @@ class SendOTPView(APIView):
             )
             return Response({'detail': 'Clearance code dispatched successfully.', 'otp': otp_code})
         except Exception as e:
+            # Enhanced Error Reporting for SMTP
+            error_msg = str(e)
+            print(f"CRITICAL SMTP FAILURE: {error_msg}")
             return Response({
-                'detail': f'SMTP Transmission Failure: {str(e)}',
-                'error_type': 'communication_failure'
+                'detail': f'Command Center Communication Failure: {error_msg}. Please verify EMAIL_HOST_PASSWORD in server environment.',
+                'error_type': 'smtp_config_error',
+                'trace': error_msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class VerifyOTPActionView(APIView):
