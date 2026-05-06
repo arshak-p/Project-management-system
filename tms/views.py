@@ -183,11 +183,6 @@ class UserViewSet(SalesSafeViewSet):
 
     @action(detail=False, methods=["get"])
     def me(self, request):
-        try:
-            from tms.tasks import check_birthdays
-            check_birthdays()
-        except Exception:
-            pass
         ser = UserSerializer(request.user, context={"request": request})
         return Response(ser.data)
 
