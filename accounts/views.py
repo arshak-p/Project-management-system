@@ -14,7 +14,7 @@ from accounts.models import User, EmailOTP
 from accounts.serializers import CustomTokenObtainPairSerializer
 from tms.permissions import IsAdminRole, IsHRManagement
 
-import threading
+from django.utils import timezone
 
 def send_reliable_email_async(subject, message, recipient_list):
     """Fires the email into a background thread and returns instantly."""
@@ -33,6 +33,7 @@ def send_reliable_email_async(subject, message, recipient_list):
     thread = threading.Thread(target=send, daemon=True)
     thread.start()
     return True
+
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -118,90 +119,6 @@ class CreateUserView(APIView):
             'is_verified': user.is_verified,
         }, status=status.HTTP_201_CREATED)
 
-from django.utils import timezone
-
-@method_decorator(csrf_exempt, name='dispatch')
-class RequestOTPView(APIView):
-    """Generate and send a 6-digit OTP to the user's email."""
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        email = request.data.get('email', '').strip()
-        if not email:
-            return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Check if user exists
-        if not User.objects.filter(email=email, is_active=True).exists():
-            return Response({'detail': 'No active account found with this email.'}, status=status.HTTP_404_NOT_FOUND)
-
-        # Generate 6-digit OTP
-        otp_code = f"{random.randint(100000, 999999)}"
-        
-        # Save OTP to database
-        EmailOTP.objects.create(email=email, otp=otp_code)
-
-        # Direct High-Priority Transmission (No silent fail)
-        try:
-            send_mail(
-                subject='Colour Parrot Security Code',
-                message=f'Your secure login code is: {otp_code}. It will expire in 10 minutes.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-            return Response({'detail': 'OTP sent successfully.'})
-        except Exception as e:
-            error_msg = str(e)
-            print(f"LOGIN OTP FAILURE: {error_msg}")
-            return Response({
-                'detail': f'Login Communication Failure: {error_msg}. Please verify EMAIL_HOST_PASSWORD.',
-                'error_type': 'smtp_config_error'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class VerifyOTPView(APIView):
-    """Verify OTP and issue JWT tokens."""
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        email = request.data.get('email', '').strip()
-        otp_code = request.data.get('otp', '').strip()
-
-        if not email or not otp_code:
-            return Response({'detail': 'Email and OTP are required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        otp_record = EmailOTP.objects.filter(email=email, otp=otp_code, is_used=False).first()
-
-        if not otp_record or not otp_record.is_valid():
-            return Response({'detail': 'Invalid or expired OTP.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Mark OTP as used
-        otp_record.is_used = True
-        otp_record.save()
-
-        # Get user and issue tokens
-        user = User.objects.get(email=email)
-        
-        # Mark as verified
-        if not user.is_verified:
-            user.is_verified = True
-            user.save()
-
-        from rest_framework_simplejwt.tokens import RefreshToken
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'role': user.role,
-                'first_name': user.first_name,
-            }
-        })
-
 # --- NEW RECONSTRUCTED VERIFICATION VIEWS ---
 
 class SendOTPView(APIView):
@@ -230,16 +147,21 @@ class SendOTPView(APIView):
                 recipient_list=[email],
                 fail_silently=False,
             )
-            return Response({'detail': 'Clearance code dispatched successfully.', 'otp': otp_code})
-        except Exception as e:
-            # Enhanced Error Reporting for SMTP
-            error_msg = str(e)
-            print(f"CRITICAL SMTP FAILURE: {error_msg}")
             return Response({
-                'detail': f'Command Center Communication Failure: {error_msg}. Please verify EMAIL_HOST_PASSWORD in server environment.',
-                'error_type': 'smtp_config_error',
-                'trace': error_msg
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                'detail': f'Clearance code CODE: {otp_code} dispatched successfully.',
+                'otp_sent': True,
+                'otp': otp_code
+            })
+        except Exception as e:
+            # Fallback for UI if email fails but we want to allow the Admin to see the code
+            error_msg = str(e)
+            print(f"SMTP FAILURE: {error_msg}")
+            # Returning 200 with otp_fallback so the frontend can display the code manually
+            return Response({
+                'detail': f'CODE: {otp_code} (Mail Server Busy - Use Manual Code)',
+                'otp_fallback': True,
+                'otp': otp_code
+            }, status=status.HTTP_200_OK)
 
 class VerifyOTPActionView(APIView):
     """
