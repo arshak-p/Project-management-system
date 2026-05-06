@@ -106,14 +106,15 @@ class UserSerializer(serializers.ModelSerializer):
         return value
 
     def get_efficiency(self, obj):
-        from tms.models import WorkItem, TimeLog
-        from django.db.models import Sum
+        # Optimized: Use annotated values from the queryset if available
+        total_time = getattr(obj, 'total_minutes_logged', None)
+        completed = getattr(obj, 'completed_tasks_count', None)
         
-        # This is a potentially heavy operation, so we only do it for detailed views or list as needed
-        # In a real heavy app we would cache this.
-        wis = WorkItem.objects.filter(assignee=obj)
-        total_time = TimeLog.objects.filter(work_item__in=wis).aggregate(total=Sum('minutes'))['total'] or 0
-        completed = wis.filter(state__slug__in=['completed-launched', 'completed', 'launched', 'done']).count()
+        if total_time is None or completed is None:
+            from django.db.models import Sum
+            wis = obj.assigned_work_items.all()
+            total_time = TimeLog.objects.filter(work_item__in=wis).aggregate(total=Sum('minutes'))['total'] or 0
+            completed = wis.filter(state__slug__in=['completed-launched', 'completed', 'launched', 'done']).count()
         
         if total_time > 0:
             return min(100, int((completed * 90) / total_time * 100))

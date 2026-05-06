@@ -145,8 +145,13 @@ class UserViewSet(SalesSafeViewSet):
     serializer_class = UserSerializer
 
     def get_queryset(self):
+        from django.db.models import Sum, Count, Q
         include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
-        return access.users_for_user(self.request.user, include_archived=include_archived).select_related("tms_profile")
+        qs = access.users_for_user(self.request.user, include_archived=include_archived)
+        return qs.select_related("tms_profile").annotate(
+            total_minutes_logged=Sum('time_logs__minutes'),
+            completed_tasks_count=Count('assigned_work_items', filter=Q(assigned_work_items__state__slug__in=['completed-launched', 'completed', 'launched', 'done']))
+        )
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
