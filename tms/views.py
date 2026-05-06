@@ -145,7 +145,6 @@ class UserViewSet(SalesSafeViewSet):
     serializer_class = UserSerializer
 
     def get_queryset(self):
-        from django.db.models import Sum, Count, Q
         include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
         qs = access.users_for_user(self.request.user, include_archived=include_archived)
         return qs.select_related("tms_profile").annotate(
