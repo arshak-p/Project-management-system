@@ -141,8 +141,16 @@ class SendOTPView(APIView):
         # Direct High-Priority Transmission (No silent fail)
         try:
             send_mail(
-                subject='Colour Parrot: Tactical Clearance Code',
-                message=f'You are being recruited to the Colour Parrot Command Center. Your clearance code is: {otp_code}',
+                subject='Welcome to Colour Parrot! - Your Tactical Clearance Code',
+                message=(
+                    f'Hello,\n\n'
+                    'You are being recruited to the Colour Parrot Command Center. '
+                    f'Your unique tactical clearance code is: {otp_code}\n\n'
+                    'System Portal: https://c1r9rt-workflow.in\n\n'
+                    'Please enter this code on the verification screen to finalize your account setup.\n\n'
+                    'Best regards,\n'
+                    'The Colour Parrot Team'
+                ),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
                 fail_silently=False,
