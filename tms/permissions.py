@@ -30,7 +30,7 @@ class IsAgencyManagerOrHR(permissions.BasePermission):
     """Full management: Create, Update, Delete members."""
     def has_permission(self, request, view):
         u = request.user
-        return bool(u and u.is_authenticated and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.HR]))
+        return bool(u and u.is_authenticated and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.HR, User.Role.PROJECT_MANAGER]))
 
 class IsPMReadOrAbove(permissions.BasePermission):
     """Read-only for PMs, Full for Admin/HR."""
@@ -48,7 +48,7 @@ class IsHRManagement(permissions.BasePermission):
     """Compatibility class for HR views."""
     def has_permission(self, request, view):
         u = request.user
-        return bool(u and u.is_authenticated and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.HR]))
+        return bool(u and u.is_authenticated and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.HR, User.Role.PROJECT_MANAGER]))
 
 class IsLeadPMOrManagement(permissions.BasePermission):
     """Stable combined class: Admin, PM, Team Head, or HR."""
