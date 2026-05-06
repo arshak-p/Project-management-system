@@ -140,14 +140,23 @@ class RequestOTPView(APIView):
         # Save OTP to database
         EmailOTP.objects.create(email=email, otp=otp_code)
 
-        # Send Email (Fallback to console if SMTP not configured)
-        # Instant Async OTP Email
-        send_reliable_email_async(
-            subject='Colour Parrot Security Code',
-            message=f'Your secure login code is: {otp_code}. It will expire in 10 minutes.',
-            recipient_list=[email]
-        )
-        return Response({'detail': 'OTP sent successfully.'})
+        # Direct High-Priority Transmission (No silent fail)
+        try:
+            send_mail(
+                subject='Colour Parrot Security Code',
+                message=f'Your secure login code is: {otp_code}. It will expire in 10 minutes.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            return Response({'detail': 'OTP sent successfully.'})
+        except Exception as e:
+            error_msg = str(e)
+            print(f"LOGIN OTP FAILURE: {error_msg}")
+            return Response({
+                'detail': f'Login Communication Failure: {error_msg}. Please verify EMAIL_HOST_PASSWORD.',
+                'error_type': 'smtp_config_error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
