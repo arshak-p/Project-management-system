@@ -1,5 +1,6 @@
 """
 Django settings for Colour Parrot TMS.
+# Deployment Heartbeat: 2026-05-06-10-06-UTC
 Environment variables override defaults for production (PostgreSQL, Redis, secrets).
 """
 import os
