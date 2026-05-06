@@ -93,9 +93,9 @@ export default function TeamPage({ me }: { me: User | null }) {
       const res = await api.sendCreationOTP(form.email);
       setShowOtpField(true);
       
-      // If the backend sent a fallback code (because mail failed)
-      if (res.data?.otp_fallback) {
-        setSuccess(`Manual Mode: ${res.data.detail}`);
+      // Show detailed message if backend provides it (e.g. including the manual code)
+      if (res.data?.detail?.includes('CODE:')) {
+        setSuccess(res.data.detail);
       } else {
         setSuccess('Verification code sent to email!');
       }
