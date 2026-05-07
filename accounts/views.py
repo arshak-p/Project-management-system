@@ -133,6 +133,10 @@ class SendOTPView(APIView):
         if not email:
             return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Optimization: Check if user exists before wasting an email send
+        if User.objects.filter(email=email).exists():
+            return Response({'detail': 'This member already has an account.'}, status=status.HTTP_400_BAD_REQUEST)
+
         otp_code = f"{random.randint(100000, 999999)}"
         
         # Save to database for verification
@@ -161,12 +165,15 @@ class SendOTPView(APIView):
                 'otp': otp_code
             })
         except Exception as e:
-            # Fallback for UI if email fails but we want to allow the Admin to see the code
+            import traceback
             error_msg = str(e)
-            print(f"SMTP FAILURE: {error_msg}")
+            stack_trace = traceback.format_exc()
+            print(f"CRITICAL SMTP FAILURE on Render: {error_msg}")
+            print(stack_trace)
+            
             # Returning 200 with otp_fallback so the frontend can display the code manually
             return Response({
-                'detail': f'CODE: {otp_code} (Mail Server Busy - Use Manual Code)',
+                'detail': f'CODE: {otp_code} (SMTP ERROR: {error_msg[:50]}... Use Manual Code)',
                 'otp_fallback': True,
                 'otp': otp_code
             }, status=status.HTTP_200_OK)
