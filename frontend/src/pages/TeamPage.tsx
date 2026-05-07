@@ -394,7 +394,7 @@ export default function TeamPage({ me }: { me: User | null }) {
                 </div>
               )}
 
-              {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'hr') && (
+              {true && (
                 <div className="space-y-1.5 animate-in fade-in duration-300">
                   {editingUser ? (
                     <>
