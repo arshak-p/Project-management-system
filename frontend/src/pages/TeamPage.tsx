@@ -154,6 +154,17 @@ export default function TeamPage({ me }: { me: User | null }) {
       return;
     }
 
+    if (!editingUser) {
+      if (!form.password) {
+        setError('Please set an initial password.');
+        return;
+      }
+      if (form.password !== confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
+    }
+
     if (editingUser && isChangingPassword) {
       if (!form.password) {
         setError('Please enter a new password.');
@@ -383,7 +394,7 @@ export default function TeamPage({ me }: { me: User | null }) {
                 </div>
               )}
 
-              {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+              {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'hr') && (
                 <div className="space-y-1.5 animate-in fade-in duration-300">
                   {editingUser ? (
                     <>
@@ -439,23 +450,39 @@ export default function TeamPage({ me }: { me: User | null }) {
                     </>
                   ) : (
                     <>
-                      <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-                        Initial Password <span className="text-error">*</span>
-                      </label>
-                      <div className="relative">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                          Initial Password <span className="text-error">*</span>
+                        </label>
+                        <div className="relative">
+                          <input 
+                            type={showPassword ? 'text' : 'password'} 
+                            autoComplete="new-password" 
+                            value={form.password} 
+                            onChange={e => setForm({ ...form, password: e.target.value })} 
+                            placeholder="Min 8 characters" 
+                            className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
+                          />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-text-muted hover:text-text">
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                          Confirm Password <span className="text-error">*</span>
+                        </label>
                         <input 
                           type={showPassword ? 'text' : 'password'} 
                           autoComplete="new-password" 
-                          value={form.password} 
-                          onChange={e => setForm({ ...form, password: e.target.value })} 
-                          placeholder="Min 8 characters" 
-                          required 
-                          className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
+                          value={confirmPassword} 
+                          onChange={e => setConfirmPassword(e.target.value)} 
+                          placeholder="Re-type password" 
+                          className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
                         />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-text-muted hover:text-text">
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
                       </div>
+                    </div>
                     </>
                   )}
                 </div>
