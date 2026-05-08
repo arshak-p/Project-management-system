@@ -133,16 +133,13 @@ class SendOTPView(APIView):
         if not email:
             return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Optimization: Check if user exists before wasting an email send
         if User.objects.filter(email=email).exists():
             return Response({'detail': 'This member already has an account.'}, status=status.HTTP_400_BAD_REQUEST)
 
         otp_code = f"{random.randint(100000, 999999)}"
         
-        # Save to database for verification
         EmailOTP.objects.create(email=email, otp=otp_code)
 
-        # Direct High-Priority Transmission (No silent fail)
         try:
             send_mail(
                 subject='Welcome to Colour Parrot! - Your Tactical Clearance Code',
