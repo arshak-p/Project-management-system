@@ -67,80 +67,49 @@ export default function KanbanPage({ me }: { me: User | null }) {
   if (isLoading) return <div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" /></div>;
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col overflow-hidden -mt-4">
+    <div className="h-[calc(100vh-10rem)] flex flex-col overflow-hidden">
       {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
 
-      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-8 px-2">
+      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 mb-6 px-2">
         <div>
-          <h1 className="text-3xl lg:text-5xl font-black tracking-tighter">Kanban Board</h1>
-          <p className="text-text-muted mt-2 font-bold uppercase tracking-[0.2em] text-[10px] opacity-60">Active Task Flow</p>
+          <h1 className="text-2xl lg:text-4xl font-black tracking-tighter">Kanban</h1>
+          <p className="text-text-muted mt-1 font-bold uppercase tracking-[0.2em] text-[9px] opacity-60">Task Flow</p>
         </div>
-        <div className="grid grid-cols-2 lg:flex gap-2 lg:gap-4 w-full lg:w-auto">
+        <div className="grid grid-cols-2 lg:flex gap-2 w-full lg:w-auto">
           <select 
             value={filterProject} 
             onChange={e => setFilterProject(e.target.value)}
-            className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[150px]"
+            className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
           >
-            <option value="">All Projects</option>
+            <option value="">Projects</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <select 
             value={filterModule} 
             onChange={e => setFilterModule(e.target.value)}
-            className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[150px]"
+            className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
           >
-            <option value="">All Modules</option>
+            <option value="">Modules</option>
             {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
           <select 
             value={filterJobTitle} 
             onChange={e => setFilterJobTitle(e.target.value)}
-            className="col-span-2 lg:col-auto px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[150px]"
+            className="col-span-2 lg:col-auto px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
           >
-            <option value="">All Job Titles</option>
+            <option value="">Job Titles</option>
             {jobTitles.map(jt => <option key={jt.id} value={jt.name}>{jt.name}</option>)}
           </select>
-          <div className="col-span-2 lg:col-auto flex gap-2">
-            {me?.role !== 'specialist' && (
-              <input 
-                type="date"
-                value={filterPostingDate}
-                onChange={e => setFilterPostingDate(e.target.value)}
-                title="Filter by Posting Date"
-                className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:w-[130px]"
-                style={{ colorScheme: 'dark' }}
-              />
-            )}
-            <input 
-              type="date"
-              value={filterDueDate}
-              onChange={e => setFilterDueDate(e.target.value)}
-              title="Filter by Due Date"
-              className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:w-[130px]"
-              style={{ colorScheme: 'dark' }}
-            />
-            <input 
-              type="date"
-              value={filterDeadline}
-              onChange={e => setFilterDeadline(e.target.value)}
-              title="Filter by Deadline"
-              className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:w-[130px]"
-              style={{ colorScheme: 'dark' }}
-            />
-          </div>
         </div>
       </motion.div>
 
-      <div className="flex-1 flex gap-6 overflow-x-auto pb-6 custom-scrollbar snap-x select-none">
+      <div className="flex-1 flex gap-4 overflow-x-auto pb-4 custom-scrollbar select-none">
         {states.map((state, idx) => {
           const columnTasks = tasks.filter(t => {
             if (t.state_slug !== state.slug) return false;
             if (filterProject && t.project?.toString() !== filterProject) return false;
             if (filterModule && t.module?.toString() !== filterModule) return false;
             if (filterJobTitle && t.assignee?.title !== filterJobTitle) return false;
-            if (filterPostingDate && t.posting_date !== filterPostingDate) return false;
-            if (filterDueDate && t.due_date !== filterDueDate) return false;
-            if (filterDeadline && t.deadline !== filterDeadline) return false;
             if (me?.role === 'specialist' && t.assignee?.id !== me?.id) return false;
             return true;
           });
@@ -148,24 +117,22 @@ export default function KanbanPage({ me }: { me: User | null }) {
           return (
             <motion.div 
               key={state.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="flex-shrink-0 w-[300px] lg:w-[340px] flex flex-col h-full bg-white/[0.02] rounded-[2rem] border border-white/5 p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: idx * 0.05 }}
+              className="flex-shrink-0 w-[260px] lg:w-[300px] flex flex-col h-full bg-white/[0.01] rounded-[1.5rem] border border-white/5 p-3"
             >
-              {/* Fixed Header */}
-              <div className="flex items-center justify-between mb-6 px-2 shrink-0">
-                <div className="flex items-center gap-3">
-                   <div className={`w-2 h-2 rounded-full ${colors.text.replace('text-', 'bg-')} shadow-glow`}></div>
-                   <h3 className={`font-extrabold text-xs uppercase tracking-[0.2em] ${colors.text}`}>{state.name}</h3>
+              <div className="flex items-center justify-between mb-4 px-1 shrink-0">
+                <div className="flex items-center gap-2">
+                   <div className={`w-1.5 h-1.5 rounded-full ${colors.text.replace('text-', 'bg-')} shadow-glow`}></div>
+                   <h3 className={`font-black text-[10px] uppercase tracking-[0.2em] ${colors.text}`}>{state.name}</h3>
                 </div>
-                <span className="text-[10px] font-black bg-white/5 px-2 py-1 rounded-lg border border-white/10 opacity-60">
+                <span className="text-[9px] font-black bg-white/5 px-1.5 py-0.5 rounded border border-white/10 opacity-40">
                   {columnTasks.length}
                 </span>
               </div>
 
-              {/* Scrollable Tasks */}
-              <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar pr-2 mb-4 scroll-smooth">
+              <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar pr-1 mb-3 scroll-smooth">
                  <AnimatePresence mode='popLayout'>
                   {columnTasks.map((task) => {
                     const cardColors = STATE_COLORS[task.state_slug || ''] || colors;
@@ -173,57 +140,42 @@ export default function KanbanPage({ me }: { me: User | null }) {
                       <motion.div
                         key={task.id}
                         layout
-                        initial={{ opacity: 0, scale: 0.95 }}
+                        initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        whileHover={{ y: -4, scale: 1.01 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
                         onClick={() => setSelectedTaskId(task.id)}
-                        className={`glass p-5 rounded-[1.25rem] border-white/5 hover:border-primary/40 group cursor-pointer relative transition-all duration-300 ${
-                          task.priority === 'urgent' ? 'border-red-500/40 bg-red-500/5 shadow-[0_0_20px_-5px_rgba(239,68,68,0.2)]' : ''
+                        className={`glass p-4 rounded-xl border-white/5 hover:border-primary/30 group cursor-pointer relative transition-all ${
+                          task.priority === 'urgent' ? 'border-red-500/40 bg-red-500/5' : ''
                         }`}
                       >
-                        <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-2.5">
                           <div className="flex justify-between items-start">
-                             <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${cardColors.bg} ${cardColors.text}`}>
+                             <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${cardColors.bg} ${cardColors.text}`}>
                                {task.priority || 'Low'}
                              </span>
-                             <button onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-error/10 text-error rounded-lg transition-all">
+                             <button onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }} className="opacity-0 group-hover:opacity-100 p-1 hover:bg-error/10 text-error rounded transition-all">
                                 <Trash2 className="w-3 h-3" />
                              </button>
                           </div>
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-0.5">
                              {(() => {
                                const proj = projects.find(p => p.id === Number(task.project));
                                return proj ? (
-                                 <span className="text-[8px] font-black uppercase tracking-[0.1em] flex items-center gap-1.5" style={{ color: proj.color }}>
-                                   <div className="w-1 h-1 rounded-full" style={{ backgroundColor: proj.color }}></div>
+                                 <span className="text-[7px] font-black uppercase tracking-[0.1em] opacity-60" style={{ color: proj.color }}>
                                    {proj.name}
                                  </span>
                                ) : null;
                              })()}
-                             {(() => {
-                               const mod = modules.find(m => m.id === task.module);
-                               return mod ? (
-                                 <span className="text-[8px] font-black uppercase tracking-widest text-primary/80 mb-1">
-                                   {mod.name}
-                                 </span>
-                               ) : null;
-                             })()}
-                             <h4 className="font-bold text-xs leading-relaxed text-text/90 group-hover:text-text transition-colors line-clamp-2">{task.title}</h4>
-                             <div className="flex flex-wrap gap-2 mt-2">
-                               {me?.role !== 'specialist' && task.posting_date && <span className="text-[8px] font-bold opacity-40">📅 {task.posting_date}</span>}
-                               {task.due_date && <span className="text-[8px] font-bold opacity-40">🚩 {task.due_date}</span>}
-                               {task.deadline && <span className="text-[8px] font-black text-red-500 flex items-center gap-1 animate-pulse"><AlertTriangle className="w-2.5 h-2.5" /> {task.deadline}</span>}
-                             </div>
+                             <h4 className="font-bold text-[11px] leading-tight text-text/90 line-clamp-2">{task.title}</h4>
                           </div>
-                          <div className="flex items-center justify-between mt-1 pt-3 border-t border-white/5 opacity-50 group-hover:opacity-100 transition-opacity">
-                             <div className="flex items-center gap-2">
-                                <div className={`w-5 h-5 rounded-full ${cardColors.bg.replace('/10', '')} flex items-center justify-center text-[8px] font-black text-white shadow-sm`}>
-                                   {task.assignee?.first_name?.[0] || task.assignee?.email?.[0]?.toUpperCase() || '?'}
+                          <div className="flex items-center justify-between mt-1 pt-2 border-t border-white/5 opacity-40 group-hover:opacity-80">
+                             <div className="flex items-center gap-1.5">
+                                <div className={`w-4 h-4 rounded-full ${cardColors.bg.replace('/10', '')} flex items-center justify-center text-[7px] font-black text-white`}>
+                                   {task.assignee?.first_name?.[0] || '?'}
                                 </div>
-                                <span className="text-[9px] font-bold truncate max-w-[80px]">{task.assignee?.first_name || task.assignee?.email?.split('@')[0] || 'Unassigned'}</span>
+                                <span className="text-[8px] font-bold truncate max-w-[60px]">{task.assignee?.first_name || 'User'}</span>
                              </div>
-                             <CircleDashed className={`w-3 h-3 ${cardColors.text} opacity-50`} />
+                             <CircleDashed className={`w-2.5 h-2.5 ${cardColors.text} opacity-50`} />
                           </div>
                         </div>
                       </motion.div>
@@ -232,13 +184,11 @@ export default function KanbanPage({ me }: { me: User | null }) {
                 </AnimatePresence>
               </div>
 
-              {/* Fixed Footer */}
               <motion.button 
-                whileHover={{ scale: 1.02 }} 
                 whileTap={{ scale: 0.98 }}
-                className="w-full py-3 bg-white/5 hover:bg-primary/10 border border-white/5 hover:border-primary/20 rounded-xl flex items-center justify-center text-text-muted hover:text-primary transition-all text-[10px] font-black uppercase tracking-widest shrink-0"
+                className="w-full py-2 bg-white/5 hover:bg-primary/5 border border-white/5 hover:border-primary/10 rounded-lg flex items-center justify-center text-text-muted hover:text-primary transition-all text-[9px] font-black uppercase tracking-widest shrink-0"
               >
-                <Plus className="w-3.5 h-3.5 mr-2" /> Add Task
+                <Plus className="w-3 h-3 mr-2" /> Add Task
               </motion.button>
             </motion.div>
           ); })}
