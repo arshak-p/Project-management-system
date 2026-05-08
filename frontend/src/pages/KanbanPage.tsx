@@ -29,6 +29,8 @@ export default function KanbanPage({ me }: { me: User | null }) {
   const [filterDeadline, setFilterDeadline] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
+  const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+
   const load = useCallback(async () => {
     try {
       const [t, s, p, m, jt] = await Promise.all([api.getTasks(), api.getStates(), api.getProjects(), api.getModules(), api.getJobTitles()]);
@@ -42,6 +44,36 @@ export default function KanbanPage({ me }: { me: User | null }) {
     }
     setIsLoading(false);
   }, []);
+
+  const handleTaskMove = async (taskId: number, newStateId: number) => {
+    try {
+      // Optimistic UI Update
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, state: newStateId } : t));
+      await api.updateTask(taskId, { state: newStateId });
+      load();
+    } catch (err) {
+      console.error("Failed to move task", err);
+      load();
+    }
+  };
+
+  const onDragStart = (e: React.DragEvent, taskId: number) => {
+    setDraggingTaskId(taskId);
+    e.dataTransfer.setData('taskId', taskId.toString());
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onDrop = (e: React.DragEvent, stateId: number) => {
+    e.preventDefault();
+    const taskId = Number(e.dataTransfer.getData('taskId'));
+    setDraggingTaskId(null);
+    handleTaskMove(taskId, stateId);
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
 
   useEffect(() => { 
     Promise.resolve().then(() => load()); 
@@ -106,7 +138,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
       <div className="flex-1 flex gap-4 overflow-x-auto pb-4 custom-scrollbar select-none">
         {states.map((state, idx) => {
           const columnTasks = tasks.filter(t => {
-            if (t.state_slug !== state.slug) return false;
+            if (t.state !== state.id) return false;
             if (filterProject && t.project?.toString() !== filterProject) return false;
             if (filterModule && t.module?.toString() !== filterModule) return false;
             if (filterJobTitle && t.assignee?.title !== filterJobTitle) return false;
@@ -120,7 +152,9 @@ export default function KanbanPage({ me }: { me: User | null }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: idx * 0.05 }}
-              className="flex-shrink-0 w-[260px] lg:w-[300px] flex flex-col h-full bg-white/[0.01] rounded-[1.5rem] border border-white/5 p-3"
+              onDragOver={onDragOver}
+              onDrop={(e) => onDrop(e, state.id)}
+              className="flex-shrink-0 w-[260px] lg:w-[300px] flex flex-col h-full bg-white/[0.01] rounded-[1.5rem] border border-white/5 p-3 hover:bg-white/[0.03] transition-colors"
             >
               <div className="flex items-center justify-between mb-4 px-1 shrink-0">
                 <div className="flex items-center gap-2">
@@ -136,15 +170,18 @@ export default function KanbanPage({ me }: { me: User | null }) {
                  <AnimatePresence mode='popLayout'>
                   {columnTasks.map((task) => {
                     const cardColors = STATE_COLORS[task.state_slug || ''] || colors;
+                    const isDragging = draggingTaskId === task.id;
                     return (
                       <motion.div
                         key={task.id}
                         layout
+                        draggable
+                        onDragStart={(e) => onDragStart(e as any, task.id)}
                         initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                        animate={{ opacity: isDragging ? 0.4 : 1, scale: isDragging ? 0.95 : 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         onClick={() => setSelectedTaskId(task.id)}
-                        className={`glass p-4 rounded-xl border-white/5 hover:border-primary/30 group cursor-pointer relative transition-all ${
+                        className={`glass p-4 rounded-xl border-white/5 hover:border-primary/30 group cursor-grab active:cursor-grabbing relative transition-all ${
                           task.priority === 'urgent' ? 'border-red-500/40 bg-red-500/5' : ''
                         }`}
                       >
