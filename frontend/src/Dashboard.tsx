@@ -243,132 +243,118 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           />
         )}
       </AnimatePresence>
-
       <aside className={`
         fixed md:sticky top-0 h-[calc(100vh-2rem)] w-72 lg:w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 shadow-premium transition-transform duration-500
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] md:translate-x-0'}
       `}>
-        <div className="p-10 flex items-center justify-between">
-          <button onClick={() => { handleNav((isAdmin || isTeamHead) ? 'overview' : 'my_tasks'); setSidebarOpen(false); }} className="flex items-center gap-6 group">
-            <div className="relative">
-               <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full group-hover:bg-primary/50 transition-all"></div>
-               <img src="/colour parrot-icon.png" alt="Logo" className="relative h-16 w-auto animate-float" />
-            </div>
-            <div className="text-left">
-              <p className="font-black text-2xl tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#d946ef]">C-Parrot</p>
-              <p className="text-[11px] font-black uppercase tracking-[0.4em] text-text-muted mt-3 opacity-60">Management</p>
-            </div>
-          </button>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-3 glass rounded-xl text-text-muted hover:text-white transition-all ml-2">
-            <X className="w-5 h-5" />
-          </button>
+        <div className="p-8">
+          <div className="flex items-center gap-4 mb-10 group cursor-pointer" onClick={() => handleNav('overview')}>
+             <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform shadow-glow">
+                <img src="/colour parrot-icon.png" alt="CP" className="w-7 h-7 object-contain" />
+             </div>
+             <div>
+               <h2 className="text-xl font-black tracking-tighter leading-none">C-Parrot</h2>
+               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-text-muted opacity-40 mt-1">Management</p>
+             </div>
+          </div>
+
+          <nav className="space-y-1">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleNav(item.id as Page)}
+                className={navItemClass(item.id)}
+              >
+                {page === item.id && (
+                  <motion.div 
+                    layoutId="nav-active" 
+                    className="absolute inset-0 bg-primary/10 rounded-[1.25rem] border border-primary/20"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <span className="relative z-10">{item.icon}</span>
+                <span className="relative z-10">{item.label}</span>
+              </button>
+            ))}
+          </nav>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
-          {navItems.map((item) => (
-            <motion.button 
-              key={item.id} 
-              onClick={() => { handleNav(item.id as Page); setSidebarOpen(false); }} 
-              className={navItemClass(item.id)}
-              whileHover={{ x: 4 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {page === item.id && (
-                <motion.div 
-                  layoutId="activeNav"
-                  className="absolute left-0 w-1.5 h-6 bg-primary rounded-r-full shadow-[0_0_15px_var(--primary)]"
-                />
-              )}
-              <span className={`transition-colors duration-300 ${page === item.id ? 'text-primary' : 'group-hover:text-primary'}`}>
-                {item.icon}
-              </span>
-              <span className="flex-1">{item.label}</span>
-              {item.id === 'notifications' && unreadCount > 0 && (
-                <span className="bg-primary text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black shadow-glow">
-                  {unreadCount}
-                </span>
-              )}
-            </motion.button>
-          ))}
-        </nav>
+        <div className="mt-auto p-8 space-y-4">
+          <div className="p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 relative overflow-hidden group">
+             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+             <div className="relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                   <div className="p-2 bg-yellow-500/10 rounded-lg">
+                      <Sun className="w-4 h-4 text-yellow-500" />
+                   </div>
+                   <span className="text-[10px] font-black uppercase tracking-wider text-text-muted">Dark / Light Mode</span>
+                </div>
+                <button 
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className="w-10 h-6 bg-white/5 rounded-full relative p-1 transition-colors hover:bg-white/10"
+                >
+                  <motion.div 
+                    animate={{ x: theme === 'dark' ? 0 : 16 }}
+                    className="w-4 h-4 bg-primary rounded-full shadow-glow" 
+                  />
+                </button>
+             </div>
+          </div>
 
-        <div className="p-4 mt-auto border-t border-white/5 bg-black/10 rounded-b-[2.5rem]">
-
-          <motion.button 
-            whileHover={{ x: 4 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} 
-            className="w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold text-text-muted hover:text-text hover:bg-white/5 transition-all mb-2"
+          <button 
+            onClick={onLogout}
+            className="w-full flex items-center gap-4 px-6 py-4 rounded-[2rem] text-sm font-bold text-error hover:bg-error/10 transition-all border border-transparent hover:border-error/20"
           >
-            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-primary" />} 
-            Dark / Light Mode
-          </motion.button>
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onLogout} 
-            className="w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold text-error bg-error/5 border border-error/10 hover:bg-error/10 transition-all shadow-sm"
-          >
-            <LogOut className="w-5 h-5" /> Sign Out
-          </motion.button>
+            <LogOut className="w-5 h-5" />
+            <span>Sign Out</span>
+          </button>
         </div>
       </aside>
 
-        <div className="flex-1 flex flex-col w-screen md:w-auto min-w-0 md:min-w-0 bg-background overflow-hidden relative">
-        <header className="h-16 md:h-24 flex items-center justify-between px-2 md:px-10">
-          <div className="flex items-center gap-6">
-            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-3 glass rounded-2xl">
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-4">
-               {history.length > 0 && (
-                 <button onClick={() => {
-                   const h = [...history];
-                   const prev = h.pop();
-                   setHistory(h);
-                   if (prev) handleNav(prev, false);
-                 }} className="p-3 glass rounded-2xl hover:text-primary transition-all">
-                   <ArrowLeft className="w-4 h-4" />
-                 </button>
-               )}
-               <h2 className="font-black text-xs text-text-muted uppercase tracking-[0.4em] opacity-40 italic">{page}</h2>
-            </div>
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        <header className="h-24 flex items-center justify-between px-8 lg:px-12 shrink-0">
+          <div className="flex items-center gap-4">
+             <button onClick={() => setSidebarOpen(true)} className="md:hidden p-3 bg-white/5 rounded-2xl">
+               <Menu className="w-6 h-6" />
+             </button>
+             {history.length > 0 && (
+               <button 
+                 onClick={() => handleNav(history[history.length - 1], false)}
+                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-primary transition-colors bg-white/5 px-4 py-2 rounded-xl border border-white/5"
+               >
+                 <ArrowLeft className="w-3.5 h-3.5" /> Back
+               </button>
+             )}
           </div>
 
           <div className="flex items-center gap-6">
-            <button 
-              onClick={() => handleNav('notifications')}
-              className="relative p-3 glass rounded-full hover:border-primary/50 transition-all text-text-muted hover:text-white group flex items-center justify-center"
-            >
-              <Bell className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              {unreadCount > 0 && (
-                <span className="absolute top-[6px] right-[6px] w-[10px] h-[10px] bg-rose-500 rounded-full border-2 border-background animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
-              )}
-            </button>
-            {me && (
-              <button onClick={() => handleNav('profile')} className="flex items-center gap-4 p-1 pl-6 pr-1 glass rounded-full hover:border-primary/50 transition-all border border-white/5">
-                <div className="flex flex-col items-end">
-                  <p className="text-[11px] font-black tracking-tight uppercase text-text">{me.first_name || 'User'}</p>
-                  <span className="text-[7px] font-black uppercase tracking-widest text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded-md border border-primary/20 leading-none">
-                    {me.role?.replace('_', ' ') || 'Specialist'}
+            <div className="relative group">
+              <button 
+                onClick={() => setPage('notifications')}
+                className="p-4 bg-white/5 hover:bg-primary/10 rounded-2xl relative transition-all border border-white/5 hover:border-primary/20 shadow-premium"
+              >
+                <Bell className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-3 right-3 w-4 h-4 bg-primary border-2 border-background rounded-full text-[8px] font-black flex items-center justify-center animate-pulse">
+                    {unreadCount}
                   </span>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-[#d946ef] flex items-center justify-center text-white text-xs font-black shadow-glow-sm">
-                  {me.first_name?.[0] || '?' }
+                )}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4 pl-6 border-l border-white/5">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-black tracking-tight">{me?.first_name?.toUpperCase() || 'AGENT'}</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-primary mt-0.5">{me?.role || 'Clearance'}</p>
+              </div>
+              <button onClick={() => setPage('profile')} className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-[#8b5cf6] p-[1px] shadow-glow hover:scale-105 transition-transform">
+                <div className="w-full h-full rounded-[15px] bg-background flex items-center justify-center font-black text-sm">
+                  {me?.first_name?.[0] || me?.email?.[0]?.toUpperCase() || '?'}
                 </div>
               </button>
-            )}
+            </div>
           </div>
         </header>
-        
-        <main className="flex-1 overflow-y-auto px-4 md:px-10 pb-24 md:pb-10 custom-scrollbar">
-          <div className="max-w-7xl mx-auto">
-             <AnimatePresence mode="wait">
-                <motion.div
-                  key={page}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
                   transition={{ duration: 0.4 }}
                 >
                   <Suspense fallback={
