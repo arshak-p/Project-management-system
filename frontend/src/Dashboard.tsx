@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, FolderKanban, Users, LogOut, Bell, 
-  Menu, X, Sun, Moon, ArrowLeft, Loader2, Calendar, 
+  Menu, Sun, ArrowLeft, Loader2, Calendar, 
   Briefcase, Boxes, Network, History, Database, Zap, BookOpen, Clock, Target, Star
 } from 'lucide-react';
 import { api } from './api';
@@ -53,10 +53,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [me, setMe] = useState<User | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+  const [notifications] = useState<Notification[]>([]);
+  const [dismissedIds] = useState<string[]>([]);
   const [isNotifyPaused, setIsNotifyPaused] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const isAdmin = me?.role === 'admin' || me?.role === 'agency_manager';
   const isTeamHead = me?.role === 'team_head';
