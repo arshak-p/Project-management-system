@@ -59,11 +59,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   const isAdmin = me?.role === 'admin' || me?.role === 'agency_manager';
   const isTeamHead = me?.role === 'team_head';
-  const isHR = me?.role === 'hr';
 
   const loadProfile = useCallback(async () => {
     try {
-      const res = await api.getProfile();
+      const res = await api.getMe();
       setMe(res.data);
       // Redirect specialists to their specific view
       if (res.data.role === 'specialist' && page === 'overview') {
