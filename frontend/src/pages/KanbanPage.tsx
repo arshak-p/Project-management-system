@@ -27,6 +27,9 @@ export default function KanbanPage({ me }: { me: User | null }) {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [targetStateId, setTargetStateId] = useState<number | null>(null);
+  const [taskForm, setTaskForm] = useState({ title: '', project: '', module: '', priority: 'medium' });
 
   const load = useCallback(async () => {
     try {
@@ -51,6 +54,24 @@ export default function KanbanPage({ me }: { me: User | null }) {
     } catch (err) {
       console.error("Failed to move task", err);
       load();
+    }
+  };
+
+  const handleQuickCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskForm.title || !taskForm.project || !targetStateId) return;
+    try {
+      await api.createTask({
+        ...taskForm,
+        state: targetStateId,
+        project: Number(taskForm.project),
+        module: taskForm.module ? Number(taskForm.module) : null,
+      });
+      setShowAddModal(false);
+      setTaskForm({ title: '', project: '', module: '', priority: 'medium' });
+      load();
+    } catch (err) {
+      console.error("Failed to create task", err);
     }
   };
 
@@ -98,6 +119,31 @@ export default function KanbanPage({ me }: { me: User | null }) {
   return (
     <div className="h-[calc(100vh-10rem)] flex flex-col overflow-hidden">
       {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
+
+      {showAddModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+           <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass w-full max-w-md p-8 rounded-[2rem] border border-primary/20 shadow-premium">
+              <h3 className="text-2xl font-black tracking-tighter mb-6">Quick Task</h3>
+              <form onSubmit={handleQuickCreate} className="space-y-4">
+                 <input autoFocus placeholder="Task Title..." className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} />
+                 <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.project} onChange={e => setTaskForm({...taskForm, project: e.target.value})}>
+                    <option value="">Select Project</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                 </select>
+                 <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.priority} onChange={e => setTaskForm({...taskForm, priority: e.target.value})}>
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                    <option value="urgent">Urgent</option>
+                 </select>
+                 <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all">Cancel</button>
+                    <button type="submit" className="flex-1 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-glow hover:scale-105 active:scale-95 transition-all">Create</button>
+                 </div>
+              </form>
+           </motion.div>
+        </div>
+      )}
 
       <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 mb-6 px-2">
         <div>
@@ -228,6 +274,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
 
               <motion.button 
                 whileTap={{ scale: 0.98 }}
+                onClick={() => { setTargetStateId(state.id); setShowAddModal(true); }}
                 className="w-full py-2 bg-white/5 hover:bg-primary/5 border border-white/5 hover:border-primary/10 rounded-lg flex items-center justify-center text-text-muted hover:text-primary transition-all text-[9px] font-black uppercase tracking-widest shrink-0"
               >
                 <Plus className="w-3 h-3 mr-2" /> Add Task
