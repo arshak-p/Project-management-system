@@ -8,17 +8,19 @@ import {
 import { api } from './api';
 import type { User } from './api';
 
-// Lazy loading for peak performance
-const OverviewPage = lazy(() => import('./pages/OverviewPage'));
+import type { User } from './api';
+import OverviewPage from './pages/OverviewPage';
+import KanbanPage from './pages/KanbanPage';
+import TasksPage from './pages/TasksPage';
+import TeamPage from './pages/TeamPage';
+
+// Lazy loading for secondary pages to keep the app lean
 const TeamHeadDashboard = lazy(() => import('./pages/TeamHeadDashboard'));
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
-const TasksPage = lazy(() => import('./pages/TasksPage'));
 const CyclesPage = lazy(() => import('./pages/CyclesPage'));
 const ModulesPage = lazy(() => import('./pages/ModulesPage'));
 const WorkflowPage = lazy(() => import('./pages/WorkflowPage'));
 const BackupsPage = lazy(() => import('./pages/BackupsPage'));
-const KanbanPage = lazy(() => import('./pages/KanbanPage'));
-const TeamPage = lazy(() => import('./pages/TeamPage'));
 const TimesheetsPage = lazy(() => import('./pages/TimesheetsPage'));
 const MyTasksPage = lazy(() => import('./pages/user/MyTasksPage'));
 const NotificationsPage = lazy(() => import('./pages/user/NotificationsPage'));
