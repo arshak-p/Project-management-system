@@ -92,18 +92,11 @@ export default function TeamPage({ me }: { me: User | null }) {
     try {
       const res = await api.sendCreationOTP(form.email);
       setShowOtpField(true);
-      
-      // AUTO-FILL & INSTANT DISPLAY:
-      // Grab the OTP directly from the response so the admin doesn't have to wait for email
       if (res.data?.otp) {
         setOtp(res.data.otp);
-        setSuccess(`TACTICAL CODE RETRIEVED: ${res.data.otp}`);
-      } else if (res.data?.detail?.includes('CODE:')) {
-        const extracted = res.data.detail.split('CODE:')[1].trim().split(' ')[0];
-        setOtp(extracted);
-        setSuccess(res.data.detail);
+        setSuccess(res.data.otp);
       } else {
-        setSuccess('Verification code dispatched to email.');
+        setSuccess('SENT');
       }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -295,15 +288,12 @@ export default function TeamPage({ me }: { me: User | null }) {
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent animate-pulse" />
                   <div className="flex flex-col gap-0.5 relative z-10">
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/60">Tactical Authorization Code</span>
-                    <span className="font-black text-xl tracking-[0.2em] font-mono">{success.includes(':') ? success.split(':')[1].trim() : success}</span>
+                    <span className="font-black text-xl tracking-[0.2em] font-mono">{success}</span>
                   </div>
                   <div className="flex gap-2 relative z-10">
                     <button 
                       type="button"
-                      onClick={() => {
-                        const code = success.includes(':') ? success.split(':')[1].trim().split(' ')[0] : success;
-                        handleCopyOtp(code);
-                      }}
+                      onClick={() => handleCopyOtp(success)}
                       className="px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20"
                     >
                       {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
