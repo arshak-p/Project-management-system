@@ -140,40 +140,35 @@ class SendOTPView(APIView):
         
         EmailOTP.objects.create(email=email, otp=otp_code)
 
-        try:
-            send_mail(
-                subject='Welcome to Colour Parrot! - Your Tactical Clearance Code',
-                message=(
-                    f'Hello,\n\n'
-                    'You are being recruited to the Colour Parrot Command Center. '
-                    f'Your unique tactical clearance code is: {otp_code}\n\n'
-                    'System Portal: https://c1r9rt-workflow.in\n\n'
-                    'Please enter this code on the verification screen to finalize your account setup.\n\n'
-                    'Best regards,\n'
-                    'The Colour Parrot Team'
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-            return Response({
-                'detail': f'Clearance code CODE: {otp_code} dispatched successfully.',
-                'otp_sent': True,
-                'otp': otp_code
-            })
-        except Exception as e:
-            import traceback
-            error_msg = str(e)
-            stack_trace = traceback.format_exc()
-            print(f"CRITICAL SMTP FAILURE on Render: {error_msg}")
-            print(stack_trace)
-            
-            # Returning 200 with otp_fallback so the frontend can display the code manually
-            return Response({
-                'detail': f'CODE: {otp_code} (SMTP ERROR: {error_msg[:50]}... Use Manual Code)',
-                'otp_fallback': True,
-                'otp': otp_code
-            }, status=status.HTTP_200_OK)
+        import threading
+        def send_otp_email(email_addr, code):
+            try:
+                send_mail(
+                    subject='Welcome to Colour Parrot! - Your Tactical Clearance Code',
+                    message=(
+                        f'Hello,\n\n'
+                        'You are being recruited to the Colour Parrot Command Center. '
+                        f'Your unique tactical clearance code is: {code}\n\n'
+                        'System Portal: https://c1r9rt-workflow.in\n\n'
+                        'Please enter this code on the verification screen to finalize your account setup.\n\n'
+                        'Best regards,\n'
+                        'The Colour Parrot Team'
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email_addr],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                print(f"BACKGROUND SMTP FAILURE: {str(e)}")
+
+        # Start email in background so response is INSTANT
+        threading.Thread(target=send_otp_email, args=(email, otp_code)).start()
+
+        return Response({
+            'detail': f'CODE: {otp_code} (Dispatched)',
+            'otp': otp_code,
+            'otp_sent': True
+        }, status=status.HTTP_200_OK)
 
 class VerifyOTPActionView(APIView):
     """
