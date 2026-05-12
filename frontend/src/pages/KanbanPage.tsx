@@ -23,10 +23,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
   const [isLoading, setIsLoading] = useState(true);
   const [filterProject, setFilterProject] = useState('');
   const [filterModule, setFilterModule] = useState('');
-  const [filterJobTitle, setFilterJobTitle] = useState(me?.role === 'team_head' ? (me?.title || '') : '');
-  const [filterPostingDate, setFilterPostingDate] = useState('');
-  const [filterDueDate, setFilterDueDate] = useState('');
-  const [filterDeadline, setFilterDeadline] = useState('');
+  const [filterJobTitle, setFilterJobTitle] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
@@ -182,8 +179,8 @@ export default function KanbanPage({ me }: { me: User | null }) {
                         exit={{ opacity: 0, scale: 0.95 }}
                         onClick={() => setSelectedTaskId(task.id)}
                         className={`glass p-4 rounded-xl border-white/5 hover:border-primary/30 group cursor-grab active:cursor-grabbing relative transition-all ${
-                          task.priority === 'urgent' ? 'border-red-500/40 bg-red-500/5' : ''
-                        }`}
+                          task.priority === 'urgent' ? 'border-red-500/40 bg-red-500/5 shadow-[0_0_15px_-5px_rgba(239,68,68,0.3)]' : ''
+                        } ${task.state_slug === 're-edit' ? 'border-red-500/30' : ''}`}
                       >
                         <div className="flex flex-col gap-2.5">
                           <div className="flex justify-between items-start">
@@ -204,13 +201,21 @@ export default function KanbanPage({ me }: { me: User | null }) {
                                ) : null;
                              })()}
                              <h4 className="font-bold text-[11px] leading-tight text-text/90 line-clamp-2">{task.title}</h4>
+                             <div className="flex flex-wrap gap-2 mt-1">
+                               {task.due_date && <span className="text-[7px] font-bold opacity-30">🚩 {task.due_date}</span>}
+                               {task.deadline && (
+                                 <span className="text-[7px] font-black text-red-500 flex items-center gap-1 animate-pulse">
+                                   <AlertTriangle className="w-2 h-2" /> {task.deadline}
+                                 </span>
+                               )}
+                             </div>
                           </div>
                           <div className="flex items-center justify-between mt-1 pt-2 border-t border-white/5 opacity-40 group-hover:opacity-80">
                              <div className="flex items-center gap-1.5">
                                 <div className={`w-4 h-4 rounded-full ${cardColors.bg.replace('/10', '')} flex items-center justify-center text-[7px] font-black text-white`}>
                                    {task.assignee?.first_name?.[0] || '?'}
                                 </div>
-                                <span className="text-[8px] font-bold truncate max-w-[60px]">{task.assignee?.first_name || 'User'}</span>
+                                <span className="text-[8px] font-bold truncate max-w-[80px]">{task.assignee?.first_name || 'User'}</span>
                              </div>
                              <CircleDashed className={`w-2.5 h-2.5 ${cardColors.text} opacity-50`} />
                           </div>

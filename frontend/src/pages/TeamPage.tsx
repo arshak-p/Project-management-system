@@ -93,11 +93,17 @@ export default function TeamPage({ me }: { me: User | null }) {
       const res = await api.sendCreationOTP(form.email);
       setShowOtpField(true);
       
-      // Show detailed message if backend provides it (e.g. including the manual code)
-      if (res.data?.detail?.includes('CODE:')) {
+      // AUTO-FILL & INSTANT DISPLAY:
+      // Grab the OTP directly from the response so the admin doesn't have to wait for email
+      if (res.data?.otp) {
+        setOtp(res.data.otp);
+        setSuccess(`TACTICAL CODE RETRIEVED: ${res.data.otp}`);
+      } else if (res.data?.detail?.includes('CODE:')) {
+        const extracted = res.data.detail.split('CODE:')[1].trim().split(' ')[0];
+        setOtp(extracted);
         setSuccess(res.data.detail);
       } else {
-        setSuccess('Verification code sent to email!');
+        setSuccess('Verification code dispatched to email.');
       }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -285,24 +291,25 @@ export default function TeamPage({ me }: { me: User | null }) {
                 </div>
               )}
               {success && (
-                <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl text-sm text-emerald-400 animate-in fade-in flex items-center justify-between shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest opacity-60">System Message</span>
-                    <span className="font-bold">{success}</span>
+                <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl text-sm text-emerald-400 animate-in fade-in flex items-center justify-between shadow-[0_0_30px_rgba(16,185,129,0.15)] relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent animate-pulse" />
+                  <div className="flex flex-col gap-0.5 relative z-10">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/60">Tactical Authorization Code</span>
+                    <span className="font-black text-xl tracking-[0.2em] font-mono">{success.includes(':') ? success.split(':')[1].trim() : success}</span>
                   </div>
-                  {success.includes('CODE:') && (
+                  <div className="flex gap-2 relative z-10">
                     <button 
                       type="button"
                       onClick={() => {
-                        const code = success.split('CODE:')[1].trim().split(' ')[0];
+                        const code = success.includes(':') ? success.split(':')[1].trim().split(' ')[0] : success;
                         handleCopyOtp(code);
                       }}
-                      className="ml-4 px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase tracking-tighter shadow-lg shadow-emerald-500/20"
+                      className="px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20"
                     >
                       {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      {copied ? 'Copied!' : 'Copy Code'}
+                      {copied ? 'Copied' : 'Copy'}
                     </button>
-                  )}
+                  </div>
                 </div>
               )}
 
