@@ -5,7 +5,8 @@ import {
   Menu, X, Sun, Moon, ArrowLeft, Loader2, Calendar, 
   Briefcase, Boxes, Network, History, Database, Zap, BookOpen, Clock, Target, Star
 } from 'lucide-react';
-import { api, User } from './api';
+import { api } from './api';
+import type { User } from './api';
 
 // Lazy loading for peak performance
 const OverviewPage = lazy(() => import('./pages/OverviewPage'));
@@ -19,10 +20,10 @@ const BackupsPage = lazy(() => import('./pages/BackupsPage'));
 const KanbanPage = lazy(() => import('./pages/KanbanPage'));
 const TeamPage = lazy(() => import('./pages/TeamPage'));
 const TimesheetsPage = lazy(() => import('./pages/TimesheetsPage'));
-const MyTasksPage = lazy(() => import('./pages/MyTasksPage'));
-const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const ActivityPage = lazy(() => import('./pages/ActivityLogPage'));
+const MyTasksPage = lazy(() => import('./pages/user/MyTasksPage'));
+const NotificationsPage = lazy(() => import('./pages/user/NotificationsPage'));
+const ProfilePage = lazy(() => import('./pages/user/ProfilePage'));
+const ActivityPage = lazy(() => import('./pages/ActivityPage'));
 const TaskCalendarPage = lazy(() => import('./pages/TaskCalendarPage'));
 const StrategistPage = lazy(() => import('./pages/StrategistPage'));
 const TeamIntelligencePage = lazy(() => import('./pages/TeamIntelligencePage'));
@@ -52,10 +53,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [me, setMe] = useState<User | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
-  const [isNotifyPaused, setIsNotifyPaused] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications] = useState<Notification[]>([]);
+  const [dismissedIds] = useState<string[]>([]);
 
   const isAdmin = me?.role === 'admin' || me?.role === 'agency_manager';
   const isTeamHead = me?.role === 'team_head';
