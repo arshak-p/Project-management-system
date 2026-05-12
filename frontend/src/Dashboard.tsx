@@ -53,8 +53,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [me, setMe] = useState<User | null>(null);
-  const [notifications] = useState<Notification[]>([]);
-  const [dismissedIds] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+  const [isNotifyPaused, setIsNotifyPaused] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const isAdmin = me?.role === 'admin' || me?.role === 'agency_manager';
   const isTeamHead = me?.role === 'team_head';
@@ -265,8 +267,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     {page === 'team' && <TeamPage me={me} />}
                     {page === 'timesheets' && <TimesheetsPage me={me} />}
                     {page === 'my_tasks' && <MyTasksPage me={me} />}
-                    {page === 'notifications' && <NotificationsPage />}
-                    {page === 'profile' && <ProfilePage me={me} onUpdate={setMe} />}
+                    {page === 'notifications' && <NotificationsPage me={me} />}
+                    {page === 'profile' && <ProfilePage me={me} />}
                     {page === 'activity' && <ActivityPage me={me} />}
                     {page === 'calendar' && <TaskCalendarPage me={me} />}
                     {page === 'strategist' && <StrategistPage me={me} />}
