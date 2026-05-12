@@ -7,8 +7,6 @@ import {
 } from 'lucide-react';
 import { api } from './api';
 import type { User } from './api';
-
-import type { User } from './api';
 import OverviewPage from './pages/OverviewPage';
 import KanbanPage from './pages/KanbanPage';
 import TasksPage from './pages/TasksPage';
