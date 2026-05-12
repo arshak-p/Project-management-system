@@ -56,6 +56,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [notifications] = useState<Notification[]>([]);
   const [dismissedIds] = useState<string[]>([]);
   const [isNotifyPaused, setIsNotifyPaused] = useState(false);
+  const [unreadCount] = useState(0);
 
   const isAdmin = me?.role === 'admin' || me?.role === 'agency_manager';
   const isTeamHead = me?.role === 'team_head';
