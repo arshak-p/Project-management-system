@@ -53,10 +53,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [me, setMe] = useState<User | null>(null);
-  const [notifications] = useState<Notification[]>([]);
-  const [dismissedIds] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
   const [isNotifyPaused, setIsNotifyPaused] = useState(false);
-  const [unreadCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const isAdmin = me?.role === 'admin' || me?.role === 'agency_manager';
   const isTeamHead = me?.role === 'team_head';
@@ -74,10 +74,24 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     }
   }, [page]);
 
+  const loadNotifications = useCallback(async () => {
+    if (isNotifyPaused) return;
+    try {
+      const res = await api.getNotifications();
+      setNotifications(res.data);
+      setUnreadCount(res.data.filter((n: any) => !n.is_read).length);
+    } catch (err) {
+      console.error("Notifications failed", err);
+    }
+  }, [isNotifyPaused]);
+
   useEffect(() => {
     loadProfile();
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 3000); // High Speed: 3s
     document.documentElement.setAttribute('data-theme', theme);
-  }, [loadProfile, theme]);
+    return () => clearInterval(interval);
+  }, [loadProfile, loadNotifications, theme]);
 
   const handleNav = (target: Page, saveHistory = true) => {
     if (saveHistory && target !== page) {
