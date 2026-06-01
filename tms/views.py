@@ -842,22 +842,31 @@ class BackupViewSet(viewsets.ModelViewSet):
 
                 t_out = io.StringIO()
                 t_w = csv.writer(t_out)
-                t_w.writerow(['Task Code', 'Title', 'State', 'Priority', 'Module', 'Assignee', 'Status', 'Created Date', 'Post Date', 'Start Date', 'Deadline', 'Reference Link', 'Description'])
+                t_w.writerow(['Task Code', 'Title', 'Project', 'Module', 'State', 'Priority', 'Assignee', 'Created At', 'Posting Date', 'Scheduled Date', 'Due Date', 'Deadline', 'Rework Count', 'State Time (Min)', 'Reference Links', 'Description'])
                 for item in WorkItem.objects.filter(project=project).select_related('state', 'module', 'assignee'):
+                    assignee_str = "Unassigned"
+                    if item.assignee:
+                        assignee_str = item.assignee.get_full_name().strip() or item.assignee.email
+                    
+                    state_info = " | ".join([f"{s}: {m}m" for s, m in (item.state_durations or {}).items()])
+                    
                     t_w.writerow([
                         item.task_code, 
                         item.title, 
-                        item.state.name, 
-                        item.priority, 
+                        item.project.name if item.project else "Unlinked",
                         item.module.name if item.module else "", 
-                        item.assignee.get_full_name() if item.assignee else "Unassigned", 
-                        "Active" if item.is_active else "Archived/Removed",
-                        item.created_at, 
+                        item.state.name if item.state else "N/A", 
+                        item.priority, 
+                        assignee_str, 
+                        item.created_at.strftime("%Y-%m-%d %H:%M") if item.created_at else "", 
                         item.posting_date or "", 
+                        item.scheduled_date or "",
                         item.due_date or "", 
                         item.deadline or "", 
+                        item.rework_count,
+                        state_info,
                         item.reference_link or "", 
-                        item.description
+                        item.description or ""
                     ])
                 zip_file.writestr(f"{prefix}Tasks_Detailed.csv", t_out.getvalue())
 

@@ -119,7 +119,7 @@ class Command(BaseCommand):
                 t.module.name if t.module else "No Module",
                 t.state.name if t.state else "N/A",
                 t.priority,
-                t.assignee.get_full_name() if t.assignee else "Unassigned",
+                (t.assignee.get_full_name().strip() or t.assignee.email) if t.assignee else "Unassigned",
                 total_mins,
                 latest_note,
                 t.created_at.strftime("%Y-%m-%d %H:%M"),
