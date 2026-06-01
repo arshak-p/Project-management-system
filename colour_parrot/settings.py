@@ -172,14 +172,8 @@ SIMPLE_JWT = {
 # --- CORS & CSRF (always applied) ---
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = [
-    o.strip()
-    for o in os.environ.get(
-        "CORS_ALLOWED_ORIGINS",
-        "https://c1r9rt-workflow.in,http://c1r9rt-workflow.in,https://www.c1r9rt-workflow.in,https://colour-parrot-mgtsystem.onrender.com,http://localhost:5173,http://127.0.0.1:5173"
-    ).split(",")
-    if o.strip()
-]
+# Temporarily allow all origins to prevent ERR_NETWORK on login
+CORS_ALLOW_ALL_ORIGINS = True
 
 CSRF_TRUSTED_ORIGINS = [
     o.strip()
