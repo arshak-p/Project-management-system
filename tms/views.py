@@ -872,23 +872,32 @@ class BackupViewSet(viewsets.ModelViewSet):
 
                 c_out = io.StringIO()
                 c_w = csv.writer(c_out)
-                c_w.writerow(['Task Code', 'Author', 'Comment', 'Date'])
+                c_w.writerow(['Task Code', 'Author', 'Comment Body', 'Timestamp'])
                 for c in WorkItemComment.objects.filter(work_item__project=project).select_related('author', 'work_item'):
-                    c_w.writerow([c.work_item.task_code, c.author.get_full_name(), c.body, c.created_at])
+                    author_str = "Unassigned"
+                    if c.author:
+                        author_str = c.author.get_full_name().strip() or c.author.email
+                    c_w.writerow([c.work_item.task_code, author_str, c.body, c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else ""])
                 zip_file.writestr(f"{prefix}All_Task_Comments.csv", c_out.getvalue())
 
                 l_out = io.StringIO()
                 l_w = csv.writer(l_out)
-                l_w.writerow(['Task', 'User', 'Minutes', 'Date', 'Note'])
+                l_w.writerow(['Task Code', 'User', 'Minutes', 'Logged Date', 'Note'])
                 for log in TimeLog.objects.filter(work_item__project=project).select_related('user', 'work_item'):
-                    l_w.writerow([log.work_item.task_code, log.user.get_full_name(), log.minutes, log.logged_at, log.note])
+                    user_str = "Unassigned"
+                    if log.user:
+                        user_str = log.user.get_full_name().strip() or log.user.email
+                    l_w.writerow([log.work_item.task_code, user_str, log.minutes, log.logged_at.strftime("%Y-%m-%d %H:%M") if log.logged_at else "", log.note or ""])
                 zip_file.writestr(f"{prefix}Detailed_Time_Logs.csv", l_out.getvalue())
 
                 a_out = io.StringIO()
                 a_w = csv.writer(a_out)
-                a_w.writerow(['Task', 'File', 'Size', 'User'])
+                a_w.writerow(['Task Code', 'File', 'Size', 'User'])
                 for a in WorkItemAttachment.objects.filter(work_item__project=project).select_related('uploaded_by', 'work_item'):
-                    a_w.writerow([a.work_item.task_code, a.file_name, a.size_bytes, a.uploaded_by.get_full_name()])
+                    up_str = "Unassigned"
+                    if a.uploaded_by:
+                        up_str = a.uploaded_by.get_full_name().strip() or a.uploaded_by.email
+                    a_w.writerow([a.work_item.task_code, a.file_name, a.size_bytes, up_str])
                 zip_file.writestr(f"{prefix}Attachments_Manifest.csv", a_out.getvalue())
 
                 # Activity Log Export
@@ -896,9 +905,12 @@ class BackupViewSet(viewsets.ModelViewSet):
                 act_w = csv.writer(act_out)
                 act_w.writerow(['Date', 'User', 'Action', 'Entity Type', 'Entity ID', 'Details'])
                 for entry in ActivityLog.objects.filter(project=project).select_related('user'):
+                    entry_user_str = "System"
+                    if entry.user:
+                        entry_user_str = entry.user.get_full_name().strip() or entry.user.email
                     act_w.writerow([
-                        entry.created_at, 
-                        entry.user.get_full_name() if entry.user else "System", 
+                        entry.created_at.strftime("%Y-%m-%d %H:%M") if entry.created_at else "", 
+                        entry_user_str, 
                         entry.action, 
                         entry.entity_type, 
                         entry.entity_id, 
