@@ -225,8 +225,9 @@ class Command(BaseCommand):
                 drive_service = build('drive', 'v3', credentials=creds)
                 
                 # 1. Create a folder for the month
+                folder_name = first_day_prev_month.strftime("%B %d %Y")
                 folder_metadata = {
-                    'name': f'Backup_{month_str}',
+                    'name': folder_name,
                     'mimeType': 'application/vnd.google-apps.folder'
                 }
                 folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
