@@ -15,7 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY", "dev-only-change-me-in-production-use-long-random-string"
 )
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in ("1", "true", "yes")
+DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = [
     h.strip()
@@ -171,7 +171,6 @@ SIMPLE_JWT = {
 
 # --- CORS & CSRF (always applied) ---
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # TEMPORARY FOR TROUBLESHOOTING
 
 CORS_ALLOWED_ORIGINS = [
     o.strip()
