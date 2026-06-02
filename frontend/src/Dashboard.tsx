@@ -150,7 +150,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   };
 
   const navItemClass = (id: Page) => `
-    relative w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold transition-all group
+    relative w-full flex items-center gap-3 px-6 py-2.5 rounded-[1.25rem] text-sm font-bold transition-all group
     ${page === id ? 'text-primary' : 'text-text-muted hover:text-text hover:bg-white/5'}
   `;
 
@@ -193,8 +193,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         fixed md:sticky top-0 h-[calc(111.11vh-2rem)] w-72 lg:w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 shadow-premium transition-transform duration-500
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] md:translate-x-0'}
       `}>
-        <div className="p-8 flex flex-col flex-1 min-h-0">
-          <div className="flex items-center gap-4 mb-10 group cursor-pointer shrink-0" onClick={() => handleNav((isAdmin || isTeamHead) ? 'overview' : 'my_tasks')}>
+        <div className="p-6 flex flex-col flex-1 min-h-0">
+          <div className="flex items-center gap-4 mb-6 group cursor-pointer shrink-0" onClick={() => handleNav((isAdmin || isTeamHead) ? 'overview' : 'my_tasks')}>
              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform shadow-glow">
                 <img src="/colour parrot-icon.png" alt="CP" className="w-7 h-7 object-contain" />
              </div>
@@ -225,11 +225,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           </nav>
         </div>
 
-        <div className="mt-auto p-8 pt-0 space-y-4 shrink-0">
+        <div className="mt-auto p-6 pt-0 space-y-4 shrink-0">
 
           <button 
             onClick={onLogout}
-            className="w-full flex items-center gap-4 px-6 py-4 rounded-[2rem] text-sm font-bold text-error hover:bg-error/10 transition-all border border-transparent hover:border-error/20"
+            className="w-full flex items-center gap-4 px-6 py-3 rounded-[2rem] text-sm font-bold text-error hover:bg-error/10 transition-all border border-transparent hover:border-error/20"
           >
             <LogOut className="w-5 h-5" />
             <span>Sign Out</span>
