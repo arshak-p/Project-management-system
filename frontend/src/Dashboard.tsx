@@ -10,6 +10,7 @@ import type { User } from './api';
 import OverviewPage from './pages/OverviewPage';
 import KanbanPage from './pages/KanbanPage';
 import TasksPage from './pages/TasksPage';
+import SpecialistDashboard from './pages/SpecialistDashboard';
 import TeamPage from './pages/TeamPage';
 
 // Lazy loading for secondary pages to keep the app lean
@@ -313,7 +314,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-text-muted opacity-40">Synchronizing Agency Data...</p>
                     </div>
                   }>
-                    {page === 'overview' && (isTeamHead ? <TeamHeadDashboard me={me} /> : <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />)}
+                    {page === 'overview' && (isTeamHead ? <TeamHeadDashboard me={me} /> : (me?.role === 'specialist' ? <SpecialistDashboard me={me} /> : <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />))}
                     {page === 'projects' && <ProjectsPage me={me} onNavigate={(p: string) => handleNav(p as Page)} />}
                     {page === 'tasks' && <TasksPage me={me} />}
                     {page === 'cycles' && <CyclesPage me={me} />}
