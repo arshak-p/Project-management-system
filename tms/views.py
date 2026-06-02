@@ -659,12 +659,12 @@ class AnalyticsSummaryView(APIView):
         total = wis.count()
         
         if start_date or end_date:
-            # When filtering by date, we only want tasks active in that range
-            created_ids = list(wis.filter(log_filter).values_list('id', flat=True))
-            logged_ids = list(TimeLog.objects.filter(log_filter).values_list('work_item_id', flat=True))
-            active_ids = set(created_ids) | set(logged_ids)
-            wis = wis.filter(id__in=active_ids)
+            # When filtering by date, we only want tasks active in that range (created in range or logged in range)
+            wis = wis.filter(
+                Q(log_filter) | Q(time_logs__in=TimeLog.objects.filter(log_filter))
+            ).distinct()
             total = wis.count() # Update total for the filtered view
+            
         time_logs_in_range = TimeLog.objects.filter(log_filter)
         if assignee_id:
             time_logs_in_range = time_logs_in_range.filter(user_id=assignee_id)
@@ -690,7 +690,7 @@ class AnalyticsSummaryView(APIView):
         start_trend = (now - timezone.timedelta(days=days_to_show)).date()
         
         # Activity trend: Based on TimeLogs created per day
-        activity_logs = TimeLog.objects.filter(created_at__date__gte=start_trend)
+        activity_logs = TimeLog.objects.filter(created_at__gte=start_trend)
         if assignee_id:
             activity_logs = activity_logs.filter(user_id=assignee_id)
             
@@ -704,7 +704,7 @@ class AnalyticsSummaryView(APIView):
         completed_counts = dict(
             wis.filter(
                 state__slug__in=['completed-launched', 'completed', 'launched', 'done'], 
-                updated_at__date__gte=start_trend
+                updated_at__gte=start_trend
             )
             .values("updated_at__date")
             .annotate(c=Count("id"))
