@@ -103,6 +103,18 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                 body=f"You have been assigned to task: '{instance.title}'",
                 link=f"/task/{instance.id}"
             )
+            
+        # Notify Assignee's Team Head
+        if getattr(instance.assignee, 'title', None):
+            ths = User.objects.filter(role=User.Role.TEAM_HEAD, is_active=True, title=instance.assignee.title)
+            for th in ths:
+                if not actor or actor.id != th.id:
+                    notify_user(
+                        th.id,
+                        title=f"Team Member Assigned: {instance.task_code}",
+                        body=f"Task '{instance.title}' was assigned to {instance.assignee.get_full_name() or instance.assignee.email}.",
+                        link=f"/task/{instance.id}"
+                    )
 
     if not created and actor:
         # Determine notification title and body
@@ -126,6 +138,19 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                 body=notif_body,
                 link=f"/task/{instance.id}"
             )
+
+    # --- Global Notifications for Upper Management ---
+    if actor:
+        is_deact = action == "deactivated"
+        global_title = f"New Task Created: {instance.task_code}" if created else (f"Archived: {instance.task_code}" if is_deact else f"Task Updated: {instance.task_code}")
+        global_body = f"'{instance.title}' was {'created' if created else 'updated'} by {actor.first_name or actor.email}"
+        notify_roles(
+            [User.Role.ADMIN, User.Role.PROJECT_MANAGER],
+            title=global_title,
+            body=global_body,
+            link=f"/task/{instance.id}",
+            exclude_user=actor
+        )
 
     # --- Workflow Specific Notifications ---
     if not created and actor and instance.state:
