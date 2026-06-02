@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, FolderKanban, Users, LogOut, Bell, 
-  Menu, Sun, ArrowLeft, Loader2, Calendar, 
+  Menu, Sun, Moon, ArrowLeft, Loader2, Calendar, 
   Briefcase, Boxes, Network, History, Database, Zap, BookOpen, Clock, Target, Star
 } from 'lucide-react';
 import { api } from './api';
@@ -178,25 +178,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         </div>
 
         <div className="mt-auto p-8 space-y-4">
-          <div className="p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 relative overflow-hidden group">
-             <div className="relative z-10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                   <div className="p-2 bg-yellow-500/10 rounded-lg">
-                      <Sun className="w-4 h-4 text-yellow-500" />
-                   </div>
-                   <span className="text-[10px] font-black uppercase tracking-wider text-text-muted">Dark / Light Mode</span>
-                </div>
-                <button 
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="w-10 h-6 bg-white/5 rounded-full relative p-1 transition-colors"
-                >
-                  <motion.div 
-                    animate={{ x: theme === 'dark' ? 0 : 16 }}
-                    className="w-4 h-4 bg-primary rounded-full shadow-glow" 
-                  />
-                </button>
-             </div>
-          </div>
 
           <button 
             onClick={onLogout}
@@ -224,7 +205,21 @@ export default function Dashboard({ onLogout }: DashboardProps) {
              )}
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="p-4 bg-white/5 hover:bg-primary/10 rounded-2xl relative transition-all border border-white/5 hover:border-primary/20 shadow-premium"
+                title="Toggle Theme"
+              >
+                {theme === 'dark' ? (
+                  <Moon className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" />
+                ) : (
+                  <Sun className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" />
+                )}
+              </button>
+            </div>
+
             <div className="relative group">
               <button 
                 onClick={() => setPage('notifications')}
@@ -238,6 +233,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                 )}
               </button>
             </div>
+
 
             <div className="flex items-center gap-4 pl-6 border-l border-white/5">
               <div className="text-right hidden sm:block">

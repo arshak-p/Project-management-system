@@ -861,7 +861,7 @@ class BackupViewSet(viewsets.ModelViewSet):
                         item.state.name if item.state else "N/A", 
                         item.priority, 
                         assignee_str, 
-                        item.created_at.strftime("%Y-%m-%d %H:%M") if item.created_at else "", 
+                        item.created_at.strftime("%d/%m/%Y %H:%M") if item.created_at else "", 
                         item.posting_date or "", 
                         item.scheduled_date or "",
                         item.due_date or "", 
@@ -880,7 +880,7 @@ class BackupViewSet(viewsets.ModelViewSet):
                     author_str = "Unassigned"
                     if c.author:
                         author_str = c.author.get_full_name().strip() or c.author.email
-                    c_w.writerow([c.work_item.task_code, author_str, c.body, c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else ""])
+                    c_w.writerow([c.work_item.task_code, author_str, c.body, c.created_at.strftime("%d/%m/%Y %H:%M") if c.created_at else ""])
                 zip_file.writestr(f"{prefix}All_Task_Comments.csv", c_out.getvalue())
 
                 l_out = io.StringIO()
@@ -890,7 +890,7 @@ class BackupViewSet(viewsets.ModelViewSet):
                     user_str = "Unassigned"
                     if log.user:
                         user_str = log.user.get_full_name().strip() or log.user.email
-                    l_w.writerow([log.work_item.task_code, user_str, log.minutes, log.logged_at.strftime("%Y-%m-%d %H:%M") if log.logged_at else "", log.note or ""])
+                    l_w.writerow([log.work_item.task_code, user_str, log.minutes, log.logged_at.strftime("%d/%m/%Y %H:%M") if log.logged_at else "", log.note or ""])
                 zip_file.writestr(f"{prefix}Detailed_Time_Logs.csv", l_out.getvalue())
 
                 a_out = io.StringIO()
@@ -912,7 +912,7 @@ class BackupViewSet(viewsets.ModelViewSet):
                     if entry.user:
                         entry_user_str = entry.user.get_full_name().strip() or entry.user.email
                     act_w.writerow([
-                        entry.created_at.strftime("%Y-%m-%d %H:%M") if entry.created_at else "", 
+                        entry.created_at.strftime("%d/%m/%Y %H:%M") if entry.created_at else "", 
                         entry_user_str, 
                         entry.action, 
                         entry.entity_type, 

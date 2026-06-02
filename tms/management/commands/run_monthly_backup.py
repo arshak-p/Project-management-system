@@ -132,7 +132,7 @@ class Command(BaseCommand):
                 (t.assignee.get_full_name().strip() or t.assignee.email) if t.assignee else "Unassigned",
                 total_mins,
                 latest_note,
-                t.created_at.strftime("%Y-%m-%d %H:%M"),
+                t.created_at.strftime("%d/%m/%Y %H:%M"),
                 t.due_date or "",
                 t.deadline or "",
                 t.posting_date or "",
@@ -164,7 +164,7 @@ class Command(BaseCommand):
                 tl.work_item.task_code if tl.work_item else "N/A",
                 user_str,
                 tl.minutes,
-                tl.logged_at.strftime("%Y-%m-%d %H:%M"),
+                tl.logged_at.strftime("%d/%m/%Y %H:%M"),
                 tl.note or ""
             ])
 
@@ -177,7 +177,7 @@ class Command(BaseCommand):
             author_str = "N/A"
             if c.author:
                 author_str = c.author.get_full_name().strip() or c.author.email
-            comment_w.writerow([c.work_item.task_code, author_str, c.body, c.created_at.strftime("%Y-%m-%d %H:%M")])
+            comment_w.writerow([c.work_item.task_code, author_str, c.body, c.created_at.strftime("%d/%m/%Y %H:%M")])
 
         # 4. Universal Activity Audit Sheet
         activity_csv = io.StringIO()
@@ -190,7 +190,7 @@ class Command(BaseCommand):
                 a.action,
                 a.entity_type,
                 a.entity_id,
-                a.created_at.strftime("%Y-%m-%d %H:%M")
+                a.created_at.strftime("%d/%m/%Y %H:%M")
             ])
 
         # Send Email to the system email account (the 5GB vault)
@@ -252,7 +252,7 @@ class Command(BaseCommand):
                 master_id = items[0].get('id')
 
                 # 2. Create a folder for the month inside the User's Master Folder
-                folder_name = first_day_prev_month.strftime("%B %d %Y")
+                folder_name = first_day_prev_month.strftime("%d/%m/%Y")
                 folder_metadata = {
                     'name': folder_name,
                     'parents': [master_id],
