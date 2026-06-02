@@ -54,7 +54,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [me, setMe] = useState<User | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+
   const [isNotifyPaused, setIsNotifyPaused] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -299,7 +299,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         onMouseLeave={() => setIsNotifyPaused(false)}
       >
         <AnimatePresence>
-          {notifications.filter(n => !dismissedIds.includes(n.id)).map(n => (
+          {notifications.map(n => (
             <motion.div 
               key={n.id} 
               initial={{ opacity: 0, x: 50 }}
