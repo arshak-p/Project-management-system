@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState } from '../api';
-import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars, Link2, ShieldAlert, Database, Trash2 } from 'lucide-react';
+import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars, Link2, ShieldAlert, Database, Trash2, Upload } from 'lucide-react';
 import { getWsUrl } from '../config';
 
 
@@ -28,6 +28,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
 
   const [newComment, setNewComment] = useState('');
   const [addingComment, setAddingComment] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [timeLogObj, setTimeLogObj] = useState({ minutes: '', note: '' });
   const [addingTime, setAddingTime] = useState(false);
@@ -140,6 +141,29 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
       setActiveTab('time');
     } finally {
       setAddingTime(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('work_item', taskId.toString());
+    formData.append('file', file);
+    formData.append('file_name', file.name);
+    if (me?.id) formData.append('uploaded_by', me.id.toString());
+    
+    setIsUploading(true);
+    try {
+      await api.createAttachment(formData);
+      const aRes = await api.getAttachments(taskId);
+      setAttachments(aRes.data);
+    } catch (err) {
+      console.error('File upload failed', err);
+      alert('Failed to upload file. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -364,6 +388,22 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                         rows={3}
                         className="flex-1 px-4 py-2 bg-surface border border-border rounded-xl text-xs focus:border-primary outline-none transition-all shadow-sm custom-scrollbar"
                       />
+                    </div>
+                  </div>
+
+                  <div className="mb-6 flex flex-col md:flex-row items-center justify-between gap-4 glass p-4 rounded-2xl border border-border/50">
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-widest text-primary flex items-center gap-2">
+                        <FileIcon className="w-3.5 h-3.5" /> File Attachments
+                      </h4>
+                      <p className="text-[10px] text-text-muted mt-1 leading-relaxed">Upload specific files or assets directly to this task.</p>
+                    </div>
+                    <div>
+                      <input type="file" id="file-upload" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
+                      <label htmlFor="file-upload" className={`flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-bold cursor-pointer hover:bg-primary hover:text-white transition-all ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        {isUploading ? 'Uploading...' : 'Upload File'}
+                      </label>
                     </div>
                   </div>
                   
