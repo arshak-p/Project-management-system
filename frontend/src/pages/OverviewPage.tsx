@@ -27,7 +27,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
       params.start_date = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     }
 
-    Promise.all([
+    return Promise.all([
       api.getAnalytics(params),
       api.getProjects(),
       api.getActivity()
@@ -48,9 +48,24 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
   }, [viewMode]);
 
   useEffect(() => {
-    load();
-    const interval = setInterval(() => load(), 3000); // Accelerated Polling: 3s
-    return () => clearInterval(interval);
+    let timeoutId: number;
+    let isMounted = true;
+
+    const poll = () => {
+      if (!isMounted) return;
+      load().finally(() => {
+        if (isMounted) {
+          timeoutId = setTimeout(poll, 3000);
+        }
+      });
+    };
+
+    poll();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [load]);
 
   if (isLoading) return (
