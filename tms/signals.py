@@ -263,27 +263,28 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                      )
 
             # --- Automated Timer Logic ---
-            if instance.state.slug == "in-progress":
+            if instance.state.slug in ["in-progress", "revisions"]:
                 # Start timer if not already running
                 if not instance.timer_start:
                     WorkItem.objects.filter(pk=instance.pk).update(timer_start=timezone.now())
             
-            # Check if we just LEFT in-progress
+            # Check if we just LEFT a tracked state
             if getattr(instance, "_old_state_id", None):
                 try:
                     old_state = State.objects.get(pk=instance._old_state_id)
-                    if old_state.slug == "in-progress" and instance.timer_start:
+                    if old_state.slug in ["in-progress", "revisions"] and instance.timer_start:
                         # Calculate duration
                         duration = timezone.now() - instance.timer_start
                         minutes = int(duration.total_seconds() // 60)
                         
                         # Only log if at least 1 minute passed
                         if minutes > 0:
+                            note = "Initial Work Session" if old_state.slug == "in-progress" else "Rework Session"
                             TimeLog.objects.create(
                                 work_item=instance,
                                 user=actor or instance.assignee or instance.created_by,
                                 minutes=minutes,
-                                note="Automated session",
+                                note=note,
                                 logged_at=timezone.now()
                             )
                         

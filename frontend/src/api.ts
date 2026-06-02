@@ -94,6 +94,8 @@ export interface Task {
   };
   is_active: boolean;
   is_client_approved?: boolean;
+  timer_start?: string | null;
+  total_minutes?: number;
 }
 
 export interface Activity {

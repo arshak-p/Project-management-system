@@ -474,6 +474,11 @@ export default function TasksPage({ me }: { me: User | null }) {
                         🔴 Rework / Re-Edit
                       </span>
                     ) : null}
+                    {task.timer_start && (
+                      <span className="flex items-center gap-1 text-[9px] bg-red-500 text-white px-2.5 py-1 rounded-lg font-black uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse">
+                        🔴 LIVE: TRACKING TIME
+                      </span>
+                    )}
                   </div>
                 </div>
                 
@@ -495,6 +500,11 @@ export default function TasksPage({ me }: { me: User | null }) {
                     <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[10px] font-bold text-text-muted">
                       👤 {task.assignee?.first_name || task.assignee?.email || 'Unassigned'}
                     </span>
+                    {(task.total_minutes !== undefined && task.total_minutes > 0) && (
+                      <span className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-bold text-primary">
+                        ⏱️ {Math.floor(task.total_minutes / 60)}h {task.total_minutes % 60}m logged
+                      </span>
+                    )}
                     <span className="md:hidden font-black text-primary/60 uppercase tracking-widest ml-auto">
                       {states.find(s => s.id === task.state)?.name}
                     </span>

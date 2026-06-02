@@ -247,18 +247,28 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                             <span className="text-[10px] font-bold text-text-muted italic">{selectedUser?.email}</span>
                          </div>
                       </div>
-                      <div className="flex flex-col md:flex-row items-center gap-4">
-                         <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
-                            <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Efficiency</span>
-                            <span className="text-4xl font-black text-white">{memberAnalytics?.totals?.efficiency !== undefined ? `${memberAnalytics.totals.efficiency}%` : 'N/A'}</span>
-                         </div>
-                         <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
-                            <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Workload</span>
-                            <span className="text-4xl font-black text-white">
-                               {memberAnalytics?.totals?.all ? Math.round((memberAnalytics.totals.pending / memberAnalytics.totals.all) * 100) : 0}%
-                            </span>
-                         </div>
-                      </div>
+                      
+                      {(() => {
+                         const totalTrackedMinutes = memberTasks.reduce((acc, task) => acc + (task.total_minutes || 0), 0);
+                         return (
+                           <div className="flex flex-col md:flex-row items-center gap-4">
+                              <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
+                                 <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Time Tracked</span>
+                                 <span className="text-4xl font-black text-white">{Math.floor(totalTrackedMinutes / 60)}h {totalTrackedMinutes % 60}m</span>
+                              </div>
+                              <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
+                                 <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Efficiency</span>
+                                 <span className="text-4xl font-black text-white">{memberAnalytics?.totals?.efficiency !== undefined ? `${memberAnalytics.totals.efficiency}%` : 'N/A'}</span>
+                              </div>
+                              <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
+                                 <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Workload</span>
+                                 <span className="text-4xl font-black text-white">
+                                    {memberAnalytics?.totals?.all ? Math.round((memberAnalytics.totals.pending / memberAnalytics.totals.all) * 100) : 0}%
+                                 </span>
+                              </div>
+                           </div>
+                         );
+                      })()}
                    </div>
                 </div>
 

@@ -317,6 +317,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "due_date",
             "deadline",
             "scheduled_date",
+            "timer_start",
             "reference_link",
             "cycle",
             "department",
