@@ -8,7 +8,7 @@ import {
   ChevronRight, X
 } from 'lucide-react';
 import {
-  AreaChart, Area, XAxis, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
 import TaskDetailModal from '../components/TaskDetailModal';
@@ -120,7 +120,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
   );
 
   return (
-    <div className="space-y-10 pb-20 font-inter max-w-7xl mx-auto">
+    <div className="space-y-10 pb-20 font-inter w-full">
       {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
       
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -270,24 +270,25 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                       <div className="h-[200px] w-full flex items-center justify-center">
                          {trendData.length > 0 && trendData.some(d => d.activity > 0 || d.velocity > 0) ? (
                            <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={trendData}>
+                              <BarChart data={trendData}>
                                  <defs>
                                     <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
-                                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
                                     </linearGradient>
                                     <linearGradient id="colorVelocity" x1="0" y1="0" x2="0" y2="1">
-                                       <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                                       <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                                       <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                                       <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1}/>
                                     </linearGradient>
                                  </defs>
                                  <XAxis dataKey="date" hide />
                                  <Tooltip 
                                     contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }}
+                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                  />
-                                 <Area type="monotone" dataKey="activity" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorActivity)" name="Active Engagement" />
-                                 <Area type="monotone" dataKey="velocity" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorVelocity)" name="Mission Success" />
-                              </AreaChart>
+                                 <Bar dataKey="activity" fill="url(#colorActivity)" radius={[4, 4, 0, 0]} name="Active Engagement" />
+                                 <Bar dataKey="velocity" fill="url(#colorVelocity)" radius={[4, 4, 0, 0]} name="Mission Success" />
+                              </BarChart>
                            </ResponsiveContainer>
                          ) : (
                            <div className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-30 italic">Awaiting Sector Movement...</div>
