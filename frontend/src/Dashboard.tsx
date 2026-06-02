@@ -57,6 +57,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [dismissedIds, setDismissedIds] = useState<number[]>([]);
   const [isNotifyPaused, setIsNotifyPaused] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const notifiedIds = useRef<Set<number>>(new Set());
 
   const isAdmin = me?.role === 'admin' || me?.role === 'agency_manager';
   const isTeamHead = me?.role === 'team_head';
@@ -80,12 +81,26 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       const res = await api.getNotifications();
       setNotifications(res.data);
       setUnreadCount(res.data.filter((n: any) => !n.read).length);
+
+      if ('Notification' in window && Notification.permission === 'granted') {
+        res.data.forEach((n: any) => {
+          if (!n.read && !notifiedIds.current.has(n.id)) {
+            new Notification(n.title || "New Notification", {
+              body: n.body || "You have a new update in the Command Center."
+            });
+            notifiedIds.current.add(n.id);
+          }
+        });
+      }
     } catch (err) {
       console.error("Notifications failed", err);
     }
   }, [isNotifyPaused]);
 
   useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
     loadProfile();
     loadNotifications();
     const interval = setInterval(loadNotifications, 3000); // High Speed: 3s
