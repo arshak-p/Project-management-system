@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
 import { motion } from 'framer-motion';
 import { TrendingUp, Briefcase, CircleDashed, Activity as ActivityIcon, Calendar, ArrowUpRight, Cake, PartyPopper } from 'lucide-react';
@@ -17,7 +17,10 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
   const [viewMode, setViewMode] = useState<'month' | 'all'>('all');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
+  const activeRequestRef = useRef<number>(0);
+
   const load = useCallback(() => {
+    const requestId = ++activeRequestRef.current;
     const params: any = {};
     if (viewMode === 'month') {
       const now = new Date();
@@ -30,13 +33,18 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
       api.getActivity()
     ])
       .then(([a, p, act]) => {
+        if (requestId !== activeRequestRef.current) return;
         setAnalytics(a.data);
         setProjects(p.data);
         const activityCount = viewMode === 'all' ? 20 : 10;
         setRecentActivity(act.data.slice(0, activityCount));
       })
-      .catch(err => console.error(err))
-      .finally(() => setIsLoading(false));
+      .catch(err => {
+        if (requestId === activeRequestRef.current) console.error(err);
+      })
+      .finally(() => {
+        if (requestId === activeRequestRef.current) setIsLoading(false);
+      });
   }, [viewMode]);
 
   useEffect(() => {
@@ -269,7 +277,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
                   itemStyle={{ color: 'var(--primary)' }}
                   labelStyle={{ color: 'var(--text)', marginBottom: '4px' }}
                 />
-                <Area type="monotone" dataKey="units" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorUnits)" />
+                <Area type="monotone" dataKey="units" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorUnits)" isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -303,7 +311,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
                   itemStyle={{ color: 'inherit' }}
                   labelStyle={{ color: 'var(--text)', marginBottom: '4px' }}
                 />
-                <Bar dataKey="count" radius={[0, 10, 10, 0]} barSize={20}>
+                <Bar dataKey="count" radius={[0, 10, 10, 0]} barSize={20} isAnimationActive={false}>
                   {chartData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#d946ef', '#ec4899'][index % 4]} />
                   ))}
