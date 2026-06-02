@@ -40,7 +40,8 @@ body {
   color: var(--text);
   font-family: 'Outfit', 'Inter', sans-serif;
   overflow-x: hidden;
-  width: 100%;
+  width: 111.11vw;
+  min-height: 111.11vh;
   position: relative;
   zoom: 0.9; /* Hard CSS zoom to exactly replicate browser 90% scale */
   /* Aurora Mesh Background */
