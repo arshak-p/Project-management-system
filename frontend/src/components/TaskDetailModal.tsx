@@ -489,13 +489,45 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               </select>
             </div>
 
+            {task.state_slug === 'team-head-review' && (me?.role === 'admin' || me?.role === 'team_head') && (
+              <div className="pt-2 animate-in slide-in-from-top-2 flex flex-col gap-2">
+                <button 
+                  onClick={async () => {
+                    const nextState = states.find(s => s.slug === 'client-review');
+                    if (nextState) handleUpdateField('state', nextState.id);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-emerald-500 hover:text-white transition-all"
+                >
+                  <ShieldCheck className="w-4 h-4" /> Approve for Client
+                </button>
+                <button 
+                  onClick={async () => {
+                    const reworkState = states.find(s => s.slug === 'rework-revision');
+                    if (reworkState) handleUpdateField('state', reworkState.id);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all"
+                >
+                  Reject / Rework
+                </button>
+              </div>
+            )}
+
             {task.state_slug === 'client-review' && !task.is_client_approved && (me?.role === 'admin' || me?.role === 'project_manager') && (
-              <div className="pt-2 animate-in slide-in-from-top-2">
+              <div className="pt-2 animate-in slide-in-from-top-2 flex flex-col gap-2">
                 <button 
                   onClick={() => handleUpdateField('is_client_approved', true)}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-600/20 hover:scale-[1.02] transition-all"
                 >
                   <Stars className="w-4 h-4" /> Mark Client Approved
+                </button>
+                <button 
+                  onClick={async () => {
+                    const completedState = states.find(s => s.slug === 'completed-launched');
+                    if (completedState) handleUpdateField('state', completedState.id);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-blue-500/10 text-blue-500 border border-blue-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-500 hover:text-white transition-all"
+                >
+                  Bypass & Launch
                 </button>
               </div>
             )}
