@@ -36,12 +36,10 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [filterDueDate, setFilterDueDate] = useState('');
   const [filterDeadline, setFilterDeadline] = useState('');
   const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    return new Date().toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+    return new Date().toISOString().split('T')[0];
   });
   const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);

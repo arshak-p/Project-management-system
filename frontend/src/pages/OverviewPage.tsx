@@ -217,7 +217,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
               </div>
               <div>
                 <span className="text-4xl font-black text-text block">{projects.length}</span>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted/60">Active Orbits</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted/60">Active Projects</span>
               </div>
             </div>
           </div>
