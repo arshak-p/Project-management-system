@@ -54,7 +54,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [me, setMe] = useState<User | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-
+  const [dismissedIds, setDismissedIds] = useState<number[]>([]);
   const [isNotifyPaused, setIsNotifyPaused] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -92,6 +92,19 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     document.documentElement.setAttribute('data-theme', theme);
     return () => clearInterval(interval);
   }, [loadProfile, loadNotifications, theme]);
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (isNotifyPaused) return;
+    
+    const timeouts = notifications
+      .filter((n: any) => !dismissedIds.includes(n.id))
+      .map((n: any) => setTimeout(() => {
+        setDismissedIds(prev => [...prev, n.id]);
+      }, 5000));
+
+    return () => timeouts.forEach(clearTimeout);
+  }, [notifications, isNotifyPaused, dismissedIds]);
 
   const handleNav = (target: Page, saveHistory = true) => {
     if (saveHistory && target !== page) {
@@ -299,7 +312,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         onMouseLeave={() => setIsNotifyPaused(false)}
       >
         <AnimatePresence>
-          {notifications.map(n => (
+          {notifications.filter((n: any) => !dismissedIds.includes(n.id)).map((n: any) => (
             <motion.div 
               key={n.id} 
               initial={{ opacity: 0, x: 50 }}
