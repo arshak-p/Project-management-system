@@ -177,7 +177,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="h-screen w-full bg-background text-text block md:flex overflow-hidden font-inter relative"
+      className="h-[111.11vh] w-[111.11vw] bg-background text-text block md:flex overflow-hidden font-inter relative"
     >
       <AnimatePresence>
         {sidebarOpen && (
@@ -237,7 +237,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 h-[111.11vh] overflow-hidden">
         <header className="h-24 flex items-center justify-between px-8 lg:px-12 shrink-0">
           <div className="flex items-center gap-4">
              <button onClick={() => setSidebarOpen(true)} className="md:hidden p-3 bg-white/5 rounded-2xl">
