@@ -224,28 +224,24 @@ class Command(BaseCommand):
                     drive_key_path, scopes=SCOPES)
                 drive_service = build('drive', 'v3', credentials=creds)
                 
-                # 1. Check for or Create Master Folder
+                # 1. Check for Master Folder (Must be created and shared by the User)
                 master_folder_name = "TMS_Agency_Backups"
                 query = f"name='{master_folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
                 results = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
                 items = results.get('files', [])
                 
                 if not items:
-                    master_metadata = {
-                        'name': master_folder_name,
-                        'mimeType': 'application/vnd.google-apps.folder'
-                    }
-                    master_folder = drive_service.files().create(body=master_metadata, fields='id').execute()
-                    master_id = master_folder.get('id')
-                    
-                    # Share the master folder with the vault email
-                    if vault_email:
-                        permission = {'type': 'user', 'role': 'writer', 'emailAddress': vault_email}
-                        drive_service.permissions().create(fileId=master_id, body=permission, fields='id').execute()
-                else:
-                    master_id = items[0].get('id')
+                    error_msg = (
+                        f"Master folder '{master_folder_name}' not found! "
+                        "Because this is an automated bot, it has 0 bytes of its own storage. "
+                        "You MUST create a folder named 'TMS_Agency_Backups' in your personal Google Drive, "
+                        "and share it as an Editor with: tms-backup-bot@colour-parrot-backup.iam.gserviceaccount.com"
+                    )
+                    raise Exception(error_msg)
+                
+                master_id = items[0].get('id')
 
-                # 2. Create a folder for the month inside the Master Folder
+                # 2. Create a folder for the month inside the User's Master Folder
                 folder_name = first_day_prev_month.strftime("%B %d %Y")
                 folder_metadata = {
                     'name': folder_name,
