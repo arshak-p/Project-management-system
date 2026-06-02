@@ -281,8 +281,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           </div>
         </header>
 
-        <section className="flex-1 overflow-hidden px-8 lg:px-12 pb-6">
-          <div className="h-full w-full custom-scrollbar overflow-y-auto">
+        <section className="flex-1 overflow-hidden pb-6">
+          <div className="h-full w-full custom-scrollbar overflow-y-auto px-8 lg:px-12">
             <div className="max-w-[1600px] mx-auto py-2">
               <AnimatePresence mode="wait">
                 <motion.div
