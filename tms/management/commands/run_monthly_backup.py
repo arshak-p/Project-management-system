@@ -224,23 +224,36 @@ class Command(BaseCommand):
                     drive_key_path, scopes=SCOPES)
                 drive_service = build('drive', 'v3', credentials=creds)
                 
-                # 1. Create a folder for the month
+                # 1. Check for or Create Master Folder
+                master_folder_name = "TMS_Agency_Backups"
+                query = f"name='{master_folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+                results = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
+                items = results.get('files', [])
+                
+                if not items:
+                    master_metadata = {
+                        'name': master_folder_name,
+                        'mimeType': 'application/vnd.google-apps.folder'
+                    }
+                    master_folder = drive_service.files().create(body=master_metadata, fields='id').execute()
+                    master_id = master_folder.get('id')
+                    
+                    # Share the master folder with the vault email
+                    if vault_email:
+                        permission = {'type': 'user', 'role': 'writer', 'emailAddress': vault_email}
+                        drive_service.permissions().create(fileId=master_id, body=permission, fields='id').execute()
+                else:
+                    master_id = items[0].get('id')
+
+                # 2. Create a folder for the month inside the Master Folder
                 folder_name = first_day_prev_month.strftime("%B %d %Y")
                 folder_metadata = {
                     'name': folder_name,
+                    'parents': [master_id],
                     'mimeType': 'application/vnd.google-apps.folder'
                 }
                 folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
                 folder_id = folder.get('id')
-                
-                # Share the folder with the vault email so it appears in their Google Drive
-                if vault_email:
-                    permission = {
-                        'type': 'user',
-                        'role': 'writer',
-                        'emailAddress': vault_email
-                    }
-                    drive_service.permissions().create(fileId=folder_id, body=permission, fields='id').execute()
                 
                 # 2. Helper to upload files
                 def upload_to_drive(filename, file_content_bytes, mime_type):
