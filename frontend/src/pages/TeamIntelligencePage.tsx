@@ -8,7 +8,7 @@ import {
   ChevronRight, X
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
 import TaskDetailModal from '../components/TaskDetailModal';
@@ -270,25 +270,45 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                       <div className="h-[200px] w-full flex items-center justify-center">
                          {trendData.length > 0 && trendData.some(d => d.activity > 0 || d.velocity > 0) ? (
                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={trendData}>
+                              <AreaChart data={trendData}>
                                  <defs>
                                     <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
-                                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                                     </linearGradient>
                                     <linearGradient id="colorVelocity" x1="0" y1="0" x2="0" y2="1">
-                                       <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
-                                       <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1}/>
+                                       <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                                       <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
                                     </linearGradient>
                                  </defs>
-                                 <XAxis dataKey="date" hide />
-                                 <Tooltip 
-                                    contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }}
-                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                 <XAxis 
+                                    dataKey="date" 
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 10, fontWeight: 900, fill: 'var(--text-muted)' }}
+                                    dy={10}
                                  />
-                                 <Bar dataKey="activity" fill="url(#colorActivity)" radius={[4, 4, 0, 0]} name="Active Engagement" />
-                                 <Bar dataKey="velocity" fill="url(#colorVelocity)" radius={[4, 4, 0, 0]} name="Mission Success" />
-                              </BarChart>
+                                 <YAxis 
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 10, fontWeight: 900, fill: 'var(--text-muted)' }}
+                                 />
+                                 <Tooltip 
+                                    contentStyle={{
+                                       backgroundColor: 'var(--surface)',
+                                       borderRadius: '1rem',
+                                       border: '1px solid var(--border)',
+                                       fontSize: '10px',
+                                       fontWeight: 900,
+                                       color: 'var(--text)'
+                                    }}
+                                    itemStyle={{ color: 'var(--primary)' }}
+                                    labelStyle={{ color: 'var(--text)', marginBottom: '4px' }}
+                                 />
+                                 <Area type="monotone" dataKey="activity" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorActivity)" name="Active Engagement" isAnimationActive={false} />
+                                 <Area type="monotone" dataKey="velocity" stroke="#8b5cf6" strokeWidth={4} fillOpacity={1} fill="url(#colorVelocity)" name="Mission Success" isAnimationActive={false} />
+                              </AreaChart>
                            </ResponsiveContainer>
                          ) : (
                            <div className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-30 italic">Awaiting Sector Movement...</div>
