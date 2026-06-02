@@ -314,7 +314,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     </div>
                   }>
                     {page === 'overview' && (isTeamHead ? <TeamHeadDashboard me={me} /> : <OverviewPage onNavigate={(p: string) => handleNav(p as Page)} me={me} />)}
-                    {page === 'projects' && <ProjectsPage me={me} />}
+                    {page === 'projects' && <ProjectsPage me={me} onNavigate={(p: string) => handleNav(p as Page)} />}
                     {page === 'tasks' && <TasksPage me={me} />}
                     {page === 'cycles' && <CyclesPage me={me} />}
                     {page === 'modules' && <ModulesPage me={me} />}
