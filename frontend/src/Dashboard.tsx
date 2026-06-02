@@ -79,7 +79,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     try {
       const res = await api.getNotifications();
       setNotifications(res.data);
-      setUnreadCount(res.data.filter((n: any) => !n.is_read).length);
+      setUnreadCount(res.data.filter((n: any) => !n.read).length);
     } catch (err) {
       console.error("Notifications failed", err);
     }
@@ -331,7 +331,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         onMouseLeave={() => setIsNotifyPaused(false)}
       >
         <AnimatePresence>
-          {notifications.filter((n: any) => !dismissedIds.includes(n.id)).map((n: any) => (
+          {notifications.filter((n: any) => !n.read && !dismissedIds.includes(n.id)).map((n: any) => (
             <motion.div 
               key={n.id} 
               initial={{ opacity: 0, x: 50 }}
