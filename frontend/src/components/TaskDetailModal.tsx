@@ -475,69 +475,69 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               </select>
             </div>
 
-            {(me?.role === 'admin' || me?.role === 'project_manager') ? (
+            <div className="grid grid-cols-2 gap-4">
+              {(me?.role === 'admin' || me?.role === 'project_manager') ? (
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div> Post Date
+                  </label>
+                  <input 
+                    type="date"
+                    value={task.posting_date || ''}
+                    onChange={e => handleUpdateField('posting_date', e.target.value || null)}
+                    className="w-full px-2 py-2 bg-indigo-500/5 border border-indigo-500/20 rounded-lg text-xs focus:border-indigo-500 outline-none hover:border-indigo-500/50 transition-colors font-bold"
+                    style={{ colorScheme: 'dark' }}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full opacity-50"></div> Post Date
+                  </label>
+                  <div className="w-full px-2 py-2 bg-surface/50 border border-border/50 rounded-lg text-xs font-mono text-indigo-400/80">
+                    {task.posting_date || 'Not set'}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-1 h-3 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div> Post Date
+                <label className="text-[9px] font-black text-red-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div> Deadline
                 </label>
                 <input 
                   type="date"
-                  value={task.posting_date || ''}
-                  onChange={e => handleUpdateField('posting_date', e.target.value || null)}
-                  className="w-full px-3 py-2.5 bg-indigo-500/5 border border-indigo-500/20 rounded-xl text-sm focus:border-indigo-500 outline-none hover:border-indigo-500/50 transition-colors font-bold"
+                  value={task.deadline || ''}
+                  onChange={e => handleUpdateField('deadline', e.target.value || null)}
+                  className="w-full px-2 py-2 bg-red-500/5 border border-red-500/20 rounded-lg text-xs focus:border-red-500 outline-none hover:border-red-500/50 transition-colors font-bold"
                   style={{ colorScheme: 'dark' }}
                 />
-                <p className="text-[9px] text-text-muted leading-tight pl-1 italic">Drives monthly launch reports and project snapshots.</p>
               </div>
-            ) : (
+
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-1 h-3 bg-indigo-500 rounded-full opacity-50"></div> Post Date
+                <label className="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div> Due Date
                 </label>
-                <div className="w-full px-3 py-2.5 bg-surface/50 border border-border/50 rounded-xl text-sm font-mono text-indigo-400/80">
-                  {task.posting_date || 'Not set'}
-                </div>
+                <input 
+                  type="date"
+                  value={task.due_date || ''}
+                  onChange={e => handleUpdateField('due_date', e.target.value || null)}
+                  className="w-full px-2 py-2 bg-amber-500/5 border border-amber-500/20 rounded-lg text-xs focus:border-amber-500 outline-none hover:border-amber-500/50 transition-colors font-bold"
+                  style={{ colorScheme: 'dark' }}
+                />
               </div>
-            )}
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                <div className="w-1 h-3 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div> Start Date
-              </label>
-              <input 
-                type="date"
-                value={task.due_date || ''}
-                onChange={e => handleUpdateField('due_date', e.target.value || null)}
-                className="w-full px-3 py-2.5 bg-amber-500/5 border border-amber-500/20 rounded-xl text-sm focus:border-amber-500 outline-none hover:border-amber-500/50 transition-colors font-bold"
-                style={{ colorScheme: 'dark' }}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
-                <div className="w-1 h-3 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div> Deadline (Finish)
-              </label>
-              <input 
-                type="date"
-                value={task.deadline || ''}
-                onChange={e => handleUpdateField('deadline', e.target.value || null)}
-                className="w-full px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-xl text-sm focus:border-red-500 outline-none hover:border-red-500/50 transition-colors font-bold"
-                style={{ colorScheme: 'dark' }}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-widest flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5" /> Work Schedule
-              </label>
-              <input 
-                type="date"
-                value={task.scheduled_date || ''}
-                onChange={e => handleUpdateField('scheduled_date', e.target.value || null)}
-                className="w-full px-3 py-2.5 bg-primary/5 border border-primary/20 rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
-                style={{ colorScheme: 'dark' }}
-              />
-              <p className="text-[9px] text-text-muted leading-tight pl-1 italic">Internal planning date.</p>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div> Task Start
+                </label>
+                <input 
+                  type="date"
+                  value={task.scheduled_date || ''}
+                  onChange={e => handleUpdateField('scheduled_date', e.target.value || null)}
+                  className="w-full px-2 py-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg text-xs focus:border-emerald-500 outline-none hover:border-emerald-500/50 transition-colors font-bold"
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
             </div>
 
             <div className="pt-4 border-t border-border/50 space-y-2">
