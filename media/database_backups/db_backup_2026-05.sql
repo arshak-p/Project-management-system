@@ -70,7 +70,8 @@ CREATE TABLE public.accounts_user (
     title character varying(120) NOT NULL,
     phone character varying(32) NOT NULL,
     is_verified boolean NOT NULL,
-    date_of_birth date
+    date_of_birth date,
+    last_active timestamp with time zone
 );
 
 
@@ -979,6 +980,7 @@ ALTER TABLE public.token_blacklist_outstandingtoken ALTER COLUMN id ADD GENERATE
 --
 
 COPY public.accounts_emailotp (id, email, otp, created_at, is_used) FROM stdin;
+1	Creator1colourparrot@gmail.com	163600	2026-05-06 11:56:02.690334+05:30	f
 \.
 
 
@@ -986,16 +988,16 @@ COPY public.accounts_emailotp (id, email, otp, created_at, is_used) FROM stdin;
 -- Data for Name: accounts_user; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.accounts_user (id, password, last_login, is_superuser, username, first_name, last_name, is_staff, is_active, date_joined, email, role, avatar, title, phone, is_verified, date_of_birth) FROM stdin;
-29	pbkdf2_sha256$1000000$MPbJZEVzvlCDzkcQ93zwJK$RbbZ44sPRE7uItwlaAvYDXbSO2T2OS+aYg6jhDqUrl0=	\N	f	asif	Asif	muhammed	f	t	2025-11-01 00:00:00+05:30	asif@gmail.com	specialist		Video editor	536468974651	f	\N
-7	pbkdf2_sha256$1000000$ckKgv3BCsCXyqOkOXoVlMk$K/s6bX4H1BrYdMy7DysvkgYqoH1bgwSfjuqHM70f0wA=	\N	f	Sneha	sneha	p	t	f	2026-04-13 10:34:35+05:30	projectmanagercolourparrot@gmail.com	project_manager		project manager	9400890105	f	\N
-28	pbkdf2_sha256$1000000$74Z1X3hwsrK6NGiDJCO9sQ$AFA7EZndxlhnAOa8rlG2KcK+EDzUGxeILuu16kDLxHs=	\N	f	arunimabaiju33	Arunima	Baiju	f	t	0026-03-05 00:00:00+05:53:28	arunimabaiju33@gmail.com	project_manager		HR	8075627063	f	\N
-8	pbkdf2_sha256$1000000$Y8ZlMFJ62660sDiNk5xYxO$j+6GqbYT5mXTClTl5aFLliCPDjFCfGRyCD07g/+hMM0=	\N	f	Ramees	Ramees	Padanilam	t	t	2026-04-12 00:00:00+05:30	rameesoppadanilam@gmail.com	admin		CEO/designer	09995706806	f	\N
-12	pbkdf2_sha256$1000000$SNVdRwM9iY9L98uVvH5mVW$NkWBLLWlJXi1ovH7jzb9X2OZhSsmx3FVGP6/6GjmGqA=	2026-04-13 15:19:28+05:30	f	arshakyob	Arshak	P	t	t	2026-04-13 15:17:42+05:30	arshakyob@gmail.com	specialist	avatars/arshak.jpg	Web Developer	9072504816	f	1998-04-29
-18	pbkdf2_sha256$1000000$vFdF0oP6ZH2F77KtBeWoCm$EH8KTDZl04jEXjsJIOGIV9EW8qduZgYuzhPXcAUaUMs=	2026-04-15 16:11:35+05:30	t	admin			t	t	2026-04-14 14:44:29+05:30	admin@colourparrot.com	admin				f	\N
-24	pbkdf2_sha256$1000000$HF627p4YdWjXcrlxpUdSw3$cRJWqYgePYm0Sr6cZlc+xDA9Uro3VkkSiY+4tEvKRAU=	\N	f	muhammedshabeel175	Shabeel	cp	f	t	2026-04-15 17:35:06.90995+05:30	muhammedshabeel175@gmail.com	specialist		Graphics Deigner	98951 13164	f	\N
-25	pbkdf2_sha256$1000000$wBwvGy6DDNEZWPXnqli72Z$63dRIf/jm1tbZpX7teRGkIYFN8OWN7aFU7D29Zj8NSg=	\N	f	colourparrotmarketing	Chandhini	cp	f	t	2026-04-15 17:45:36.386924+05:30	colourparrotmarketing@gmail.com	sales_manager			96338 65774	f	\N
-26	pbkdf2_sha256$1000000$wcBk219gLtV4NUoHIUTZcb$c64f/488wSFqAl9nNIcwiiPZAT28nMTZ67eJL43xcoo=	\N	f	abhijith	Abhijith	Abhi	f	t	2026-04-15 17:50:25.565793+05:30	abhijith@gmail.com	specialist		Graphics Deigner	65468743554	f	\N
+COPY public.accounts_user (id, password, last_login, is_superuser, username, first_name, last_name, is_staff, is_active, date_joined, email, role, avatar, title, phone, is_verified, date_of_birth, last_active) FROM stdin;
+29	pbkdf2_sha256$1000000$MPbJZEVzvlCDzkcQ93zwJK$RbbZ44sPRE7uItwlaAvYDXbSO2T2OS+aYg6jhDqUrl0=	\N	f	asif	Asif	muhammed	f	t	2025-11-01 00:00:00+05:30	asif@gmail.com	specialist		Video editor	536468974651	f	\N	\N
+7	pbkdf2_sha256$1000000$ckKgv3BCsCXyqOkOXoVlMk$K/s6bX4H1BrYdMy7DysvkgYqoH1bgwSfjuqHM70f0wA=	\N	f	Sneha	sneha	p	t	f	2026-04-13 10:34:35+05:30	projectmanagercolourparrot@gmail.com	project_manager		project manager	9400890105	f	\N	\N
+28	pbkdf2_sha256$1000000$74Z1X3hwsrK6NGiDJCO9sQ$AFA7EZndxlhnAOa8rlG2KcK+EDzUGxeILuu16kDLxHs=	\N	f	arunimabaiju33	Arunima	Baiju	f	t	0026-03-05 00:00:00+05:53:28	arunimabaiju33@gmail.com	project_manager		HR	8075627063	f	\N	\N
+8	pbkdf2_sha256$1000000$Y8ZlMFJ62660sDiNk5xYxO$j+6GqbYT5mXTClTl5aFLliCPDjFCfGRyCD07g/+hMM0=	\N	f	Ramees	Ramees	Padanilam	t	t	2026-04-12 00:00:00+05:30	rameesoppadanilam@gmail.com	admin		CEO/designer	09995706806	f	\N	\N
+12	pbkdf2_sha256$1000000$SNVdRwM9iY9L98uVvH5mVW$NkWBLLWlJXi1ovH7jzb9X2OZhSsmx3FVGP6/6GjmGqA=	2026-04-13 15:19:28+05:30	f	arshakyob	Arshak	P	t	t	2026-04-13 15:17:42+05:30	arshakyob@gmail.com	specialist	avatars/arshak.jpg	Web Developer	9072504816	f	1998-04-29	\N
+18	pbkdf2_sha256$1000000$vFdF0oP6ZH2F77KtBeWoCm$EH8KTDZl04jEXjsJIOGIV9EW8qduZgYuzhPXcAUaUMs=	2026-04-15 16:11:35+05:30	t	admin			t	t	2026-04-14 14:44:29+05:30	admin@colourparrot.com	admin				f	\N	\N
+24	pbkdf2_sha256$1000000$HF627p4YdWjXcrlxpUdSw3$cRJWqYgePYm0Sr6cZlc+xDA9Uro3VkkSiY+4tEvKRAU=	\N	f	muhammedshabeel175	Shabeel	cp	f	t	2026-04-15 17:35:06.90995+05:30	muhammedshabeel175@gmail.com	specialist		Graphics Deigner	98951 13164	f	\N	\N
+25	pbkdf2_sha256$1000000$wBwvGy6DDNEZWPXnqli72Z$63dRIf/jm1tbZpX7teRGkIYFN8OWN7aFU7D29Zj8NSg=	\N	f	colourparrotmarketing	Chandhini	cp	f	t	2026-04-15 17:45:36.386924+05:30	colourparrotmarketing@gmail.com	sales_manager			96338 65774	f	\N	\N
+26	pbkdf2_sha256$1000000$wcBk219gLtV4NUoHIUTZcb$c64f/488wSFqAl9nNIcwiiPZAT28nMTZ67eJL43xcoo=	\N	f	abhijith	Abhijith	Abhi	f	t	2026-04-15 17:50:25.565793+05:30	abhijith@gmail.com	specialist		Graphics Deigner	65468743554	f	\N	\N
 \.
 
 
@@ -1254,6 +1256,10 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 49	tms	0013_alter_workitem_reference_link	2026-04-30 10:51:47.352621+05:30
 50	tms	0014_workitem_deadline_workitem_posting_date	2026-04-30 10:51:47.490074+05:30
 51	tms	0015_workitem_last_state_change_workitem_rework_count_and_more	2026-04-30 16:56:16.624654+05:30
+52	accounts	0007_alter_user_role	2026-05-04 17:03:03.967372+05:30
+53	accounts	0008_user_last_active	2026-05-04 17:03:04.084959+05:30
+54	tms	0016_alter_workitem_options	2026-05-04 17:03:04.105234+05:30
+55	tms	0017_alter_workitem_options	2026-05-04 17:03:04.128591+05:30
 \.
 
 
@@ -1446,6 +1452,9 @@ COPY public.tms_notification (id, title, body, read, link, created_at, user_id) 
 265	📊 Monthly Agency Backup Ready & Emailed	Backup for 2026-05 has been automatically sent to your verification email inbox. We've also performed a 12-month retention cleanup.	f	/backups	2026-05-01 12:22:03.148599+05:30	18
 266	📊 Monthly Agency Backup Ready & Emailed	Backup for 2026-05 has been automatically sent to your verification email inbox. We've also performed a 12-month retention cleanup.	f	/backups	2026-05-01 12:22:03.16795+05:30	28
 267	📊 Monthly Agency Backup Ready & Emailed	Backup for 2026-05 has been automatically sent to your verification email inbox. We've also performed a 12-month retention cleanup.	f	/backups	2026-05-01 12:22:03.172133+05:30	8
+268	📊 Monthly Agency Backup Ready & Emailed	Backup for 2026-05 has been automatically sent to your verification email inbox. All activities and data are stored permanently.	f	/backups	2026-05-04 14:43:04.490092+05:30	18
+269	📊 Monthly Agency Backup Ready & Emailed	Backup for 2026-05 has been automatically sent to your verification email inbox. All activities and data are stored permanently.	f	/backups	2026-05-04 14:43:04.529516+05:30	28
+270	📊 Monthly Agency Backup Ready & Emailed	Backup for 2026-05 has been automatically sent to your verification email inbox. All activities and data are stored permanently.	f	/backups	2026-05-04 14:43:04.533094+05:30	8
 \.
 
 
@@ -1708,7 +1717,7 @@ COPY public.token_blacklist_outstandingtoken (id, token, created_at, expires_at,
 -- Name: accounts_emailotp_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.accounts_emailotp_id_seq', 1, false);
+SELECT pg_catalog.setval('public.accounts_emailotp_id_seq', 1, true);
 
 
 --
@@ -1771,7 +1780,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 27, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 51, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 55, true);
 
 
 --
@@ -1834,7 +1843,7 @@ SELECT pg_catalog.setval('public.tms_module_id_seq', 20, true);
 -- Name: tms_notification_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tms_notification_id_seq', 267, true);
+SELECT pg_catalog.setval('public.tms_notification_id_seq', 270, true);
 
 
 --
@@ -2394,6 +2403,13 @@ CREATE INDEX accounts_user_groups_group_id_bd11a704 ON public.accounts_user_grou
 --
 
 CREATE INDEX accounts_user_groups_user_id_52b62117 ON public.accounts_user_groups USING btree (user_id);
+
+
+--
+-- Name: accounts_user_last_active_78f90a49; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX accounts_user_last_active_78f90a49 ON public.accounts_user USING btree (last_active);
 
 
 --

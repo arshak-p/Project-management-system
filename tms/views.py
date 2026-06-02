@@ -659,9 +659,12 @@ class AnalyticsSummaryView(APIView):
         total = wis.count()
         
         if start_date or end_date:
-            # When filtering by date, we only want tasks active in that range (created in range or logged in range)
+            # Include tasks that are STILL pending (carried over), OR were created/logged in this date range
+            terminal_states = ['completed-launched', 'completed', 'launched', 'done', 'archived']
             wis = wis.filter(
-                Q(log_filter) | Q(time_logs__in=TimeLog.objects.filter(log_filter))
+                ~Q(state__slug__in=terminal_states) |
+                Q(log_filter) | 
+                Q(time_logs__in=TimeLog.objects.filter(log_filter))
             ).distinct()
             total = wis.count() # Update total for the filtered view
             
