@@ -49,6 +49,19 @@ export default function NotificationsPage({ me, onNavigate }: { me: User | null,
     }
   };
 
+  const requestPush = async () => {
+    if (!('Notification' in window)) {
+      alert('This browser does not support desktop notification');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      alert('Native Notifications Enabled! You will now receive desktop alerts even when the browser is minimized.');
+    } else {
+      alert('Notifications are blocked. Please enable them in your browser settings if you wish to receive them.');
+    }
+  };
+
   if (isLoading) return (
     <div className="flex justify-center py-16">
       <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -84,6 +97,14 @@ export default function NotificationsPage({ me, onNavigate }: { me: User | null,
               {unread.length} New
             </span>
           )}
+          <button 
+            onClick={requestPush}
+            className="px-4 py-2 bg-surface text-text border border-border text-sm rounded-xl font-semibold hover:border-primary/50 transition-all flex items-center gap-2"
+            title="Enable OS Desktop Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            Enable Desktop Alerts
+          </button>
         </div>
       </div>
 
