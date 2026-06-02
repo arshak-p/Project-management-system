@@ -158,8 +158,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         fixed md:sticky top-0 h-[calc(100vh-2rem)] w-72 lg:w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 shadow-premium transition-transform duration-500
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] md:translate-x-0'}
       `}>
-        <div className="p-8">
-          <div className="flex items-center gap-4 mb-10 group cursor-pointer" onClick={() => handleNav((isAdmin || isTeamHead) ? 'overview' : 'my_tasks')}>
+        <div className="p-8 flex flex-col flex-1 min-h-0">
+          <div className="flex items-center gap-4 mb-10 group cursor-pointer shrink-0" onClick={() => handleNav((isAdmin || isTeamHead) ? 'overview' : 'my_tasks')}>
              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform shadow-glow">
                 <img src="/colour parrot-icon.png" alt="CP" className="w-7 h-7 object-contain" />
              </div>
@@ -169,7 +169,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
              </div>
           </div>
 
-          <nav className="space-y-1 overflow-y-auto custom-scrollbar h-[calc(100vh-25rem)]">
+          <nav className="space-y-1 overflow-y-auto custom-scrollbar flex-1">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -190,7 +190,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           </nav>
         </div>
 
-        <div className="mt-auto p-8 space-y-4">
+        <div className="mt-auto p-8 pt-0 space-y-4 shrink-0">
 
           <button 
             onClick={onLogout}
