@@ -233,6 +233,15 @@ class Command(BaseCommand):
                 folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
                 folder_id = folder.get('id')
                 
+                # Share the folder with the vault email so it appears in their Google Drive
+                if vault_email:
+                    permission = {
+                        'type': 'user',
+                        'role': 'writer',
+                        'emailAddress': vault_email
+                    }
+                    drive_service.permissions().create(fileId=folder_id, body=permission, fields='id').execute()
+                
                 # 2. Helper to upload files
                 def upload_to_drive(filename, file_content_bytes, mime_type):
                     file_metadata = {
