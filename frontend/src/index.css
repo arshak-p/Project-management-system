@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+html {
+  font-size: 90%; /* Scales all Tailwind rem values down by exactly 10% to mimic browser 90% zoom */
+}
+
 :root {
   --primary: #10b981; /* Parrot Green */
   --secondary: #6366f1; /* Indigo */
