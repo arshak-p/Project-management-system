@@ -190,7 +190,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       </AnimatePresence>
 
       <aside className={`
-        fixed md:sticky top-0 h-[calc(100vh-2rem)] w-72 lg:w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 shadow-premium transition-transform duration-500
+        fixed md:sticky top-0 h-[calc(111.11vh-2rem)] w-72 lg:w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 shadow-premium transition-transform duration-500
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] md:translate-x-0'}
       `}>
         <div className="p-8 flex flex-col flex-1 min-h-0">
