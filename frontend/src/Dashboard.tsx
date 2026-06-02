@@ -309,7 +309,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     {page === 'team' && <TeamPage me={me} />}
                     {page === 'timesheets' && <TimesheetsPage me={me} />}
                     {page === 'my_tasks' && <MyTasksPage me={me} />}
-                    {page === 'notifications' && <NotificationsPage me={me} />}
+                    {page === 'notifications' && <NotificationsPage me={me} onNavigate={(p: string) => handleNav(p as Page)} />}
                     {page === 'profile' && <ProfilePage me={me} />}
                     {page === 'activity' && <ActivityPage me={me} />}
                     {page === 'calendar' && <TaskCalendarPage me={me} />}
@@ -338,7 +338,17 @@ export default function Dashboard({ onLogout }: DashboardProps) {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               className="glass p-4 rounded-[1.5rem] border border-white/10 shadow-glow pointer-events-auto cursor-pointer"
-              onClick={() => handleNav('notifications')}
+              onClick={() => {
+                if (n.link) {
+                  if (n.link === '/dashboard') return handleNav('overview');
+                  if (n.link.startsWith('/task/')) return handleNav('my_tasks');
+                  if (n.link === '/admin/backups' || n.link === '/backups') return handleNav('backups');
+                  if (n.link === '/team') return handleNav('team');
+                  if (n.link === '/projects') return handleNav('projects');
+                  if (n.link === '/profile') return handleNav('profile');
+                }
+                handleNav('notifications');
+              }}
             >
                <div className="flex items-start gap-3">
                   <div className="p-2 rounded-xl bg-primary/10 text-primary">

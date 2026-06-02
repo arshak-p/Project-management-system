@@ -4,7 +4,7 @@ import type { Notification, User } from '../../api';
 import { Bell, CheckCircle, Clock } from 'lucide-react';
 import TaskDetailModal from '../../components/TaskDetailModal';
 
-export default function NotificationsPage({ me }: { me: User | null }) {
+export default function NotificationsPage({ me, onNavigate }: { me: User | null, onNavigate?: (page: string) => void }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -34,9 +34,18 @@ export default function NotificationsPage({ me }: { me: User | null }) {
 
   const handleNotifyClick = (n: Notification) => {
     if (!n.read) markRead(n.id);
-    if (n.link && n.link.startsWith('/task/')) {
-      const taskId = parseInt(n.link.replace('/task/', ''));
-      if (taskId) setSelectedTaskId(taskId);
+    
+    if (n.link) {
+      if (n.link.startsWith('/task/')) {
+        const taskId = parseInt(n.link.replace('/task/', ''));
+        if (taskId) setSelectedTaskId(taskId);
+      } else if (onNavigate) {
+        if (n.link === '/dashboard') onNavigate('overview');
+        else if (n.link === '/admin/backups' || n.link === '/backups') onNavigate('backups');
+        else if (n.link === '/team') onNavigate('team');
+        else if (n.link === '/projects') onNavigate('projects');
+        else if (n.link === '/profile') onNavigate('profile');
+      }
     }
   };
 
