@@ -813,8 +813,11 @@ class BackupViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="trigger-manual")
     def trigger_manual(self, request):
         from django.core.management import call_command
-        call_command('run_monthly_backup')
-        return Response({"status": "Manual backup generation triggered."})
+        # Run for 2 months ago (April)
+        call_command('run_monthly_backup', months_ago=2)
+        # Run for 1 month ago (May)
+        call_command('run_monthly_backup', months_ago=1)
+        return Response({"status": "Manual backup generation triggered for the last 2 months."})
 
     @action(detail=True, methods=["post"], url_path="approve-and-download")
     def approve_and_download(self, request, pk=None):

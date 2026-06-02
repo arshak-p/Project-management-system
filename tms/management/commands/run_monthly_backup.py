@@ -18,12 +18,22 @@ from django.db.models import Sum
 class Command(BaseCommand):
     help = "Performs monthly backup, retention cleanup, and agency performance summary."
 
+    def add_arguments(self, parser):
+        parser.add_argument('--months_ago', type=int, default=1, help='Number of months ago to run backup for')
+
     def handle(self, *args, **options):
+        months_ago = options['months_ago']
         now = datetime.now()
         # Calculate Previous Month range for targeted export
         first_day_this_month = now.replace(day=1)
-        last_day_prev_month = first_day_this_month - timedelta(days=1)
-        first_day_prev_month = last_day_prev_month.replace(day=1)
+        
+        # Loop backwards to find the correct month
+        target_date = first_day_this_month
+        for _ in range(months_ago):
+            last_day_prev = target_date - timedelta(days=1)
+            target_date = last_day_prev.replace(day=1)
+            
+        first_day_prev_month = target_date
         
         prev_month_str = first_day_prev_month.strftime("%Y-%m")
         month_str = prev_month_str  # Use the previous month for the backup label
