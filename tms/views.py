@@ -564,7 +564,12 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NotificationSerializer
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)
+        return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())[:100]
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     @action(detail=True, methods=["post"], url_path="mark-read")
     def mark_read(self, request, pk=None):
@@ -592,7 +597,12 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
             pid = access.user_client_project_id(u)
             return qs.filter(project_id=pid) if pid else qs.none()
         proj_ids = access.projects_for_user(u).values_list("id", flat=True)
-        return qs.filter(project_id__in=proj_ids)
+        return qs.filter(project_id__in=proj_ids).order_by('-created_at')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())[:50]
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class ProjectMemberViewSet(SalesSafeViewSet):
