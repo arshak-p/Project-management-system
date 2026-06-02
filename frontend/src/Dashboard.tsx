@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { useState, useEffect, useCallback, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, FolderKanban, Users, LogOut, Bell, 
@@ -93,18 +93,37 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     return () => clearInterval(interval);
   }, [loadProfile, loadNotifications, theme]);
 
-  // Auto-dismiss notifications after 5 seconds
-  useEffect(() => {
-    if (isNotifyPaused) return;
-    
-    const timeouts = notifications
-      .filter((n: any) => !dismissedIds.includes(n.id))
-      .map((n: any) => setTimeout(() => {
-        setDismissedIds(prev => [...prev, n.id]);
-      }, 5000));
+  // Auto-dismiss notifications after 5 seconds robustly
+  const activeTimeouts = useRef<Record<number, any>>({});
 
-    return () => timeouts.forEach(clearTimeout);
+  useEffect(() => {
+    if (isNotifyPaused) {
+      Object.values(activeTimeouts.current).forEach(clearTimeout);
+      activeTimeouts.current = {};
+      return;
+    }
+    
+    notifications.forEach((n: any) => {
+      if (!dismissedIds.includes(n.id) && !activeTimeouts.current[n.id]) {
+        activeTimeouts.current[n.id] = setTimeout(() => {
+          setDismissedIds(prev => {
+            if (!prev.includes(n.id)) return [...prev, n.id];
+            return prev;
+          });
+          delete activeTimeouts.current[n.id];
+        }, 5000);
+      }
+    });
+
+    // We do NOT clear timeouts on every render cleanup, so they actually complete
   }, [notifications, isNotifyPaused, dismissedIds]);
+
+  // Clean up all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(activeTimeouts.current).forEach(clearTimeout);
+    };
+  }, []);
 
   const handleNav = (target: Page, saveHistory = true) => {
     if (saveHistory && target !== page) {
