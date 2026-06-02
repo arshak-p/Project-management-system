@@ -279,10 +279,11 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                         
                         # Only log if at least 1 minute passed
                         if minutes > 0:
-                            note = "Initial Work Session" if old_state.slug == "in-progress" else "Rework Session"
+                            actor_name = f"{actor.first_name or actor.email} ({actor.role.replace('_', ' ').title()})" if actor else "System"
+                            note = f"Initial Work Session (Timer stopped by {actor_name})" if old_state.slug == "in-progress" else f"Rework Session (Timer stopped by {actor_name})"
                             TimeLog.objects.create(
                                 work_item=instance,
-                                user=actor or instance.assignee or instance.created_by,
+                                user=instance.assignee or actor or instance.created_by,
                                 minutes=minutes,
                                 note=note,
                                 logged_at=timezone.now()
