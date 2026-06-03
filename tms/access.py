@@ -62,22 +62,15 @@ def projects_for_user(user: User, include_archived: bool = False) -> QuerySet:
 
     if not user.is_authenticated:
         return qs.none()
-    if user.is_superuser or user.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.SALES_MANAGER, User.Role.HR):
-        return qs
+        
     if user.role == User.Role.CLIENT:
         pid = user_client_project_id(user)
         if pid:
             return qs.filter(id=pid)
         return qs.none()
-    if user.role == User.Role.TEAM_HEAD:
-        # Team heads see projects where they or their team members are active
-        dept_id = user_department_id(user)
-        if dept_id:
-            return qs.filter(department_id=dept_id)
-        return qs.filter(memberships__user=user)
-    if user.role == User.Role.SPECIALIST:
-        return qs.filter(memberships__user=user)
-    return qs.none()
+        
+    # All internal staff (Admin, PM, HR, Sales, Team Head, Specialist) can see all projects
+    return qs
 
 def users_for_user(user: User, include_archived: bool = False) -> QuerySet[User]:
     """
