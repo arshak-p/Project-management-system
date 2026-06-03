@@ -159,7 +159,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     { id: 'projects', icon: <Briefcase className="w-5 h-5" />, label: 'Projects', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr'] },
     { id: 'cycles', icon: <Clock className="w-5 h-5" />, label: 'Cycles', roles: ['admin', 'agency_manager', 'project_manager', 'team_head'] },
     { id: 'tasks', icon: <Boxes className="w-5 h-5" />, label: 'Tasks', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr'] },
-    { id: 'my_tasks', icon: <Target className="w-5 h-5" />, label: 'My Workspace', roles: ['specialist'] },
+    { id: 'my_tasks', icon: <Target className="w-5 h-5" />, label: 'My Workspace', roles: ['specialist', 'team_head'] },
     { id: 'kanban', icon: <FolderKanban className="w-5 h-5" />, label: 'Kanban Board', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr', 'specialist'] },
     { id: 'calendar', icon: <Calendar className="w-5 h-5" />, label: 'Calendar', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr', 'specialist'] },
     { id: 'team', icon: <Users className="w-5 h-5" />, label: 'Team', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr'] },
