@@ -159,7 +159,7 @@ export default function TasksPage({ me }: { me: User | null }) {
           <h1 className="text-3xl lg:text-5xl font-black tracking-tighter">Work Items</h1>
           <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mt-1 opacity-60 italic">Live Task Engine // Agency Operations</p>
         </div>
-        {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+        {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'sales_manager') && (
           <button 
             onClick={() => setShowForm(!showForm)} 
             className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
@@ -527,7 +527,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                       </span>
                     );
                   })()}
-                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'sales_manager') && (
                     task.is_active ? (
                       <button onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }} title="Archive Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-500 text-text-muted rounded-lg transition-all">
                         <Database className="w-4 h-4" />

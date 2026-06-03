@@ -219,8 +219,8 @@ class ProjectViewSet(SalesSafeViewSet):
 
     def perform_destroy(self, instance):
         u = self.request.user
-        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
-            raise PermissionDenied("Only admins and project managers can delete projects.")
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.SALES_MANAGER]):
+            raise PermissionDenied("Only admins, project managers, and strategists can delete projects.")
         instance._activity_user = u
         instance.is_active = False
         instance.save(update_fields=["is_active"])
@@ -228,8 +228,8 @@ class ProjectViewSet(SalesSafeViewSet):
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
         u = self.request.user
-        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
-            raise PermissionDenied("Only admins and project managers can restore projects.")
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.SALES_MANAGER]):
+            raise PermissionDenied("Only admins, project managers, and strategists can restore projects.")
         instance = self.get_object()
         instance.is_active = True
         instance._activity_user = u
@@ -448,8 +448,8 @@ class WorkItemViewSet(SalesSafeViewSet):
 
     def perform_destroy(self, instance):
         u = self.request.user
-        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
-            raise PermissionDenied("Only Agency Managers or Project Managers can delete tasks.")
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.SALES_MANAGER]):
+            raise PermissionDenied("Only Agency Managers, Project Managers, and Strategists can delete tasks.")
         instance._activity_user = u
         instance.is_active = False
         instance.save(update_fields=["is_active"])
@@ -457,8 +457,8 @@ class WorkItemViewSet(SalesSafeViewSet):
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
         u = self.request.user
-        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
-            raise PermissionDenied("Only Agency Managers or Project Managers can restore tasks.")
+        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.SALES_MANAGER]):
+            raise PermissionDenied("Only Agency Managers, Project Managers, and Strategists can restore tasks.")
         instance = self.get_object()
         instance.is_active = True
         instance._activity_user = u

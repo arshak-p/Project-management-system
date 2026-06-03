@@ -630,17 +630,19 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                 <ShieldAlert className="w-3.5 h-3.5" /> Action Matrix
               </label>
               <div className="space-y-2">
-                <button 
-                  onClick={async () => {
-                    if (confirm('Archive this task? It will be removed from active boards.')) {
-                      await api.updateTask(task.id, { is_active: false });
-                      onClose();
-                    }
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all"
-                >
-                  <Database className="w-4 h-4" /> Archive Task
-                </button>
+                {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'sales_manager') && (
+                  <button 
+                    onClick={async () => {
+                      if (confirm('Archive this task? It will be removed from active boards.')) {
+                        await api.deleteTask(task.id);
+                        onClose();
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all"
+                  >
+                    <Database className="w-4 h-4" /> Archive Task
+                  </button>
+                )}
                 {(me?.is_superuser || me?.role === 'admin') && (
                   <button 
                     onClick={async () => {
