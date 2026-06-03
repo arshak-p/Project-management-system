@@ -118,12 +118,15 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
                   className="p-4 bg-background border border-white/5 rounded-2xl flex items-center justify-between hover:bg-white/5 transition-all cursor-pointer group"
                 >
                   <div>
-                    <span className="text-[8px] font-black uppercase tracking-widest text-primary">{task.task_code}</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-primary">{task.task_code} • {task.project__slug || 'GENERAL'} {task.module_slug && `• ${task.module_slug}`}</span>
                     <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors">{task.title}</h4>
+                    <span className="text-[8px] font-black uppercase text-text-muted/40 block mt-1">Assignee: {task.assignee?.first_name || 'Generic Operator'} • Status: {task.state__name || task.state_slug?.replace(/-/g, ' ')}</span>
                   </div>
-                  <span className="text-[8px] font-black uppercase tracking-widest bg-white/5 text-text-muted px-2.5 py-1 rounded-lg">
-                    {task.state__name}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-black uppercase tracking-widest bg-white/5 text-text-muted px-2.5 py-1 rounded-lg">
+                      {task.state__name}
+                    </span>
+                  </div>
                 </div>
               ))
             )}
