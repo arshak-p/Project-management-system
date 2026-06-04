@@ -81,18 +81,60 @@ export default function MyTasksPage({ me }: { me: User | null }) {
   const PRIORITY_WEIGHT: Record<string, number> = { urgent: 1, high: 2, medium: 3, low: 4 };
 
   const getTaskBorderColor = (t: Task) => {
-    if (t.state_slug === 'completed-launched' || t.state_slug === 'archived') {
-      return 'border-white/5'; // Neutral for completed
+    if (t.state_slug === 'completed-launched' || t.state_slug === 'archived' || t.is_client_approved) {
+      return 'border-emerald-500/20'; // Clean faint green for completed / client approved tasks
     }
-    if (t.due_date && t.due_date < todayStr) {
-      return 'border-red-500/80 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
-    } else if (t.due_date === todayStr) {
-      return 'border-amber-500/80 shadow-[0_0_15px_rgba(245,158,11,0.2)]';
-    } else if (t.posting_date) {
-      return 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.2)]';
+    
+    // 1. Critical Deadline-based Checks
+    if (t.deadline) {
+      if (t.deadline < todayStr) {
+        return 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.35)]'; // Overdue deadline (Critical Red)
+      }
+      if (t.deadline === todayStr) {
+        return 'border-red-500/80 shadow-[0_0_12px_rgba(239,68,68,0.25)] animate-pulse'; // Deadline is TODAY (Pulsing Red)
+      }
+      // Calculate days until deadline
+      const diffTime = new Date(t.deadline).getTime() - new Date(todayStr).getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays <= 3) {
+        return 'border-orange-500/80 shadow-[0_0_10px_rgba(249,115,22,0.2)]'; // Deadline within 3 days (Orange warning)
+      }
     }
+
+    // 2. Due Date-based Checks
+    if (t.due_date) {
+      if (t.due_date < todayStr) {
+        return 'border-amber-500/80 shadow-[0_0_12px_rgba(245,158,11,0.2)]'; // Overdue due date (Amber)
+      }
+      if (t.due_date === todayStr) {
+        return 'border-yellow-400/80 shadow-[0_0_12px_rgba(234,179,8,0.2)]'; // Due TODAY (Yellow)
+      }
+      // Calculate days until due date
+      const diffTime = new Date(t.due_date).getTime() - new Date(todayStr).getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays <= 3) {
+        return 'border-yellow-500/50 shadow-[0_0_8px_rgba(234,179,8,0.1)]'; // Due within 3 days (Faint Yellow)
+      }
+    }
+
+    // 3. Start Date / Posting Date Checks (Active / In-progress)
+    if (t.posting_date) {
+      if (t.posting_date <= todayStr) {
+        return 'border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.1)]'; // Active task from/after start date (Sleek Green)
+      }
+    }
+
+    if (t.state_slug === 'in-progress') {
+      return 'border-primary/40 shadow-[0_0_8px_rgba(16,185,129,0.05)]'; // General In-Progress fallback border
+    }
+
+    if (t.priority === 'urgent') {
+      return 'border-red-500/20'; // Faint warning border for urgent tasks without dates
+    }
+
     return 'border-white/5';
   };
+
 
   const filteredTasks = tasks.filter(t => {
     const isCompleted = t.state_slug === 'completed-launched' || t.state_slug === 'archived';
