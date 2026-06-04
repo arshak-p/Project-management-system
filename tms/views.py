@@ -34,7 +34,7 @@ from tms.models import (
 from tms.permissions import (
     BlockSalesWrites, IsAdminRole, IsPMOrAdmin, IsLeadPMOrAdmin, 
     IsHRManagement, IsAgencyManagerOrHR, IsPMReadOrAbove,
-    IsLeadPMOrManagement, IsUserListAuthorized
+    IsLeadPMOrManagement, IsUserListAuthorized, IsSelfOrHRManagement
 )
 from tms.serializers import (
     ActivityLogSerializer,
@@ -149,17 +149,20 @@ class UserViewSet(SalesSafeViewSet):
         return access.users_for_user(self.request.user, include_archived=include_archived).select_related("tms_profile")
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve"):
+        if self.action in ("update", "partial_update", "retrieve"):
+            return [permissions.IsAuthenticated(), IsSelfOrHRManagement()]
+        if self.action == "list":
             # Agency Manager, HR, PM, and Team Head can list users (filtered by queryset)
             return [permissions.IsAuthenticated(), IsUserListAuthorized()]
-        if self.action in ("update", "partial_update", "create", "destroy", "restore"):
-            # ONLY Agency Manager (Admin) and HR can create/update/remove/recover
+        if self.action in ("create", "destroy", "restore"):
+            # ONLY Agency Manager (Admin) and HR can create/remove/recover
             return [permissions.IsAuthenticated(), IsAgencyManagerOrHR()]
         if self.action == "assignable":
             return [permissions.IsAuthenticated(), BlockSalesWrites()]
         if self.action == "me":
             return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), BlockSalesWrites()]
+
 
     def perform_update(self, serializer):
         serializer.save(_activity_user=self.request.user)
@@ -342,9 +345,15 @@ class CycleViewSet(SalesSafeViewSet):
         projects = access.projects_for_user(u, include_archived=include_archived)
         return qs.filter(project__in=projects)
 
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
+        return super().get_permissions()
+
     def perform_destroy(self, instance):
         instance.is_active = False
         instance.save(update_fields=["is_active"])
+
 
 
 class CycleMemberViewSet(SalesSafeViewSet):
@@ -355,6 +364,12 @@ class CycleMemberViewSet(SalesSafeViewSet):
         pids = access.projects_for_user(u).values_list("id", flat=True)
         cids = Cycle.objects.filter(project_id__in=pids).values_list("id", flat=True)
         return CycleMember.objects.filter(cycle_id__in=cids).select_related("user", "cycle")
+
+    def get_permissions(self):
+        if self.action in ("create", "destroy"):
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
+        return super().get_permissions()
+
 
 
 class WorkItemViewSet(SalesSafeViewSet):

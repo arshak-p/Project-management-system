@@ -326,7 +326,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     {page === 'timesheets' && <TimesheetsPage me={me} />}
                     {page === 'my_tasks' && <MyTasksPage me={me} />}
                     {page === 'notifications' && <NotificationsPage me={me} onNavigate={(p: string) => handleNav(p as Page)} />}
-                    {page === 'profile' && <ProfilePage me={me} />}
+                    {page === 'profile' && <ProfilePage me={me} onUpdateMe={(updated: User) => setMe(updated)} />}
                     {page === 'activity' && <ActivityPage me={me} />}
                     {page === 'calendar' && <TaskCalendarPage me={me} />}
                     {page === 'strategist' && <StrategistPage me={me} />}

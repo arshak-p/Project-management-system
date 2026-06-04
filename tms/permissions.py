@@ -70,3 +70,18 @@ class IsUserListAuthorized(permissions.BasePermission):
         if role == User.Role.PROJECT_MANAGER:
             return request.method in permissions.SAFE_METHODS
         return False
+
+
+class IsSelfOrHRManagement(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated)
+
+    def has_object_permission(self, request, view, obj):
+        u = request.user
+        is_hr = bool(
+            u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.HR]
+        )
+        if is_hr:
+            return True
+        return obj.id == u.id
+
