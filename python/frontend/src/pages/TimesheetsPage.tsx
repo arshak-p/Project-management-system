@@ -14,13 +14,15 @@ export default function TimesheetsPage({ me }: { me: User | null }) {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [allLogs, setAllLogs] = useState<TimeLog[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   const load = useCallback(() => {
-    Promise.all([api.getTasks(), api.getProjects(), api.getAllTimeLogs()])
-      .then(([t, p, l]) => {
+    Promise.all([api.getTasks(), api.getProjects(), api.getAllTimeLogs(), api.getUsers()])
+      .then(([t, p, l, u]) => {
         setTasks(t.data);
         setProjects(p.data);
         setAllLogs(l.data);
+        setUsers(u.data);
       })
       .catch(err => console.error("Error fetching logs:", err))
       .finally(() => setIsLoading(false));
@@ -124,8 +126,8 @@ export default function TimesheetsPage({ me }: { me: User | null }) {
             <label className="text-[10px] uppercase font-black tracking-widest text-text-muted px-1 mb-1.5">Team Member</label>
             <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)} className="bg-surface border border-border text-xs font-bold rounded-xl px-4 py-3.5 outline-none focus:border-primary min-w-[200px] shadow-sm cursor-pointer">
               <option value="all">Every Specialist</option>
-              {Array.from(allUsersMap.entries()).map(([id, name]) => (
-                <option key={id} value={id}>{name}</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.first_name} {u.last_name} ({u.title || u.role})</option>
               ))}
             </select>
           </div>

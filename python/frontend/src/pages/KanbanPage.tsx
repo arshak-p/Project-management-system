@@ -23,11 +23,13 @@ export default function KanbanPage({ me }: { me: User | null }) {
   const [isLoading, setIsLoading] = useState(true);
   const [filterProject, setFilterProject] = useState('');
   const [filterModule, setFilterModule] = useState('');
-  const [filterJobTitle, setFilterJobTitle] = useState(me?.role === 'team_head' ? (me?.title || '') : '');
-  const [filterPostingDate, setFilterPostingDate] = useState('');
-  const [filterDueDate, setFilterDueDate] = useState('');
-  const [filterDeadline, setFilterDeadline] = useState('');
+  const [filterJobTitle, setFilterJobTitle] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+
+  const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [targetStateId, setTargetStateId] = useState<number | null>(null);
+  const [taskForm, setTaskForm] = useState({ title: '', project: '', module: '', priority: 'medium' });
 
   const load = useCallback(async () => {
     try {
@@ -42,6 +44,54 @@ export default function KanbanPage({ me }: { me: User | null }) {
     }
     setIsLoading(false);
   }, []);
+
+  const handleTaskMove = async (taskId: number, newStateId: number) => {
+    try {
+      // Optimistic UI Update
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, state: newStateId } : t));
+      await api.updateTask(taskId, { state: newStateId });
+      load();
+    } catch (err) {
+      console.error("Failed to move task", err);
+      load();
+    }
+  };
+
+  const handleQuickCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskForm.title || !taskForm.project || !targetStateId) return;
+    try {
+      await api.createTask({
+        ...taskForm,
+        state: targetStateId,
+        project: Number(taskForm.project),
+        module: taskForm.module ? Number(taskForm.module) : null,
+      });
+      setShowAddModal(false);
+      setTaskForm({ title: '', project: '', module: '', priority: 'medium' });
+      load();
+    } catch (err) {
+      console.error("Failed to create task", err);
+    }
+  };
+
+  const onDragStart = (e: React.DragEvent, taskId: number) => {
+    setDraggingTaskId(taskId);
+    e.dataTransfer.setData('taskId', taskId.toString());
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onDrop = (e: React.DragEvent, stateId: number) => {
+    e.preventDefault();
+    const taskId = Number(e.dataTransfer.getData('taskId'));
+    setDraggingTaskId(null);
+    handleTaskMove(taskId, stateId);
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
 
   useEffect(() => { 
     Promise.resolve().then(() => load()); 
@@ -67,180 +117,170 @@ export default function KanbanPage({ me }: { me: User | null }) {
   if (isLoading) return <div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" /></div>;
 
   return (
-    <div className="space-y-10 pb-20">
+    <div className="h-[calc(100vh-10rem)] flex flex-col overflow-hidden">
       {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
 
-      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
-        <div>
-          <h1 className="text-3xl lg:text-5xl font-black tracking-tighter">Kanban Board</h1>
-          <p className="text-text-muted mt-2 font-bold uppercase tracking-[0.2em] text-[10px] opacity-60">Active Task Flow</p>
+      {showAddModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+           <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass w-full max-w-md p-8 rounded-[2rem] border border-primary/20 shadow-premium">
+              <h3 className="text-2xl font-black tracking-tighter mb-6">Quick Task</h3>
+              <form onSubmit={handleQuickCreate} className="space-y-4">
+                 <input autoFocus placeholder="Task Title..." className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} />
+                 <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.project} onChange={e => setTaskForm({...taskForm, project: e.target.value})}>
+                    <option value="">Select Project</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                 </select>
+                 <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.priority} onChange={e => setTaskForm({...taskForm, priority: e.target.value})}>
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                    <option value="urgent">Urgent</option>
+                 </select>
+                 <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all">Cancel</button>
+                    <button type="submit" className="flex-1 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-glow hover:scale-105 active:scale-95 transition-all">Create</button>
+                 </div>
+              </form>
+           </motion.div>
         </div>
-        <div className="grid grid-cols-2 lg:flex gap-2 lg:gap-4 w-full lg:w-auto">
+      )}
+
+      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 mb-6 px-2">
+        <div>
+          <h1 className="text-2xl lg:text-4xl font-black tracking-tighter">Kanban</h1>
+          <p className="text-text-muted mt-1 font-bold uppercase tracking-[0.2em] text-[9px] opacity-60">Task Flow</p>
+        </div>
+        <div className="grid grid-cols-2 lg:flex gap-2 w-full lg:w-auto">
           <select 
             value={filterProject} 
             onChange={e => setFilterProject(e.target.value)}
-            className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[150px]"
+            className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
           >
-            <option value="">All Projects</option>
+            <option value="">Projects</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <select 
             value={filterModule} 
             onChange={e => setFilterModule(e.target.value)}
-            className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[150px]"
+            className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
           >
-            <option value="">All Modules</option>
+            <option value="">Modules</option>
             {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
           <select 
             value={filterJobTitle} 
             onChange={e => setFilterJobTitle(e.target.value)}
-            className="col-span-2 lg:col-auto px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[150px]"
+            className="col-span-2 lg:col-auto px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
           >
-            <option value="">All Job Titles</option>
+            <option value="">Job Titles</option>
             {jobTitles.map(jt => <option key={jt.id} value={jt.name}>{jt.name}</option>)}
           </select>
-          <div className="col-span-2 lg:col-auto flex gap-2">
-            {me?.role !== 'specialist' && (
-              <input 
-                type="date"
-                value={filterPostingDate}
-                onChange={e => setFilterPostingDate(e.target.value)}
-                title="Filter by Posting Date"
-                className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:w-[130px]"
-                style={{ colorScheme: 'dark' }}
-              />
-            )}
-            <input 
-              type="date"
-              value={filterDueDate}
-              onChange={e => setFilterDueDate(e.target.value)}
-              title="Filter by Due Date"
-              className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:w-[130px]"
-              style={{ colorScheme: 'dark' }}
-            />
-            <input 
-              type="date"
-              value={filterDeadline}
-              onChange={e => setFilterDeadline(e.target.value)}
-              title="Filter by Deadline"
-              className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:w-[130px]"
-              style={{ colorScheme: 'dark' }}
-            />
-          </div>
         </div>
       </motion.div>
 
-      <div className="flex gap-8 overflow-x-auto pb-10 custom-scrollbar snap-x h-[calc(100vh-250px)]">
+      <div className="flex-1 flex gap-4 overflow-x-auto pb-4 custom-scrollbar select-none">
         {states.map((state, idx) => {
           const columnTasks = tasks.filter(t => {
-            if (t.state_slug !== state.slug) return false;
+            if (t.state !== state.id) return false;
             if (filterProject && t.project?.toString() !== filterProject) return false;
             if (filterModule && t.module?.toString() !== filterModule) return false;
             if (filterJobTitle && t.assignee?.title !== filterJobTitle) return false;
-            if (filterPostingDate && t.posting_date !== filterPostingDate) return false;
-            if (filterDueDate && t.due_date !== filterDueDate) return false;
-            if (filterDeadline && t.deadline !== filterDeadline) return false;
-            
-            // Strict Privacy Protocol: Specialists only see their own assigned tasks
             if (me?.role === 'specialist' && t.assignee?.id !== me?.id) return false;
-            
             return true;
           });
           const colors = STATE_COLORS[state.slug] || STATE_COLORS['pending'];
           return (
             <motion.div 
               key={state.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="flex-shrink-0 w-[280px] lg:w-80 flex flex-col snap-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: idx * 0.05 }}
+              onDragOver={onDragOver}
+              onDrop={(e) => onDrop(e, state.id)}
+              className="flex-shrink-0 w-[260px] lg:w-[300px] flex flex-col h-full bg-white/[0.01] rounded-[1.5rem] border border-white/5 p-3 hover:bg-white/[0.03] transition-colors"
             >
-              <div className="flex items-center justify-between mb-6 px-4">
-                <div className="flex items-center gap-3">
-                   <div className={`w-2 h-2 rounded-full ${colors.text.replace('text-', 'bg-')} shadow-glow`}></div>
-                   <h3 className={`font-extrabold text-sm uppercase tracking-widest ${colors.text}`}>{state.name}</h3>
+              <div className="flex items-center justify-between mb-4 px-1 shrink-0">
+                <div className="flex items-center gap-2">
+                   <div className={`w-1.5 h-1.5 rounded-full ${colors.text.replace('text-', 'bg-')} shadow-glow`}></div>
+                   <h3 className={`font-black text-[10px] uppercase tracking-[0.2em] ${colors.text}`}>{state.name}</h3>
                 </div>
-                <span className="text-[10px] font-black bg-white/5 px-2 py-1 rounded-lg border border-white/10 opacity-60">
+                <span className="text-[9px] font-black bg-white/5 px-1.5 py-0.5 rounded border border-white/10 opacity-40">
                   {columnTasks.length}
                 </span>
               </div>
 
-              <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar pr-2">
-                 <AnimatePresence>
+              <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar pr-1 mb-3 scroll-smooth">
+                 <AnimatePresence mode='popLayout'>
                   {columnTasks.map((task) => {
                     const cardColors = STATE_COLORS[task.state_slug || ''] || colors;
+                    const isDragging = draggingTaskId === task.id;
                     return (
                       <motion.div
                         key={task.id}
                         layout
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        whileHover={{ scale: 1.02 }}
+                        draggable
+                        onDragStart={(e) => onDragStart(e as any, task.id)}
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: isDragging ? 0.4 : 1, scale: isDragging ? 0.95 : 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
                         onClick={() => setSelectedTaskId(task.id)}
-                        className={`glass p-6 rounded-[1.5rem] border-white/5 hover:border-primary/30 group cursor-pointer relative overflow-hidden transition-all ${
+                        className={`glass p-4 rounded-xl border-white/5 hover:border-primary/30 group cursor-grab active:cursor-grabbing relative transition-all ${
                           task.priority === 'urgent' ? 'border-red-500/40 bg-red-500/5 shadow-[0_0_15px_-5px_rgba(239,68,68,0.3)]' : ''
                         } ${task.state_slug === 're-edit' ? 'border-red-500/30' : ''}`}
                       >
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-2.5">
                           <div className="flex justify-between items-start">
-                             <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${cardColors.bg} ${cardColors.text}`}>
+                             <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${cardColors.bg} ${cardColors.text}`}>
                                {task.priority || 'Low'}
                              </span>
-                             <button onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-error/10 text-error rounded-lg transition-all">
-                                <Trash2 className="w-3.5 h-3.5" />
+                             <button onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }} className="opacity-0 group-hover:opacity-100 p-1 hover:bg-error/10 text-error rounded transition-all">
+                                <Trash2 className="w-3 h-3" />
                              </button>
                           </div>
-                          <div className="flex flex-col gap-1.5">
+                          <div className="flex flex-col gap-0.5">
                              {(() => {
                                const proj = projects.find(p => p.id === Number(task.project));
                                return proj ? (
-                                 <span className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1" style={{ color: proj.color }}>
-                                   <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: proj.color }}></div>
+                                 <span className="text-[7px] font-black uppercase tracking-[0.1em] opacity-60" style={{ color: proj.color }}>
                                    {proj.name}
                                  </span>
                                ) : null;
                              })()}
-                             {(() => {
-                               const mod = modules.find(m => m.id === task.module);
-                               return mod ? (
-                                 <span className="text-[9px] font-black uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded w-max">
-                                   {mod.name}
+                             <h4 className="font-bold text-[11px] leading-tight text-text/90 line-clamp-2">{task.title}</h4>
+                             <div className="flex flex-wrap gap-2 mt-1">
+                               {task.due_date && <span className="text-[7px] font-bold opacity-30">🚩 {task.due_date}</span>}
+                               {task.deadline && (
+                                 <span className="text-[7px] font-black text-red-500 flex items-center gap-1 animate-pulse">
+                                   <AlertTriangle className="w-2 h-2" /> {task.deadline}
                                  </span>
-                               ) : null;
-                             })()}
-                             <h4 className="font-bold text-sm leading-relaxed">{task.title}</h4>
-                                 <div className="flex flex-wrap gap-2 mt-1">
-                                   {me?.role !== 'specialist' && task.posting_date && <span className="text-[8px] font-bold opacity-60">📅 {task.posting_date}</span>}
-                                   {task.due_date && <span className="text-[8px] font-bold opacity-60">🚩 {task.due_date}</span>}
-                                   {task.deadline && <span className="text-[8px] font-black text-red-500 flex items-center gap-1"><AlertTriangle className="w-2.5 h-2.5" /> DEADLINE: {task.deadline}</span>}
-                                 </div>
-                          </div>
-                          <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/5 opacity-40 group-hover:opacity-100 transition-opacity">
-                             <div className="flex items-center gap-2">
-                                <div className={`w-5 h-5 rounded-full ${cardColors.bg.replace('/10', '')} flex items-center justify-center text-[8px] font-black text-white`}>
-                                   {task.assignee?.first_name?.[0] || task.assignee?.email?.[0]?.toUpperCase() || '?'}
-                                </div>
-                                <span className="text-[10px] font-bold">{task.assignee?.first_name || task.assignee?.email || 'Unassigned'}</span>
+                               )}
                              </div>
-                             <CircleDashed className={`w-3.5 h-3.5 ${cardColors.text}`} />
+                          </div>
+                          <div className="flex items-center justify-between mt-1 pt-2 border-t border-white/5 opacity-40 group-hover:opacity-80">
+                             <div className="flex items-center gap-1.5">
+                                <div className={`w-4 h-4 rounded-full ${cardColors.bg.replace('/10', '')} flex items-center justify-center text-[7px] font-black text-white`}>
+                                   {task.assignee?.first_name?.[0] || '?'}
+                                </div>
+                                <span className="text-[8px] font-bold truncate max-w-[80px]">{task.assignee?.first_name || 'User'}</span>
+                             </div>
+                             <CircleDashed className={`w-2.5 h-2.5 ${cardColors.text} opacity-50`} />
                           </div>
                         </div>
                       </motion.div>
                     );
                   })}
                 </AnimatePresence>
+              </div>
 
               <motion.button 
-                whileHover={{ scale: 1.02 }} 
-                className="w-full py-4 border-2 border-dashed border-white/5 rounded-[1.5rem] flex items-center justify-center text-text-muted hover:text-primary hover:border-primary/20 hover:bg-primary/5 transition-all text-xs font-bold"
+                whileTap={{ scale: 0.98 }}
+                onClick={() => { setTargetStateId(state.id); setShowAddModal(true); }}
+                className="w-full py-2 bg-white/5 hover:bg-primary/5 border border-white/5 hover:border-primary/10 rounded-lg flex items-center justify-center text-text-muted hover:text-primary transition-all text-[9px] font-black uppercase tracking-widest shrink-0"
               >
-                <Plus className="w-4 h-4 mr-2" /> Add Task
+                <Plus className="w-3 h-3 mr-2" /> Add Task
               </motion.button>
-            </div>
-          </motion.div>
-        ); })}
+            </motion.div>
+          ); })}
       </div>
     </div>
   );

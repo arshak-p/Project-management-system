@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState } from '../api';
-import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars, Link2, ShieldAlert, Database, Trash2 } from 'lucide-react';
+import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars, Link2, ShieldAlert, Database, Trash2, Upload } from 'lucide-react';
 import { getWsUrl } from '../config';
 
 
@@ -28,6 +28,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
 
   const [newComment, setNewComment] = useState('');
   const [addingComment, setAddingComment] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [timeLogObj, setTimeLogObj] = useState({ minutes: '', note: '' });
   const [addingTime, setAddingTime] = useState(false);
@@ -140,6 +141,29 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
       setActiveTab('time');
     } finally {
       setAddingTime(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('work_item', taskId.toString());
+    formData.append('file', file);
+    formData.append('file_name', file.name);
+    if (me?.id) formData.append('uploaded_by', me.id.toString());
+    
+    setIsUploading(true);
+    try {
+      await api.createAttachment(formData);
+      const aRes = await api.getAttachments(taskId);
+      setAttachments(aRes.data);
+    } catch (err) {
+      console.error('File upload failed', err);
+      alert('Failed to upload file. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -366,6 +390,22 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                       />
                     </div>
                   </div>
+
+                  <div className="mb-6 flex flex-col md:flex-row items-center justify-between gap-4 glass p-4 rounded-2xl border border-border/50">
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-widest text-primary flex items-center gap-2">
+                        <FileIcon className="w-3.5 h-3.5" /> File Attachments
+                      </h4>
+                      <p className="text-[10px] text-text-muted mt-1 leading-relaxed">Upload specific files or assets directly to this task.</p>
+                    </div>
+                    <div>
+                      <input type="file" id="file-upload" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
+                      <label htmlFor="file-upload" className={`flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-bold cursor-pointer hover:bg-primary hover:text-white transition-all ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        {isUploading ? 'Uploading...' : 'Upload File'}
+                      </label>
+                    </div>
+                  </div>
                   
                   <div className="flex-1 overflow-y-auto space-y-3 mb-6">
                     {attachments.length === 0 && !task.reference_link && (
@@ -449,13 +489,45 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               </select>
             </div>
 
+            {task.state_slug === 'team-head-review' && (me?.role === 'admin' || me?.role === 'team_head') && (
+              <div className="pt-2 animate-in slide-in-from-top-2 flex flex-col gap-2">
+                <button 
+                  onClick={async () => {
+                    const nextState = states.find(s => s.slug === 'client-review');
+                    if (nextState) handleUpdateField('state', nextState.id);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-emerald-500 hover:text-white transition-all"
+                >
+                  <ShieldCheck className="w-4 h-4" /> Approve for Client
+                </button>
+                <button 
+                  onClick={async () => {
+                    const reworkState = states.find(s => s.slug === 'rework-revision');
+                    if (reworkState) handleUpdateField('state', reworkState.id);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all"
+                >
+                  Reject / Rework
+                </button>
+              </div>
+            )}
+
             {task.state_slug === 'client-review' && !task.is_client_approved && (me?.role === 'admin' || me?.role === 'project_manager') && (
-              <div className="pt-2 animate-in slide-in-from-top-2">
+              <div className="pt-2 animate-in slide-in-from-top-2 flex flex-col gap-2">
                 <button 
                   onClick={() => handleUpdateField('is_client_approved', true)}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-600/20 hover:scale-[1.02] transition-all"
                 >
                   <Stars className="w-4 h-4" /> Mark Client Approved
+                </button>
+                <button 
+                  onClick={async () => {
+                    const completedState = states.find(s => s.slug === 'completed-launched');
+                    if (completedState) handleUpdateField('state', completedState.id);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-blue-500/10 text-blue-500 border border-blue-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-500 hover:text-white transition-all"
+                >
+                  Bypass & Launch
                 </button>
               </div>
             )}
@@ -475,69 +547,69 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               </select>
             </div>
 
-            {(me?.role === 'admin' || me?.role === 'project_manager') ? (
+            <div className="grid grid-cols-2 gap-4">
+              {(me?.role === 'admin' || me?.role === 'project_manager') ? (
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div> Post Date
+                  </label>
+                  <input 
+                    type="date"
+                    value={task.posting_date || ''}
+                    onChange={e => handleUpdateField('posting_date', e.target.value || null)}
+                    className="w-full px-2 py-2 bg-indigo-500/5 border border-indigo-500/20 rounded-lg text-xs focus:border-indigo-500 outline-none hover:border-indigo-500/50 transition-colors font-bold"
+                    style={{ colorScheme: 'dark' }}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full opacity-50"></div> Post Date
+                  </label>
+                  <div className="w-full px-2 py-2 bg-surface/50 border border-border/50 rounded-lg text-xs font-mono text-indigo-400/80">
+                    {task.posting_date || 'Not set'}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-1 h-3 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div> Post Date
+                <label className="text-[9px] font-black text-red-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div> Deadline
                 </label>
                 <input 
                   type="date"
-                  value={task.posting_date || ''}
-                  onChange={e => handleUpdateField('posting_date', e.target.value || null)}
-                  className="w-full px-3 py-2.5 bg-indigo-500/5 border border-indigo-500/20 rounded-xl text-sm focus:border-indigo-500 outline-none hover:border-indigo-500/50 transition-colors font-bold"
+                  value={task.deadline || ''}
+                  onChange={e => handleUpdateField('deadline', e.target.value || null)}
+                  className="w-full px-2 py-2 bg-red-500/5 border border-red-500/20 rounded-lg text-xs focus:border-red-500 outline-none hover:border-red-500/50 transition-colors font-bold"
                   style={{ colorScheme: 'dark' }}
                 />
-                <p className="text-[9px] text-text-muted leading-tight pl-1 italic">Drives monthly launch reports and project snapshots.</p>
               </div>
-            ) : (
+
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-1 h-3 bg-indigo-500 rounded-full opacity-50"></div> Post Date
+                <label className="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div> Due Date
                 </label>
-                <div className="w-full px-3 py-2.5 bg-surface/50 border border-border/50 rounded-xl text-sm font-mono text-indigo-400/80">
-                  {task.posting_date || 'Not set'}
-                </div>
+                <input 
+                  type="date"
+                  value={task.due_date || ''}
+                  onChange={e => handleUpdateField('due_date', e.target.value || null)}
+                  className="w-full px-2 py-2 bg-amber-500/5 border border-amber-500/20 rounded-lg text-xs focus:border-amber-500 outline-none hover:border-amber-500/50 transition-colors font-bold"
+                  style={{ colorScheme: 'dark' }}
+                />
               </div>
-            )}
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                <div className="w-1 h-3 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div> Start Date
-              </label>
-              <input 
-                type="date"
-                value={task.due_date || ''}
-                onChange={e => handleUpdateField('due_date', e.target.value || null)}
-                className="w-full px-3 py-2.5 bg-amber-500/5 border border-amber-500/20 rounded-xl text-sm focus:border-amber-500 outline-none hover:border-amber-500/50 transition-colors font-bold"
-                style={{ colorScheme: 'dark' }}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
-                <div className="w-1 h-3 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div> Deadline (Finish)
-              </label>
-              <input 
-                type="date"
-                value={task.deadline || ''}
-                onChange={e => handleUpdateField('deadline', e.target.value || null)}
-                className="w-full px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-xl text-sm focus:border-red-500 outline-none hover:border-red-500/50 transition-colors font-bold"
-                style={{ colorScheme: 'dark' }}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-widest flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5" /> Work Schedule
-              </label>
-              <input 
-                type="date"
-                value={task.scheduled_date || ''}
-                onChange={e => handleUpdateField('scheduled_date', e.target.value || null)}
-                className="w-full px-3 py-2.5 bg-primary/5 border border-primary/20 rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors"
-                style={{ colorScheme: 'dark' }}
-              />
-              <p className="text-[9px] text-text-muted leading-tight pl-1 italic">Internal planning date.</p>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div> Task Start
+                </label>
+                <input 
+                  type="date"
+                  value={task.scheduled_date || ''}
+                  onChange={e => handleUpdateField('scheduled_date', e.target.value || null)}
+                  className="w-full px-2 py-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg text-xs focus:border-emerald-500 outline-none hover:border-emerald-500/50 transition-colors font-bold"
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
             </div>
 
             <div className="pt-4 border-t border-border/50 space-y-2">
@@ -558,17 +630,19 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                 <ShieldAlert className="w-3.5 h-3.5" /> Action Matrix
               </label>
               <div className="space-y-2">
-                <button 
-                  onClick={async () => {
-                    if (confirm('Archive this task? It will be removed from active boards.')) {
-                      await api.updateTask(task.id, { is_active: false });
-                      onClose();
-                    }
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all"
-                >
-                  <Database className="w-4 h-4" /> Archive Task
-                </button>
+                {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'sales_manager') && (
+                  <button 
+                    onClick={async () => {
+                      if (confirm('Archive this task? It will be removed from active boards.')) {
+                        await api.deleteTask(task.id);
+                        onClose();
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all"
+                  >
+                    <Database className="w-4 h-4" /> Archive Task
+                  </button>
+                )}
                 {(me?.is_superuser || me?.role === 'admin') && (
                   <button 
                     onClick={async () => {

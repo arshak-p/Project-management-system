@@ -103,6 +103,18 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                 body=f"You have been assigned to task: '{instance.title}'",
                 link=f"/task/{instance.id}"
             )
+            
+        # Notify Assignee's Team Head
+        if getattr(instance.assignee, 'title', None):
+            ths = User.objects.filter(role=User.Role.TEAM_HEAD, is_active=True, title=instance.assignee.title)
+            for th in ths:
+                if not actor or actor.id != th.id:
+                    notify_user(
+                        th.id,
+                        title=f"Team Member Assigned: {instance.task_code}",
+                        body=f"Task '{instance.title}' was assigned to {instance.assignee.get_full_name() or instance.assignee.email}.",
+                        link=f"/task/{instance.id}"
+                    )
 
     if not created and actor:
         # Determine notification title and body
@@ -126,6 +138,19 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                 body=notif_body,
                 link=f"/task/{instance.id}"
             )
+
+    # --- Global Notifications for Upper Management ---
+    if actor:
+        is_deact = action == "deactivated"
+        global_title = f"New Task Created: {instance.task_code}" if created else (f"Archived: {instance.task_code}" if is_deact else f"Task Updated: {instance.task_code}")
+        global_body = f"'{instance.title}' was {'created' if created else 'updated'} by {actor.first_name or actor.email}"
+        notify_roles(
+            [User.Role.ADMIN, User.Role.PROJECT_MANAGER],
+            title=global_title,
+            body=global_body,
+            link=f"/task/{instance.id}",
+            exclude_user=actor
+        )
 
     # --- Workflow Specific Notifications ---
     if not created and actor and instance.state:
@@ -238,27 +263,29 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                      )
 
             # --- Automated Timer Logic ---
-            if instance.state.slug == "in-progress":
+            if instance.state.slug in ["in-progress", "revisions"]:
                 # Start timer if not already running
                 if not instance.timer_start:
                     WorkItem.objects.filter(pk=instance.pk).update(timer_start=timezone.now())
             
-            # Check if we just LEFT in-progress
+            # Check if we just LEFT a tracked state
             if getattr(instance, "_old_state_id", None):
                 try:
                     old_state = State.objects.get(pk=instance._old_state_id)
-                    if old_state.slug == "in-progress" and instance.timer_start:
+                    if old_state.slug in ["in-progress", "revisions"] and instance.timer_start:
                         # Calculate duration
                         duration = timezone.now() - instance.timer_start
                         minutes = int(duration.total_seconds() // 60)
                         
                         # Only log if at least 1 minute passed
                         if minutes > 0:
+                            actor_name = f"{actor.first_name or actor.email} ({actor.role.replace('_', ' ').title()})" if actor else "System"
+                            note = f"Initial Work Session (Timer stopped by {actor_name})" if old_state.slug == "in-progress" else f"Rework Session (Timer stopped by {actor_name})"
                             TimeLog.objects.create(
                                 work_item=instance,
-                                user=actor or instance.assignee or instance.created_by,
+                                user=instance.assignee or actor or instance.created_by,
                                 minutes=minutes,
-                                note="Automated session",
+                                note=note,
                                 logged_at=timezone.now()
                             )
                         

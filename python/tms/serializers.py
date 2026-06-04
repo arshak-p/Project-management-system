@@ -94,6 +94,7 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
             "date_of_birth",
             "efficiency",
+            "last_active",
         )
         read_only_fields = ("id",)
         extra_kwargs = {"password": {"write_only": True, "required": False, "allow_blank": True}}
@@ -104,15 +105,51 @@ class UserSerializer(serializers.ModelSerializer):
             validate_password(value)
         return value
 
+    def validate(self, attrs):
+        request = self.context.get("request")
+        if request and request.user:
+            user = request.user
+            is_hr_or_admin = (
+                user.is_superuser
+                or user.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.HR]
+            )
+            if not is_hr_or_admin and self.instance and self.instance.id == user.id:
+                restricted_fields = {
+                    "role": "role",
+                    "is_active": "account status",
+                    "email": "email address",
+                    "username": "username",
+                    "date_joined": "date joined",
+                    "department_id": "department",
+                    "client_project_id": "client project association",
+                }
+                for field, label in restricted_fields.items():
+                    if field in attrs:
+                        if field == "department_id":
+                            prof = getattr(self.instance, "tms_profile", None)
+                            current_val = prof.department_id if prof else None
+                        elif field == "client_project_id":
+                            prof = getattr(self.instance, "tms_profile", None)
+                            current_val = prof.client_project_id if prof else None
+                        else:
+                            current_val = getattr(self.instance, field, None)
+                        
+                        if attrs[field] != current_val:
+                            raise serializers.ValidationError({
+                                field: f"You do not have permission to change your {label}."
+                            })
+        return attrs
+
     def get_efficiency(self, obj):
-        from tms.models import WorkItem, TimeLog
-        from django.db.models import Sum
+        # Optimized: Use annotated values from the queryset if available
+        total_time = getattr(obj, 'total_minutes_logged', None)
+        completed = getattr(obj, 'completed_tasks_count', None)
         
-        # This is a potentially heavy operation, so we only do it for detailed views or list as needed
-        # In a real heavy app we would cache this.
-        wis = WorkItem.objects.filter(assignee=obj)
-        total_time = TimeLog.objects.filter(work_item__in=wis).aggregate(total=Sum('minutes'))['total'] or 0
-        completed = wis.filter(state__slug__in=['completed-launched', 'completed', 'launched', 'done']).count()
+        if total_time is None or completed is None:
+            from django.db.models import Sum
+            wis = obj.assigned_work_items.all()
+            total_time = TimeLog.objects.filter(work_item__in=wis).aggregate(total=Sum('minutes'))['total'] or 0
+            completed = wis.filter(state__slug__in=['completed-launched', 'completed', 'launched', 'done']).count()
         
         if total_time > 0:
             return min(100, int((completed * 90) / total_time * 100))
@@ -315,6 +352,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "due_date",
             "deadline",
             "scheduled_date",
+            "timer_start",
             "reference_link",
             "cycle",
             "department",

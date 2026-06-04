@@ -29,6 +29,7 @@ export interface User {
   is_superuser?: boolean;
   is_staff?: boolean;
   efficiency?: number;
+  last_active?: string;
 }
 
 export interface Project {
@@ -93,6 +94,8 @@ export interface Task {
   };
   is_active: boolean;
   is_client_approved?: boolean;
+  timer_start?: string | null;
+  total_minutes?: number;
 }
 
 export interface Activity {
@@ -131,8 +134,8 @@ export interface AnalyticsSummary {
   assignee_workload: unknown[];
   historical_trend: {
     date: string;
-    created: number;
-    completed: number;
+    velocity: number;
+    activity: number;
   }[];
 }
 

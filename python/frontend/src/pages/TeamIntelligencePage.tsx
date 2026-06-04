@@ -8,12 +8,11 @@ import {
   ChevronRight, X
 } from 'lucide-react';
 import {
-  AreaChart, Area, XAxis, Tooltip, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
 import TaskDetailModal from '../components/TaskDetailModal';
 
-const COLORS = ['#3b82f6', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e'];
 
 export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const [users, setUsers] = useState<User[]>([]);
@@ -24,7 +23,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [dateRange, setDateRange] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('monthly');
+  const [dateRange, setDateRange] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('all');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
 
   useEffect(() => {
@@ -86,16 +85,31 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const selectedUser = users.find(u => u.id === selectedUserId);
 
   const projectData = useMemo(() => {
-    return (memberAnalytics?.by_project as { project__name: string, c: number }[])?.map((p) => ({
+    return (memberAnalytics?.by_project as { project__name: string, project__color: string, c: number }[])?.map((p) => ({
       name: p.project__name,
-      value: p.c
+      value: p.c,
+      color: p.project__color || '#3b82f6'
     })) || [];
   }, [memberAnalytics]);
+
+  const uniqueTitles = useMemo(() => {
+    const titles = new Set<string>();
+    users.forEach(u => {
+      if (u.title) titles.add(u.title);
+      else titles.add('Team Member');
+    });
+    return Array.from(titles).sort((a, b) => {
+      if (a === 'Team Member') return 1;
+      if (b === 'Team Member') return -1;
+      return a.localeCompare(b);
+    });
+  }, [users]);
 
   const trendData = useMemo(() => {
     return memberAnalytics?.historical_trend?.map(t => ({
       date: new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      units: t.created
+      activity: t.activity,
+      velocity: t.velocity
     })) || [];
   }, [memberAnalytics]);
 
@@ -106,7 +120,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
   );
 
   return (
-    <div className="space-y-10 pb-20 font-inter max-w-7xl mx-auto">
+    <div className="space-y-10 pb-20 font-inter w-full">
       {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
       
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -154,47 +168,52 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                 placeholder="Find Member..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 glass border border-white/5 rounded-2xl outline-none focus:border-primary transition-all text-[10px] font-black uppercase tracking-widest text-white"
+                className="w-full pl-10 pr-4 py-3 glass border border-white/5 rounded-2xl outline-none focus:border-primary transition-all text-[10px] font-black uppercase tracking-widest text-text"
               />
            </div>
         </div>
       </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10">
-           {/* Sidebar: Member List */}
-           <div className="md:col-span-4 lg:col-span-3 space-y-4 max-h-[40vh] md:max-h-[75vh] overflow-y-auto custom-scrollbar pr-2 order-2 md:order-1">
-            {['admin', 'project_manager', 'team_head', 'specialist'].map(role => {
-              const roleUsers = filteredUsers.filter(u => u.role === role);
-              if (roleUsers.length === 0) return null;
-              
-              return (
-                <div key={role} className="space-y-2 mb-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20 mb-3 block">
-                    {role.replace('_', ' ')} Tiers ({roleUsers.length})
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
-                    {roleUsers.map(user => (
-                      <button 
-                        key={user.id} 
-                        onClick={() => setSelectedUserId(user.id)}
-                        className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all group ${
-                          selectedUserId === user.id ? 'bg-primary border-primary shadow-glow text-white' : 'glass border-white/5 text-text-muted hover:border-primary/40'
-                        }`}
-                      >
-                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black ${selectedUserId === user.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
-                            {user.first_name?.[0] || '?' }
-                         </div>
-                         <div className="text-left flex-1 min-w-0">
-                            <p className="font-extrabold text-xs truncate capitalize">{user.first_name || 'Generic Operator'} {user.last_name}</p>
-                            <p className={`text-[8px] font-black uppercase tracking-widest ${selectedUserId === user.id ? 'text-white/60' : 'text-text-muted/40'}`}>{user.role || 'Member'}</p>
-                         </div>
-                         <ChevronRight className={`w-4 h-4 transition-transform ${selectedUserId === user.id ? 'translate-x-1' : 'opacity-0'}`} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+           {/* Sidebar: Member List - Locked in Position with Viewport Sync */}
+           <div className="md:col-span-4 lg:col-span-3 space-y-4 md:sticky md:top-20 md:self-start h-[calc(100vh-140px)] overflow-y-auto custom-scrollbar pr-2 order-2 md:order-1">
+             {uniqueTitles.map(title => {
+               const titleUsers = filteredUsers.filter(u => (u.title || 'Team Member') === title);
+               if (titleUsers.length === 0) return null;
+               
+               return (
+                 <div key={title} className="space-y-2 mb-4">
+                   <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20 mb-3 block">
+                     {title} Tiers ({titleUsers.length})
+                   </h4>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
+                     {titleUsers.map(user => (
+                       <button 
+                         key={user.id} 
+                         onClick={() => setSelectedUserId(user.id)}
+                         className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all group ${
+                           selectedUserId === user.id ? 'bg-primary border-primary shadow-glow text-white' : 'glass border-white/5 text-text-muted hover:border-primary/40'
+                         }`}
+                       >
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black ${selectedUserId === user.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
+                             {user.first_name?.[0] || '?' }
+                          </div>
+                          <div className="text-left flex-1 min-w-0">
+                             <p className="font-extrabold text-xs truncate capitalize">{user.first_name || 'Generic Operator'} {user.last_name}</p>
+                             <p className={`text-[8px] font-black uppercase tracking-widest ${selectedUserId === user.id ? 'text-white/60' : 'text-text-muted/40'}`}>{user.title || user.role.replace('_', ' ')}</p>
+                          </div>
+                          <ChevronRight className={`w-4 h-4 transition-transform ${selectedUserId === user.id ? 'translate-x-1' : 'opacity-0'}`} />
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+               );
+             })}
+            {filteredUsers.length === 0 && !isLoading && (
+              <div className="text-center py-10 glass rounded-3xl border-dashed border-white/5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted/40 italic">No Operators in Sector</p>
+              </div>
+            )}
         </div>
 
         {/* Main Detail Area */}
@@ -228,18 +247,28 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                             <span className="text-[10px] font-bold text-text-muted italic">{selectedUser?.email}</span>
                          </div>
                       </div>
-                      <div className="flex flex-col md:flex-row items-center gap-4">
-                         <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
-                            <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Efficiency</span>
-                            <span className="text-4xl font-black text-white">{memberAnalytics?.totals?.efficiency !== undefined ? `${memberAnalytics.totals.efficiency}%` : 'N/A'}</span>
-                         </div>
-                         <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
-                            <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Workload</span>
-                            <span className="text-4xl font-black text-white">
-                               {memberAnalytics?.totals?.all ? Math.round((memberAnalytics.totals.pending / memberAnalytics.totals.all) * 100) : 0}%
-                            </span>
-                         </div>
-                      </div>
+                      
+                      {(() => {
+                         const totalTrackedMinutes = memberTasks.reduce((acc, task) => acc + (task.total_minutes || 0), 0);
+                         return (
+                           <div className="flex flex-col md:flex-row items-center gap-4">
+                              <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
+                                 <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Time Tracked</span>
+                                 <span className="text-4xl font-black text-white">{Math.floor(totalTrackedMinutes / 60)}h {totalTrackedMinutes % 60}m</span>
+                              </div>
+                              <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
+                                 <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Efficiency</span>
+                                 <span className="text-4xl font-black text-white">{memberAnalytics?.totals?.efficiency !== undefined ? `${memberAnalytics.totals.efficiency}%` : 'N/A'}</span>
+                              </div>
+                              <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
+                                 <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Workload</span>
+                                 <span className="text-4xl font-black text-white">
+                                    {memberAnalytics?.totals?.all ? Math.round((memberAnalytics.totals.pending / memberAnalytics.totals.all) * 100) : 0}%
+                                 </span>
+                              </div>
+                           </div>
+                         );
+                      })()}
                    </div>
                 </div>
 
@@ -249,24 +278,50 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                          <TrendingUp className="w-4 h-4 text-primary" /> Sector Velocity Trend
                       </h3>
                       <div className="h-[200px] w-full flex items-center justify-center">
-                         {trendData.length > 0 && trendData.some(d => d.units > 0) ? (
+                         {trendData.length > 0 && trendData.some(d => d.activity > 0 || d.velocity > 0) ? (
                            <ResponsiveContainer width="100%" height="100%">
                               <AreaChart data={trendData}>
                                  <defs>
-                                    <linearGradient id="colorUnits" x1="0" y1="0" x2="0" y2="1">
+                                    <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                                     </linearGradient>
+                                    <linearGradient id="colorVelocity" x1="0" y1="0" x2="0" y2="1">
+                                       <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                                       <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                                    </linearGradient>
                                  </defs>
-                                 <XAxis dataKey="date" hide />
-                                 <Tooltip 
-                                    contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }}
+                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                 <XAxis 
+                                    dataKey="date" 
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 10, fontWeight: 900, fill: 'var(--text-muted)' }}
+                                    dy={10}
                                  />
-                                 <Area type="monotone" dataKey="units" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUnits)" />
+                                 <YAxis 
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 10, fontWeight: 900, fill: 'var(--text-muted)' }}
+                                 />
+                                 <Tooltip 
+                                    contentStyle={{
+                                       backgroundColor: 'var(--surface)',
+                                       borderRadius: '1rem',
+                                       border: '1px solid var(--border)',
+                                       fontSize: '10px',
+                                       fontWeight: 900,
+                                       color: 'var(--text)'
+                                    }}
+                                    itemStyle={{ color: 'var(--primary)' }}
+                                    labelStyle={{ color: 'var(--text)', marginBottom: '4px' }}
+                                 />
+                                 <Area type="monotone" dataKey="activity" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorActivity)" name="Active Engagement" isAnimationActive={false} />
+                                 <Area type="monotone" dataKey="velocity" stroke="#8b5cf6" strokeWidth={4} fillOpacity={1} fill="url(#colorVelocity)" name="Mission Success" isAnimationActive={false} />
                               </AreaChart>
                            </ResponsiveContainer>
                          ) : (
-                           <div className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-30 italic">No Velocity Recorded</div>
+                           <div className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-30 italic">Awaiting Sector Movement...</div>
                          )}
                        </div>
                    </div>
@@ -280,7 +335,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                            <ResponsiveContainer width="100%" height="100%">
                               <PieChart>
                                  <Pie data={projectData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} dataKey="value">
-                                    {projectData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                    {projectData.map((p: any, i) => <Cell key={i} fill={p.color} />)}
                                  </Pie>
                                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, color: '#fff' }} />
                               </PieChart>

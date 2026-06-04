@@ -31,7 +31,7 @@ interface ProjectAnalytics {
 export default function MyTasksPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'urgent' | 'due_today' | 'overdue'>('all');
+  const [filter, setFilter] = useState<'todays_task' | 'start_date' | 'due_date' | 'deadline' | 'completed' | 'all'>('todays_task');
   const [activeTab, setActiveTab] = useState<'tasks' | 'performance'>('tasks');
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -78,16 +78,55 @@ export default function MyTasksPage({ me }: { me: User | null }) {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
+  const PRIORITY_WEIGHT: Record<string, number> = { urgent: 1, high: 2, medium: 3, low: 4 };
+
+  const getTaskBorderColor = (t: Task) => {
+    if (t.state_slug === 'completed-launched' || t.state_slug === 'archived') {
+      return 'border-white/5'; // Neutral for completed
+    }
+    if (t.due_date && t.due_date < todayStr) {
+      return 'border-red-500/80 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
+    } else if (t.due_date === todayStr) {
+      return 'border-amber-500/80 shadow-[0_0_15px_rgba(245,158,11,0.2)]';
+    } else if (t.posting_date) {
+      return 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.2)]';
+    }
+    return 'border-white/5';
+  };
+
   const filteredTasks = tasks.filter(t => {
-    if (filter === 'urgent') return t.priority === 'urgent';
-    if (filter === 'due_today') return t.due_date === todayStr;
-    if (filter === 'overdue') return t.due_date && t.due_date < todayStr;
-    return true;
+    const isCompleted = t.state_slug === 'completed-launched' || t.state_slug === 'archived';
+    if (filter === 'todays_task') {
+      return !isCompleted;
+    }
+    if (filter === 'start_date') {
+      return !isCompleted && !!t.posting_date;
+    }
+    if (filter === 'due_date') {
+      return !isCompleted && t.due_date === todayStr;
+    }
+    if (filter === 'deadline') {
+      return !isCompleted && t.due_date && t.due_date < todayStr;
+    }
+    if (filter === 'completed') {
+      return isCompleted;
+    }
+    return true; // 'all'
+  }).sort((a, b) => {
+    const pA = PRIORITY_WEIGHT[a.priority || 'medium'] || 99;
+    const pB = PRIORITY_WEIGHT[b.priority || 'medium'] || 99;
+    if (pA !== pB) return pA - pB;
+    // secondary sort by due date
+    const dA = a.due_date || '9999-99-99';
+    const dB = b.due_date || '9999-99-99';
+    return dA.localeCompare(dB);
   });
 
-  const urgentCount = tasks.filter(t => t.priority === 'urgent').length;
-  const dueTodayCount = tasks.filter(t => t.due_date === todayStr).length;
-  const overdueCount = tasks.filter(t => t.due_date && t.due_date < todayStr).length;
+  const activeCount = tasks.filter(t => t.state_slug !== 'completed-launched' && t.state_slug !== 'archived').length;
+  const startDateCount = tasks.filter(t => t.state_slug !== 'completed-launched' && t.state_slug !== 'archived' && !!t.posting_date).length;
+  const dueTodayCount = tasks.filter(t => t.state_slug !== 'completed-launched' && t.state_slug !== 'archived' && t.due_date === todayStr).length;
+  const overdueCount = tasks.filter(t => t.state_slug !== 'completed-launched' && t.state_slug !== 'archived' && t.due_date && t.due_date < todayStr).length;
+  const completedCount = tasks.filter(t => t.state_slug === 'completed-launched' || t.state_slug === 'archived').length;
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-64 font-inter">
@@ -229,10 +268,12 @@ export default function MyTasksPage({ me }: { me: User | null }) {
         <div className="space-y-6">
           <div className="flex items-center gap-4 overflow-x-auto pb-4 custom-scrollbar">
              {[
-               { id: 'all', label: 'All Operations', count: tasks.length },
-               { id: 'urgent', label: 'Critical Path', count: urgentCount, color: 'text-error' },
-               { id: 'due_today', label: 'Due Today', count: dueTodayCount, color: 'text-indigo-500' },
-               { id: 'overdue', label: 'Past Deadline', count: overdueCount, color: 'text-amber-500' },
+               { id: 'todays_task', label: "Today's Tasks", count: activeCount },
+               { id: 'start_date', label: 'Start Date Tasks', count: startDateCount },
+               { id: 'due_date', label: 'Due Date Tasks', count: dueTodayCount, color: 'text-amber-500' },
+               { id: 'deadline', label: 'Deadline Tasks', count: overdueCount, color: 'text-error' },
+               { id: 'completed', label: 'Completed Tasks', count: completedCount, color: 'text-emerald-500' },
+               { id: 'all', label: 'All Tasks', count: tasks.length },
              ].map(opt => (
                <button 
                 key={opt.id}
@@ -241,7 +282,7 @@ export default function MyTasksPage({ me }: { me: User | null }) {
                   filter === opt.id ? 'bg-primary border-primary text-white shadow-glow' : 'glass border-white/5 text-text-muted hover:border-primary/40'
                 }`}
                >
-                 <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
+                 <span className={`text-[10px] font-black uppercase tracking-widest ${opt.color && filter !== opt.id ? opt.color : ''}`}>{opt.label}</span>
                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${filter === opt.id ? 'bg-white/20 text-white' : 'bg-white/5 text-text-muted'}`}>
                    {opt.count}
                  </span>
@@ -265,9 +306,7 @@ export default function MyTasksPage({ me }: { me: User | null }) {
                    exit={{ opacity: 0, scale: 0.98 }}
                    transition={{ delay: idx * 0.05 }}
                    onClick={() => setSelectedTaskId(t.id)}
-                    className={`group p-6 glass rounded-[2rem] border-white/5 flex items-center gap-6 cursor-pointer transition-all hover:bg-white/5 ${
-                       t.is_client_approved ? 'border-emerald-500/40 hover:border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : (['client-review', 'completed-launched'].includes(t.state_slug || '') ? 'border-blue-500/40 hover:border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : (t.priority === 'urgent' ? 'border-error/20 hover:border-error/40' : 'hover:border-primary/40'))
-                     }`}
+                    className={`group p-6 glass rounded-[2rem] border flex items-center gap-6 cursor-pointer transition-all hover:bg-white/5 ${getTaskBorderColor(t)}`}
                  >
                     <div className={`p-4 rounded-2xl ${t.is_client_approved ? 'bg-emerald-500/10 text-emerald-500' : (['client-review', 'completed-launched'].includes(t.state_slug || '') ? 'bg-blue-500/10 text-blue-500' : (t.priority === 'urgent' ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'))} group-hover:shadow-glow transition-all`}>
                        {PRIORITY_ICONS[t.priority] || <CircleDashed className="w-5 h-5" />}

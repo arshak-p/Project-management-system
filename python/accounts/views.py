@@ -14,7 +14,7 @@ from accounts.models import User, EmailOTP
 from accounts.serializers import CustomTokenObtainPairSerializer
 from tms.permissions import IsAdminRole, IsHRManagement
 
-import threading
+from django.utils import timezone
 
 def send_reliable_email_async(subject, message, recipient_list):
     """Fires the email into a background thread and returns instantly."""
@@ -33,6 +33,7 @@ def send_reliable_email_async(subject, message, recipient_list):
     thread = threading.Thread(target=send, daemon=True)
     thread.start()
     return True
+
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -118,81 +119,6 @@ class CreateUserView(APIView):
             'is_verified': user.is_verified,
         }, status=status.HTTP_201_CREATED)
 
-from django.utils import timezone
-
-@method_decorator(csrf_exempt, name='dispatch')
-class RequestOTPView(APIView):
-    """Generate and send a 6-digit OTP to the user's email."""
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        email = request.data.get('email', '').strip()
-        if not email:
-            return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Check if user exists
-        if not User.objects.filter(email=email, is_active=True).exists():
-            return Response({'detail': 'No active account found with this email.'}, status=status.HTTP_404_NOT_FOUND)
-
-        # Generate 6-digit OTP
-        otp_code = f"{random.randint(100000, 999999)}"
-        
-        # Save OTP to database
-        EmailOTP.objects.create(email=email, otp=otp_code)
-
-        # Send Email (Fallback to console if SMTP not configured)
-        # Instant Async OTP Email
-        send_reliable_email_async(
-            subject='Colour Parrot Security Code',
-            message=f'Your secure login code is: {otp_code}. It will expire in 10 minutes.',
-            recipient_list=[email]
-        )
-        return Response({'detail': 'OTP sent successfully.'})
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class VerifyOTPView(APIView):
-    """Verify OTP and issue JWT tokens."""
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        email = request.data.get('email', '').strip()
-        otp_code = request.data.get('otp', '').strip()
-
-        if not email or not otp_code:
-            return Response({'detail': 'Email and OTP are required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        otp_record = EmailOTP.objects.filter(email=email, otp=otp_code, is_used=False).first()
-
-        if not otp_record or not otp_record.is_valid():
-            return Response({'detail': 'Invalid or expired OTP.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Mark OTP as used
-        otp_record.is_used = True
-        otp_record.save()
-
-        # Get user and issue tokens
-        user = User.objects.get(email=email)
-        
-        # Mark as verified
-        if not user.is_verified:
-            user.is_verified = True
-            user.save()
-
-        from rest_framework_simplejwt.tokens import RefreshToken
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'role': user.role,
-                'first_name': user.first_name,
-            }
-        })
-
 # --- NEW RECONSTRUCTED VERIFICATION VIEWS ---
 
 class SendOTPView(APIView):
@@ -207,26 +133,42 @@ class SendOTPView(APIView):
         if not email:
             return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        if User.objects.filter(email=email).exists():
+            return Response({'detail': 'This member already has an account.'}, status=status.HTTP_400_BAD_REQUEST)
+
         otp_code = f"{random.randint(100000, 999999)}"
         
-        # Save to database for verification
         EmailOTP.objects.create(email=email, otp=otp_code)
 
-        # Direct High-Priority Transmission (No silent fail)
-        try:
-            send_mail(
-                subject='Colour Parrot: Tactical Clearance Code',
-                message=f'You are being recruited to the Colour Parrot Command Center. Your clearance code is: {otp_code}',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-            return Response({'detail': 'Clearance code dispatched successfully.', 'otp': otp_code})
-        except Exception as e:
-            return Response({
-                'detail': f'SMTP Transmission Failure: {str(e)}',
-                'error_type': 'communication_failure'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        import threading
+        def send_otp_email(email_addr, code):
+            try:
+                send_mail(
+                    subject='Welcome to Colour Parrot! - Your Tactical Clearance Code',
+                    message=(
+                        f'Hello,\n\n'
+                        'You are being recruited to the Colour Parrot Command Center. '
+                        f'Your unique tactical clearance code is: {code}\n\n'
+                        'System Portal: https://c1r9rt-workflow.in\n\n'
+                        'Please enter this code on the verification screen to finalize your account setup.\n\n'
+                        'Best regards,\n'
+                        'The Colour Parrot Team'
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email_addr],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                print(f"BACKGROUND SMTP FAILURE: {str(e)}")
+
+        # Start email in background so response is INSTANT
+        threading.Thread(target=send_otp_email, args=(email, otp_code)).start()
+
+        return Response({
+            'detail': f'CODE: {otp_code} (Dispatched)',
+            'otp': otp_code,
+            'otp_sent': True
+        }, status=status.HTTP_200_OK)
 
 class VerifyOTPActionView(APIView):
     """

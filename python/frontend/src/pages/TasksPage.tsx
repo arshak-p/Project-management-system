@@ -36,12 +36,10 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [filterDueDate, setFilterDueDate] = useState('');
   const [filterDeadline, setFilterDeadline] = useState('');
   const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    return new Date().toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+    return new Date().toISOString().split('T')[0];
   });
   const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -161,7 +159,7 @@ export default function TasksPage({ me }: { me: User | null }) {
           <h1 className="text-3xl lg:text-5xl font-black tracking-tighter">Work Items</h1>
           <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mt-1 opacity-60 italic">Live Task Engine // Agency Operations</p>
         </div>
-        {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+        {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'sales_manager') && (
           <button 
             onClick={() => setShowForm(!showForm)} 
             className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
@@ -250,17 +248,22 @@ export default function TasksPage({ me }: { me: User | null }) {
                   <textarea value={form.reference_link} onChange={e => setForm({ ...form, reference_link: e.target.value })} placeholder="Paste multiple links here (separated by newlines)..." rows={3} className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all placeholder:text-text-muted/30 custom-scrollbar" />
                 </div>
 
-                <div className="md:col-span-4 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Task Start Date</label>
+                <div className="md:col-span-3 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 ml-1">Task Start Date</label>
+                  <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} className="w-full px-6 py-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl text-sm font-bold focus:border-emerald-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
+                </div>
+
+                <div className="md:col-span-3 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Due Date</label>
                   <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-sm font-bold focus:border-amber-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
 
-                <div className="md:col-span-4 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 ml-1">Deadline (Finish)</label>
+                <div className="md:col-span-3 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 ml-1">Deadline</label>
                   <input type="date" value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} className="w-full px-6 py-4 bg-red-500/5 border border-red-500/20 rounded-2xl text-sm font-bold focus:border-red-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
 
-                <div className="md:col-span-4 space-y-2.5">
+                <div className="md:col-span-3 space-y-2.5">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 ml-1">Post Date</label>
                   <input type="date" value={form.posting_date} onChange={e => setForm({ ...form, posting_date: e.target.value })} className="w-full px-6 py-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl text-sm font-bold focus:border-indigo-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
@@ -355,38 +358,36 @@ export default function TasksPage({ me }: { me: User | null }) {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-end gap-4 pt-4 border-t border-white/5">
-          <div className="grid grid-cols-2 lg:flex items-end gap-4 flex-1 w-full">
+        <div className="flex flex-wrap lg:flex-nowrap items-end gap-3 pt-4 border-t border-white/5">
              {me?.role !== 'specialist' && (
-               <div className="flex flex-col flex-1">
+               <div className="flex flex-col flex-1 min-w-0">
                  <label className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-2 ml-1">Post Date</label>
-                 <input type="date" value={filterPostingDate} onChange={e => setFilterPostingDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+                 <input type="date" value={filterPostingDate} onChange={e => setFilterPostingDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-3 py-3 text-[10px] xl:text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
                </div>
              )}
-             <div className="flex flex-col flex-1">
+             <div className="flex flex-col flex-1 min-w-0">
                <label className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-2 ml-1">Start Date</label>
-               <input type="date" value={filterDueDate} onChange={e => setFilterDueDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <input type="date" value={filterDueDate} onChange={e => setFilterDueDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-3 py-3 text-[10px] xl:text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
-             <div className="flex flex-col flex-1">
+             <div className="flex flex-col flex-1 min-w-0">
                <label className="text-[9px] font-black uppercase tracking-widest text-red-500 mb-2 ml-1">Deadline</label>
-               <input type="date" value={filterDeadline} onChange={e => setFilterDeadline(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <input type="date" value={filterDeadline} onChange={e => setFilterDeadline(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-3 py-3 text-[10px] xl:text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
-             <div className="flex flex-col flex-1">
+             <div className="flex flex-col flex-1 min-w-0">
                <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-2 ml-1">Created From</label>
-               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-3 py-3 text-[10px] xl:text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
-             <div className="flex flex-col flex-1">
+             <div className="flex flex-col flex-1 min-w-0">
                <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-2 ml-1">Created To</label>
-               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-3 py-3 text-[10px] xl:text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
-          </div>
-          <div className="flex items-center gap-2 w-full lg:w-auto h-[44px]">
+          <div className="flex items-center gap-2 w-full lg:w-auto shrink-0 h-[44px]">
              <button 
                onClick={() => {
                  const d = new Date().toISOString().split('T')[0];
                  setStartDate(d); setEndDate(d);
                }}
-               className="flex-1 lg:flex-none h-full px-5 glass border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/5 transition-all whitespace-nowrap"
+               className="flex-1 lg:flex-none h-full px-4 glass border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/5 transition-all whitespace-nowrap"
              >
                Today
              </button>
@@ -397,7 +398,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
                  setStartDate(start); setEndDate(end);
                }}
-               className="flex-1 lg:flex-none h-full px-5 glass border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/5 transition-all whitespace-nowrap"
+               className="flex-1 lg:flex-none h-full px-4 glass border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/5 transition-all whitespace-nowrap"
              >
                Month
              </button>
@@ -406,7 +407,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                  setStartDate(''); setEndDate(''); setFilterProject(''); setFilterState(''); setFilterAssignee(''); setFilterModule(''); setFilterPostingDate(''); setFilterDueDate(''); setFilterDeadline(''); setSearch(''); 
                  setShowCompleted(false); setShowArchived(false);
                }}
-               className="flex-1 lg:flex-none h-full px-5 bg-error/10 text-error border border-error/20 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-error/20 transition-all whitespace-nowrap"
+               className="flex-1 lg:flex-none h-full px-4 bg-error/10 text-error border border-error/20 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-error/20 transition-all whitespace-nowrap"
              >
                Reset All
              </button>
@@ -473,6 +474,11 @@ export default function TasksPage({ me }: { me: User | null }) {
                         🔴 Rework / Re-Edit
                       </span>
                     ) : null}
+                    {task.timer_start && (
+                      <span className="flex items-center gap-1 text-[9px] bg-red-500 text-white px-2.5 py-1 rounded-lg font-black uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse">
+                        🔴 LIVE: TRACKING TIME
+                      </span>
+                    )}
                   </div>
                 </div>
                 
@@ -494,6 +500,11 @@ export default function TasksPage({ me }: { me: User | null }) {
                     <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[10px] font-bold text-text-muted">
                       👤 {task.assignee?.first_name || task.assignee?.email || 'Unassigned'}
                     </span>
+                    {(task.total_minutes !== undefined && task.total_minutes > 0) && (
+                      <span className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-bold text-primary">
+                        ⏱️ {Math.floor(task.total_minutes / 60)}h {task.total_minutes % 60}m logged
+                      </span>
+                    )}
                     <span className="md:hidden font-black text-primary/60 uppercase tracking-widest ml-auto">
                       {states.find(s => s.id === task.state)?.name}
                     </span>
@@ -516,7 +527,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                       </span>
                     );
                   })()}
-                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'sales_manager') && (
                     task.is_active ? (
                       <button onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }} title="Archive Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-500 text-text-muted rounded-lg transition-all">
                         <Database className="w-4 h-4" />
