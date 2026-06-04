@@ -92,12 +92,11 @@ export default function TeamPage({ me }: { me: User | null }) {
     try {
       const res = await api.sendCreationOTP(form.email);
       setShowOtpField(true);
-      
-      // If the backend sent a fallback code (because mail failed)
-      if (res.data?.otp_fallback) {
-        setSuccess(`Manual Mode: ${res.data.detail}`);
+      if (res.data?.otp) {
+        setOtp(res.data.otp);
+        setSuccess(res.data.otp);
       } else {
-        setSuccess('Verification code sent to email!');
+        setSuccess('SENT');
       }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -152,6 +151,17 @@ export default function TeamPage({ me }: { me: User | null }) {
     if (!editingUser && !isEmailVerified) {
       setError('Please verify the email address before creating a new member.');
       return;
+    }
+
+    if (!editingUser) {
+      if (!form.password) {
+        setError('Please set an initial password.');
+        return;
+      }
+      if (form.password !== confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
     }
 
     if (editingUser && isChangingPassword) {
@@ -274,24 +284,22 @@ export default function TeamPage({ me }: { me: User | null }) {
                 </div>
               )}
               {success && (
-                <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl text-sm text-emerald-400 animate-in fade-in flex items-center justify-between shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest opacity-60">System Message</span>
-                    <span className="font-bold">{success}</span>
+                <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl text-sm text-emerald-400 animate-in fade-in flex items-center justify-between shadow-[0_0_30px_rgba(16,185,129,0.15)] relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent animate-pulse" />
+                  <div className="flex flex-col gap-0.5 relative z-10">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/60">Tactical Authorization Code</span>
+                    <span className="font-black text-xl tracking-[0.2em] font-mono">{success}</span>
                   </div>
-                  {success.includes('CODE:') && (
+                  <div className="flex gap-2 relative z-10">
                     <button 
                       type="button"
-                      onClick={() => {
-                        const code = success.split('CODE:')[1].trim().split(' ')[0];
-                        handleCopyOtp(code);
-                      }}
-                      className="ml-4 px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase tracking-tighter shadow-lg shadow-emerald-500/20"
+                      onClick={() => handleCopyOtp(success)}
+                      className="px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20"
                     >
                       {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      {copied ? 'Copied!' : 'Copy Code'}
+                      {copied ? 'Copied' : 'Copy'}
                     </button>
-                  )}
+                  </div>
                 </div>
               )}
 
@@ -383,7 +391,7 @@ export default function TeamPage({ me }: { me: User | null }) {
                 </div>
               )}
 
-              {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+              {true && (
                 <div className="space-y-1.5 animate-in fade-in duration-300">
                   {editingUser ? (
                     <>
@@ -439,23 +447,39 @@ export default function TeamPage({ me }: { me: User | null }) {
                     </>
                   ) : (
                     <>
-                      <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-                        Initial Password <span className="text-error">*</span>
-                      </label>
-                      <div className="relative">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                          Initial Password <span className="text-error">*</span>
+                        </label>
+                        <div className="relative">
+                          <input 
+                            type={showPassword ? 'text' : 'password'} 
+                            autoComplete="new-password" 
+                            value={form.password} 
+                            onChange={e => setForm({ ...form, password: e.target.value })} 
+                            placeholder="Min 8 characters" 
+                            className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
+                          />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-text-muted hover:text-text">
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                          Confirm Password <span className="text-error">*</span>
+                        </label>
                         <input 
                           type={showPassword ? 'text' : 'password'} 
                           autoComplete="new-password" 
-                          value={form.password} 
-                          onChange={e => setForm({ ...form, password: e.target.value })} 
-                          placeholder="Min 8 characters" 
-                          required 
-                          className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
+                          value={confirmPassword} 
+                          onChange={e => setConfirmPassword(e.target.value)} 
+                          placeholder="Re-type password" 
+                          className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" 
                         />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-text-muted hover:text-text">
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
                       </div>
+                    </div>
                     </>
                   )}
                 </div>
@@ -554,8 +578,8 @@ export default function TeamPage({ me }: { me: User | null }) {
               <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
             </div>
           </label>
-          {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'hr') && (
-            <button onClick={() => setShowModal(true)} className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+          {(me?.is_superuser || me?.role === 'admin' || me?.role === 'hr') && (
+            <button onClick={() => { setForm(defaultForm); setEditingUser(null); setIsEmailVerified(false); setShowModal(true); }} className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
               <Plus className="w-4 h-4" /> Add Member
             </button>
           )}
@@ -572,7 +596,7 @@ export default function TeamPage({ me }: { me: User | null }) {
 
       <div className="relative">
         <Users className="w-4 h-4 absolute left-4 top-3.5 text-text-muted" />
-        <input type="text" placeholder="Search by name, email or role..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none" />
+        <input type="text" placeholder="Search by name, email or role..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-sm text-text focus:border-primary outline-none transition-all" />
       </div>
 
       {isLoading ? (
@@ -590,7 +614,7 @@ export default function TeamPage({ me }: { me: User | null }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filtered.map((user, i) => (
             <div key={user.id} className={`glass rounded-2xl border border-border/50 hover:border-primary/30 transition-all group overflow-hidden relative ${!user.is_active ? 'opacity-60 grayscale-[0.6]' : ''}`}>
-              {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+              {(me?.is_superuser || me?.role === 'admin' || me?.role === 'hr') && (
                 <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-10">
                    <button 
                     onClick={(e) => { e.stopPropagation(); openEdit(user); }} 
@@ -599,7 +623,7 @@ export default function TeamPage({ me }: { me: User | null }) {
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
-                 {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'hr') && (
+                 {(me?.is_superuser || me?.role === 'admin' || me?.role === 'hr') && (
                     user.is_active ? (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleArchive(user.id); }} 
@@ -622,8 +646,13 @@ export default function TeamPage({ me }: { me: User | null }) {
               )}
               <div className={`h-1 bg-gradient-to-r ${getAvatarGradient(i)}`}></div>
               <div className="p-6 text-center">
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${getAvatarGradient(i)} flex items-center justify-center text-2xl font-black text-white mx-auto mb-4 shadow-lg group-hover:scale-105 transition-transform`}>
-                  {getInitials(user)}
+                <div className="relative w-16 h-16 mx-auto mb-4 group-hover:scale-105 transition-transform">
+                  <div className={`w-full h-full rounded-2xl bg-gradient-to-br ${getAvatarGradient(i)} flex items-center justify-center text-2xl font-black text-white shadow-lg`}>
+                    {getInitials(user)}
+                  </div>
+                  {user.last_active && (new Date().getTime() - new Date(user.last_active).getTime() < 300000) && (
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-[#0d0f14] rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse" title="Online Now" />
+                  )}
                 </div>
                 <h3 className="font-bold text-base text-text truncate">
                   {user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'No Name Set'}
@@ -650,9 +679,11 @@ export default function TeamPage({ me }: { me: User | null }) {
                       {user.is_active ? '🟢 Operational' : '🟡 Offline Log'}
                     </span>
                   </div>
-                  <div>
-                    <p className="text-xs text-text-muted">Joined</p>
-                    <p className="text-xs font-medium">{user.date_joined ? new Date(user.date_joined).toLocaleDateString() : 'N/A'}</p>
+                  <div className="col-span-2 mt-2 pt-2 border-t border-border/30">
+                    <p className="text-[10px] text-text-muted uppercase tracking-widest mb-0.5">Last Seen</p>
+                    <p className="text-[10px] font-bold text-white/80">
+                      {user.last_active ? new Date(user.last_active).toLocaleString() : 'Never logged activity'}
+                    </p>
                   </div>
                 </div>
               </div>

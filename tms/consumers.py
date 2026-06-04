@@ -13,6 +13,23 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         self.group_name = f"user_{user.id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
+        await self.update_user_activity()
+
+    async def receive_json(self, content):
+        if content.get("type") == "heartbeat":
+            await self.update_user_activity()
+
+    async def update_user_activity(self):
+        from channels.db import database_sync_to_async
+        from django.utils import timezone
+        user = self.scope["user"]
+
+        @database_sync_to_async
+        def _update():
+            # Update last_active in DB
+            user.__class__.objects.filter(id=user.id).update(last_active=timezone.now())
+
+        await _update()
 
     async def disconnect(self, code):
         if hasattr(self, "group_name"):

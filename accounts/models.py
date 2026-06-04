@@ -36,6 +36,7 @@ class User(AbstractUser):
     phone = models.CharField(max_length=32, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
+    last_active = models.DateTimeField(null=True, blank=True, db_index=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]

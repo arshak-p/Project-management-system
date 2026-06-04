@@ -15,7 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY", "dev-only-change-me-in-production-use-long-random-string"
 )
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in ("1", "true", "yes")
+DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = [
     h.strip()
@@ -171,16 +171,9 @@ SIMPLE_JWT = {
 
 # --- CORS & CSRF (always applied) ---
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # TEMPORARY FOR TROUBLESHOOTING
 
-CORS_ALLOWED_ORIGINS = [
-    o.strip()
-    for o in os.environ.get(
-        "CORS_ALLOWED_ORIGINS",
-        "https://c1r9rt-workflow.in,http://c1r9rt-workflow.in,https://www.c1r9rt-workflow.in,https://colour-parrot-mgtsystem.onrender.com,http://localhost:5173,http://127.0.0.1:5173"
-    ).split(",")
-    if o.strip()
-]
+# Temporarily allow all origins to prevent ERR_NETWORK on login
+CORS_ALLOW_ALL_ORIGINS = True
 
 CSRF_TRUSTED_ORIGINS = [
     o.strip()
@@ -240,15 +233,15 @@ from celery.schedules import crontab
 # --- Email Hub (SMTP) ---
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() in ("1", "true", "yes")
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() in ("1", "true", "yes")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "465"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "false").lower() in ("1", "true", "yes")
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "true").lower() in ("1", "true", "yes")
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "workflowsecuritycolourparrot@gmail.com")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 
 # Forced SMTP for Production Reliability
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-DEFAULT_FROM_EMAIL = f"Colour Parrot <{EMAIL_HOST_USER}>"
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 CELERY_BEAT_SCHEDULE = {
     "run-monthly-backup-at-1st": {

@@ -96,7 +96,7 @@ export default function ProjectsPage({ onNavigate, me }: { onNavigate?: (page: s
               <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
             </div>
           </label>
-          {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+          {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'sales_manager') && (
             <button 
               onClick={() => setShowForm(!showForm)} 
               className="flex-1 lg:flex-none flex items-center justify-center gap-3 px-6 py-3.5 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
@@ -178,7 +178,7 @@ export default function ProjectsPage({ onNavigate, me }: { onNavigate?: (page: s
                   >
                     {p.name.charAt(0)}
                   </div>
-                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'sales_manager') && (
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
                       {p.is_active && (
                         <button onClick={(e) => { e.stopPropagation(); startEdit(p); }} title="Edit Project" className="p-3 bg-primary/5 text-primary hover:bg-primary hover:text-white rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>

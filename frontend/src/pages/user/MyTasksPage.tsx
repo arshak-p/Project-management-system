@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CircleDashed, Clock, AlertTriangle, ArrowUp, Circle,
   ClipboardList, TrendingUp, Star, Zap, ChevronRight,
-  BarChart3, PieChart as PieChartIcon, Calendar, CalendarCheck
+  BarChart3, PieChart as PieChartIcon
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip,
@@ -31,7 +31,7 @@ interface ProjectAnalytics {
 export default function MyTasksPage({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'today' | 'start_date' | 'due_date' | 'deadline' | 'completed' | 'all'>('today');
+  const [filter, setFilter] = useState<'todays_task' | 'start_date' | 'due_date' | 'deadline' | 'completed' | 'all'>('todays_task');
   const [activeTab, setActiveTab] = useState<'tasks' | 'performance'>('tasks');
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -78,127 +78,55 @@ export default function MyTasksPage({ me }: { me: User | null }) {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const todayCount = tasks.filter(t => t.state_slug !== 'completed-launched').length;
-  const startDateCount = tasks.filter(t => t.scheduled_date && t.state_slug !== 'completed-launched').length;
-  const dueDateCount = tasks.filter(t => t.due_date === todayStr && t.state_slug !== 'completed-launched').length;
-  const deadlineCount = tasks.filter(t => t.deadline && t.state_slug !== 'completed-launched').length;
-  const completedCount = tasks.filter(t => t.state_slug === 'completed-launched').length;
-  const allCount = tasks.length;
+  const PRIORITY_WEIGHT: Record<string, number> = { urgent: 1, high: 2, medium: 3, low: 4 };
 
-  const filteredTasks = useMemo(() => {
-    return tasks.filter(t => {
-      if (filter === 'today') return t.state_slug !== 'completed-launched';
-      if (filter === 'start_date') return !!t.scheduled_date && t.state_slug !== 'completed-launched';
-      if (filter === 'due_date') return t.due_date === todayStr && t.state_slug !== 'completed-launched';
-      if (filter === 'deadline') return !!t.deadline && t.state_slug !== 'completed-launched';
-      if (filter === 'completed') return t.state_slug === 'completed-launched';
-      return true; // 'all'
-    });
-  }, [tasks, filter, todayStr]);
+  const getTaskBorderColor = (t: Task) => {
+    if (t.state_slug === 'completed-launched' || t.state_slug === 'archived') {
+      return 'border-white/5'; // Neutral for completed
+    }
+    if (t.due_date && t.due_date < todayStr) {
+      return 'border-red-500/80 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
+    } else if (t.due_date === todayStr) {
+      return 'border-amber-500/80 shadow-[0_0_15px_rgba(245,158,11,0.2)]';
+    } else if (t.posting_date) {
+      return 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.2)]';
+    }
+    return 'border-white/5';
+  };
 
-  const getCardStyle = useCallback((t: Task) => {
-    if (t.is_client_approved) {
-      return 'card-emerald-glow';
+  const filteredTasks = tasks.filter(t => {
+    const isCompleted = t.state_slug === 'completed-launched' || t.state_slug === 'archived';
+    if (filter === 'todays_task') {
+      return !isCompleted;
     }
-    if (t.state_slug === 'completed-launched') {
-      return 'card-emerald-glow';
+    if (filter === 'start_date') {
+      return !isCompleted && !!t.posting_date;
     }
-    if (t.state_slug === 'rework-revision' || t.state_slug === 're-edit') {
-      return 'card-red-glow';
+    if (filter === 'due_date') {
+      return !isCompleted && t.due_date === todayStr;
     }
-    if (['client-review', 'team-head-review'].includes(t.state_slug || '')) {
-      return 'card-blue-glow';
+    if (filter === 'deadline') {
+      return !isCompleted && t.due_date && t.due_date < todayStr;
     }
-    if (t.priority === 'urgent' || (t.deadline && t.deadline < todayStr)) {
-      return 'card-red-glow';
+    if (filter === 'completed') {
+      return isCompleted;
     }
-    if (t.priority === 'high') {
-      return 'card-amber-glow';
-    }
-    if (t.state_slug === 'in-progress') {
-      return 'card-primary-glow';
-    }
-    return 'border-white/5 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]';
-  }, [todayStr]);
+    return true; // 'all'
+  }).sort((a, b) => {
+    const pA = PRIORITY_WEIGHT[a.priority || 'medium'] || 99;
+    const pB = PRIORITY_WEIGHT[b.priority || 'medium'] || 99;
+    if (pA !== pB) return pA - pB;
+    // secondary sort by due date
+    const dA = a.due_date || '9999-99-99';
+    const dB = b.due_date || '9999-99-99';
+    return dA.localeCompare(dB);
+  });
 
-  const getPriorityColor = useCallback((priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'urgent': return 'text-red-500 font-black animate-pulse';
-      case 'high': return 'text-amber-500 font-black';
-      case 'medium': return 'text-blue-400 font-bold';
-      case 'low': return 'text-slate-500 font-semibold';
-      default: return 'text-text-muted/40';
-    }
-  }, []);
-
-  const filterOptions = useMemo(() => [
-    { 
-      id: 'today' as const, 
-      label: "TODAY'S TASKS", 
-      count: todayCount,
-      theme: {
-        active: 'bg-emerald-500 border-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]',
-        inactive: 'glass border-white/5 text-text-muted hover:border-emerald-500/40 hover:text-emerald-400',
-        badgeActive: 'bg-white/20 text-white',
-        badgeInactive: 'bg-white/5 text-text-muted group-hover:bg-emerald-500/10 group-hover:text-emerald-400'
-      }
-    },
-    { 
-      id: 'start_date' as const, 
-      label: 'START DATE TASKS', 
-      count: startDateCount,
-      theme: {
-        active: 'bg-blue-500 border-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]',
-        inactive: 'glass border-white/5 text-text-muted hover:border-blue-500/40 hover:text-blue-400',
-        badgeActive: 'bg-white/20 text-white',
-        badgeInactive: 'bg-white/5 text-text-muted group-hover:bg-blue-500/10 group-hover:text-blue-400'
-      }
-    },
-    { 
-      id: 'due_date' as const, 
-      label: 'DUE DATE TASKS', 
-      count: dueDateCount,
-      theme: {
-        active: 'bg-amber-500 border-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.4)]',
-        inactive: 'glass border-white/5 text-text-muted hover:border-amber-500/40 hover:text-amber-400',
-        badgeActive: 'bg-white/20 text-white',
-        badgeInactive: 'bg-white/5 text-text-muted group-hover:bg-amber-500/10 group-hover:text-amber-400'
-      }
-    },
-    { 
-      id: 'deadline' as const, 
-      label: 'DEADLINE TASKS', 
-      count: deadlineCount,
-      theme: {
-        active: 'bg-red-500 border-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]',
-        inactive: 'glass border-red-500/30 text-red-400 hover:border-red-500 hover:text-red-300',
-        badgeActive: 'bg-white/20 text-white',
-        badgeInactive: 'bg-red-500/10 text-red-400 group-hover:bg-red-500/20 group-hover:text-red-300'
-      }
-    },
-    { 
-      id: 'completed' as const, 
-      label: 'COMPLETED TASKS', 
-      count: completedCount,
-      theme: {
-        active: 'bg-teal-500 border-teal-500 text-white shadow-[0_0_15px_rgba(20,184,166,0.4)]',
-        inactive: 'glass border-white/5 text-text-muted hover:border-teal-500/40 hover:text-teal-400',
-        badgeActive: 'bg-white/20 text-white',
-        badgeInactive: 'bg-white/5 text-text-muted group-hover:bg-teal-500/10 group-hover:text-teal-400'
-      }
-    },
-    { 
-      id: 'all' as const, 
-      label: 'ALL TASKS', 
-      count: allCount,
-      theme: {
-        active: 'bg-slate-700 border-slate-600 text-white shadow-[0_0_15px_rgba(71,85,105,0.4)]',
-        inactive: 'glass border-white/5 text-text-muted hover:border-slate-500/40 hover:text-slate-300',
-        badgeActive: 'bg-white/20 text-white',
-        badgeInactive: 'bg-white/5 text-text-muted group-hover:bg-slate-700/20 group-hover:text-slate-300'
-      }
-    }
-  ], [todayCount, startDateCount, dueDateCount, deadlineCount, completedCount, allCount]);
+  const activeCount = tasks.filter(t => t.state_slug !== 'completed-launched' && t.state_slug !== 'archived').length;
+  const startDateCount = tasks.filter(t => t.state_slug !== 'completed-launched' && t.state_slug !== 'archived' && !!t.posting_date).length;
+  const dueTodayCount = tasks.filter(t => t.state_slug !== 'completed-launched' && t.state_slug !== 'archived' && t.due_date === todayStr).length;
+  const overdueCount = tasks.filter(t => t.state_slug !== 'completed-launched' && t.state_slug !== 'archived' && t.due_date && t.due_date < todayStr).length;
+  const completedCount = tasks.filter(t => t.state_slug === 'completed-launched' || t.state_slug === 'archived').length;
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-64 font-inter">
@@ -339,18 +267,23 @@ export default function MyTasksPage({ me }: { me: User | null }) {
       ) : (
         <div className="space-y-6">
           <div className="flex items-center gap-4 overflow-x-auto pb-4 custom-scrollbar">
-             {filterOptions.map(opt => (
+             {[
+               { id: 'todays_task', label: "Today's Tasks", count: activeCount },
+               { id: 'start_date', label: 'Start Date Tasks', count: startDateCount },
+               { id: 'due_date', label: 'Due Date Tasks', count: dueTodayCount, color: 'text-amber-500' },
+               { id: 'deadline', label: 'Deadline Tasks', count: overdueCount, color: 'text-error' },
+               { id: 'completed', label: 'Completed Tasks', count: completedCount, color: 'text-emerald-500' },
+               { id: 'all', label: 'All Tasks', count: tasks.length },
+             ].map(opt => (
                <button 
                 key={opt.id}
-                onClick={() => setFilter(opt.id)}
-                className={`flex items-center gap-4 whitespace-nowrap px-6 py-3 rounded-2xl transition-all border group ${
-                  filter === opt.id ? opt.theme.active : opt.theme.inactive
+                onClick={() => setFilter(opt.id as typeof filter)}
+                className={`flex items-center gap-4 whitespace-nowrap px-6 py-3 rounded-2xl transition-all border ${
+                  filter === opt.id ? 'bg-primary border-primary text-white shadow-glow' : 'glass border-white/5 text-text-muted hover:border-primary/40'
                 }`}
                >
-                 <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
-                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg transition-all ${
-                   filter === opt.id ? opt.theme.badgeActive : opt.theme.badgeInactive
-                 }`}>
+                 <span className={`text-[10px] font-black uppercase tracking-widest ${opt.color && filter !== opt.id ? opt.color : ''}`}>{opt.label}</span>
+                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${filter === opt.id ? 'bg-white/20 text-white' : 'bg-white/5 text-text-muted'}`}>
                    {opt.count}
                  </span>
                </button>
@@ -365,93 +298,61 @@ export default function MyTasksPage({ me }: { me: User | null }) {
                     <p className="text-text-muted font-black text-xs uppercase tracking-widest italic opacity-40">No matching units in orbit.</p>
                  </motion.div>
                )}
-                {filteredTasks.map((t, idx) => (
-                  <motion.div 
-                    key={t.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ delay: idx * 0.05 }}
-                    onClick={() => setSelectedTaskId(t.id)}
-                    className={`group p-6 glass rounded-[2rem] flex items-center gap-6 cursor-pointer transition-all hover:bg-white/5 ${getCardStyle(t)}`}
-                  >
-                     <div className={`p-4 rounded-2xl transition-all group-hover:shadow-glow ${
-                       t.is_client_approved ? 'bg-emerald-500/10 text-emerald-500' : 
-                       (t.state_slug === 'rework-revision' || t.state_slug === 're-edit') ? 'bg-red-500/10 text-red-500' :
-                       (['client-review', 'completed-launched'].includes(t.state_slug || '')) ? 'bg-blue-500/10 text-blue-500' : 
-                       t.priority === 'urgent' ? 'bg-error/10 text-error' : 
-                       t.priority === 'high' ? 'bg-amber-500/10 text-amber-500' :
-                       'bg-primary/10 text-primary'
-                     }`}>
-                        {PRIORITY_ICONS[t.priority] || <CircleDashed className="w-5 h-5" />}
-                     </div>
-                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                           <span className="text-[9px] font-black uppercase text-primary tracking-[0.2em]">{t.task_code} • {t.project__slug || 'GENERAL'} {t.module_slug && `• ${t.module_slug}`}</span>
-                           <span className="w-1 h-1 rounded-full bg-white/10"></span>
-                           <span className={`px-2 py-0.5 rounded-md font-black tracking-widest text-[8px] uppercase ${
-                              t.state_slug === 'pending' ? 'bg-slate-500/10 text-slate-400 border border-slate-500/20' :
-                              t.state_slug === 'in-progress' ? 'bg-primary/10 text-primary border border-primary/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' :
-                              t.state_slug === 'team-head-review' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
-                              t.state_slug === 'client-review' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.15)]' :
-                              (t.state_slug === 're-edit' || t.state_slug === 'rework-revision') ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
-                              t.state_slug === 'completed-launched' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                              'bg-surface/50 text-text-muted/60 border border-border/30'
-                            }`}>{t.state__name || t.state_slug?.replace(/-/g, ' ')}</span>
-                           {t.is_client_approved ? (
-                             <span className="text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.1)]">🟢 Client Approved</span>
-                           ) : ['client-review', 'completed-launched'].includes(t.state_slug || '') ? (
-                             <span className="text-[8px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-[0_0_8px_rgba(59,130,246,0.1)]">🔵 In-House Approved</span>
-                           ) : t.state_slug === 'team-head-review' ? (
-                             <span className="text-[8px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse">🟡 Pending Review</span>
-                           ) : t.state_slug === 'rework-revision' ? (
-                             <span className="text-[8px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded border border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.15)] animate-pulse">🔴 Rework / Re-Edit</span>
-                           ) : null}
-                        </div>
-                        <h4 className="font-extrabold text-sm text-text-muted group-hover:text-white transition-colors uppercase tracking-tight truncate">{t.title}</h4>
-                     </div>
-                     <div className="flex items-center gap-8">
-                        <div className="text-right hidden lg:block">
-                           <p className={`text-[9px] uppercase tracking-widest ${getPriorityColor(t.priority)}`}>
-                             {t.priority}
-                           </p>
-                           <div className="flex flex-col items-end gap-1.5 mt-2 text-[9.5px] font-extrabold">
-                              {/* 1. Post Date */}
-                              {me?.role !== 'specialist' && t.posting_date && (
-                                 <div className="flex items-center gap-1.5 text-sky-400 bg-sky-950/20 px-2 py-0.5 rounded border border-sky-500/20">
-                                    <Calendar className="w-3 h-3 text-sky-400" />
-                                    <span>POSTED: {t.posting_date}</span>
-                                 </div>
-                              )}
-                              {/* 2. Start Date */}
-                              {t.scheduled_date && (
-                                 <div className="flex items-center gap-1.5 text-emerald-400 bg-emerald-950/20 px-2 py-0.5 rounded border border-emerald-500/20">
-                                    <CalendarCheck className="w-3 h-3 text-emerald-400" />
-                                    <span>START: {t.scheduled_date}</span>
-                                 </div>
-                              )}
-                              {/* 3. Due Date */}
-                              {t.due_date && (
-                                 <div className="flex items-center gap-1.5 text-amber-400 bg-amber-950/20 px-2 py-0.5 rounded border border-amber-500/20">
-                                    <Clock className="w-3 h-3 text-amber-400" />
-                                    <span>DUE: {t.due_date}</span>
-                                 </div>
-                              )}
-                              {/* 4. Deadline */}
-                              {t.deadline && (
-                                 <div className="flex items-center gap-1.5 text-red-400 bg-red-950/35 px-2 py-0.5 rounded border border-red-500/30 shadow-[0_0_8px_rgba(239,68,68,0.15)] animate-pulse">
-                                    <AlertTriangle className="w-3 h-3 text-red-500" />
-                                    <span className="font-black">DEADLINE: {t.deadline}</span>
-                                 </div>
-                              )}
+               {filteredTasks.map((t, idx) => (
+                 <motion.div 
+                   key={t.id}
+                   initial={{ opacity: 0, x: -10 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   exit={{ opacity: 0, scale: 0.98 }}
+                   transition={{ delay: idx * 0.05 }}
+                   onClick={() => setSelectedTaskId(t.id)}
+                    className={`group p-6 glass rounded-[2rem] border flex items-center gap-6 cursor-pointer transition-all hover:bg-white/5 ${getTaskBorderColor(t)}`}
+                 >
+                    <div className={`p-4 rounded-2xl ${t.is_client_approved ? 'bg-emerald-500/10 text-emerald-500' : (['client-review', 'completed-launched'].includes(t.state_slug || '') ? 'bg-blue-500/10 text-blue-500' : (t.priority === 'urgent' ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'))} group-hover:shadow-glow transition-all`}>
+                       {PRIORITY_ICONS[t.priority] || <CircleDashed className="w-5 h-5" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                       <div className="flex items-center gap-3 mb-2">
+                          <span className="text-[9px] font-black uppercase text-primary tracking-[0.2em]">{t.task_code} • {t.project__slug || 'GENERAL'} {t.module_slug && `• ${t.module_slug}`}</span>
+                          <span className="w-1 h-1 rounded-full bg-white/10"></span>
+                          <span className={`px-2 py-0.5 rounded-md font-black tracking-widest text-[8px] uppercase ${
+                             t.state_slug === 'pending' ? 'bg-slate-500/10 text-slate-400 border border-slate-500/20' :
+                             t.state_slug === 'in-progress' ? 'bg-primary/10 text-primary border border-primary/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' :
+                             t.state_slug === 'team-head-review' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+                             t.state_slug === 'client-review' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.15)]' :
+                             (t.state_slug === 're-edit' || t.state_slug === 'rework-revision') ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
+                             t.state_slug === 'completed-launched' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                             'bg-surface/50 text-text-muted/60 border border-border/30'
+                           }`}>{t.state__name || t.state_slug?.replace(/-/g, ' ')}</span>
+                          {t.is_client_approved ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.1)]">🟢 Client Approved</span>
+                          ) : ['client-review', 'completed-launched'].includes(t.state_slug || '') ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-[0_0_8px_rgba(59,130,246,0.1)]">🔵 In-House Approved</span>
+                          ) : t.state_slug === 'team-head-review' ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse">🟡 Pending Review</span>
+                          ) : t.state_slug === 'rework-revision' ? (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded border border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.15)] animate-pulse">🔴 Rework / Re-Edit</span>
+                          ) : null}
+                       </div>
+                       <h4 className="font-extrabold text-sm text-text-muted group-hover:text-white transition-colors uppercase tracking-tight truncate">{t.title}</h4>
+                    </div>
+                    <div className="flex items-center gap-8">
+                       <div className="text-right hidden lg:block">
+                          <p className={`text-[9px] uppercase font-black tracking-widest ${t.priority === 'urgent' ? 'text-error' : 'text-text-muted/40'}`}>
+                            {t.priority}
+                          </p>
+                           <div className="flex flex-col items-end gap-1 mt-1.5 text-[9px] text-text-muted font-bold">
+                              {me?.role !== 'specialist' && t.posting_date && <div className="flex items-center gap-1.5">📅 {t.posting_date}</div>}
+                              <div className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> {t.due_date || 'N/A'}</div>
+                              {t.deadline && <div className="flex items-center gap-1.5 text-red-500 font-black"><AlertTriangle className="w-3 h-3" /> DEADLINE: {t.deadline}</div>}
                            </div>
-                        </div>
-                        <div className="w-10 h-10 rounded-xl border border-white/5 flex items-center justify-center text-text-muted/20 group-hover:border-primary/40 group-hover:text-primary transition-all group-hover:translate-x-1">
-                           <ChevronRight className="w-5 h-5" />
-                        </div>
-                     </div>
-                  </motion.div>
-                ))}
+                       </div>
+                       <div className="w-10 h-10 rounded-xl border border-white/5 flex items-center justify-center text-text-muted/20 group-hover:border-primary/40 group-hover:text-primary transition-all group-hover:translate-x-1">
+                          <ChevronRight className="w-5 h-5" />
+                       </div>
+                    </div>
+                 </motion.div>
+               ))}
              </AnimatePresence>
           </div>
         </div>

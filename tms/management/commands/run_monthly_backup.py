@@ -12,13 +12,31 @@ import json
 import csv
 import io
 from django.core.mail import EmailMessage
+from django.db.models import Sum
+
 
 class Command(BaseCommand):
     help = "Performs monthly backup, retention cleanup, and agency performance summary."
 
+    def add_arguments(self, parser):
+        parser.add_argument('--months_ago', type=int, default=1, help='Number of months ago to run backup for')
+
     def handle(self, *args, **options):
+        months_ago = options['months_ago']
         now = datetime.now()
-        month_str = now.strftime("%Y-%m")
+        # Calculate Previous Month range for targeted export
+        first_day_this_month = now.replace(day=1)
+        
+        # Loop backwards to find the correct month
+        target_date = first_day_this_month
+        for _ in range(months_ago):
+            last_day_prev = target_date - timedelta(days=1)
+            target_date = last_day_prev.replace(day=1)
+            
+        first_day_prev_month = target_date
+        
+        prev_month_str = first_day_prev_month.strftime("%Y-%m")
+        month_str = prev_month_str  # Use the previous month for the backup label
         
         # 1. Create or get the backup record for this month
         backup_req, created = Backup.objects.get_or_create(
@@ -26,12 +44,7 @@ class Command(BaseCommand):
             defaults={'is_approved': False}
         )
 
-        # Calculate Previous Month range for targeted export
-        first_day_this_month = now.replace(day=1)
-        last_day_prev_month = first_day_this_month - timedelta(days=1)
-        first_day_prev_month = last_day_prev_month.replace(day=1)
-        
-        prev_month_str = first_day_prev_month.strftime("%Y-%m")
+        # Removed duplicated block
         
         if not created and backup_req.is_approved:
             self.stdout.write(self.style.WARNING(f"Backup for {month_str} already approved."))
@@ -53,11 +66,14 @@ class Command(BaseCommand):
                     "-U", db_settings.get('USER', 'postgres'),
                     "-F", "p", db_settings.get('NAME', 'colour_parrot')
                 ]
-                with open(db_path, 'w') as f:
-                    subprocess.run(dump_cmd, env=env, stdout=f, check=True)
-            self.stdout.write(self.style.SUCCESS(f"DB snapshot created at {db_path}"))
+                try:
+                    with open(db_path, 'w') as f:
+                        subprocess.run(dump_cmd, env=env, stdout=f, check=True)
+                    self.stdout.write(self.style.SUCCESS(f"DB snapshot created at {db_path}"))
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f"DB snapshot failed (pg_dump might be missing): {e}"))
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"DB Snapshot failed: {str(e)}"))
+            self.stdout.write(self.style.ERROR(f"Error checking DB settings: {e}"))
 
         # Retention logic disabled per User Request: "Never delete any data"
         self.stdout.write(self.style.NOTICE("Skipping retention cleanup: Permanent Storage Mode Active."))
@@ -113,10 +129,10 @@ class Command(BaseCommand):
                 t.module.name if t.module else "No Module",
                 t.state.name if t.state else "N/A",
                 t.priority,
-                t.assignee.get_full_name() if t.assignee else "Unassigned",
+                (t.assignee.get_full_name().strip() or t.assignee.email) if t.assignee else "Unassigned",
                 total_mins,
                 latest_note,
-                t.created_at.strftime("%Y-%m-%d %H:%M"),
+                t.created_at.strftime("%d/%m/%Y %H:%M"),
                 t.due_date or "",
                 t.deadline or "",
                 t.posting_date or "",
@@ -141,11 +157,14 @@ class Command(BaseCommand):
         self.stdout.write(f"Exporting {prev_month_logs.count()} time logs from {prev_month_str}...")
         
         for tl in prev_month_logs:
+            user_str = "N/A"
+            if tl.user:
+                user_str = tl.user.get_full_name().strip() or tl.user.email
             time_writer.writerow([
                 tl.work_item.task_code if tl.work_item else "N/A",
-                tl.user.get_full_name() if tl.user else "N/A",
+                user_str,
                 tl.minutes,
-                tl.logged_at.strftime("%Y-%m-%d %H:%M"),
+                tl.logged_at.strftime("%d/%m/%Y %H:%M"),
                 tl.note or ""
             ])
 
@@ -155,7 +174,10 @@ class Command(BaseCommand):
         comment_w.writerow(["Task Code", "Author", "Comment Body", "Timestamp"])
         from tms.models import WorkItemComment
         for c in WorkItemComment.objects.all().select_related('work_item', 'author'):
-            comment_w.writerow([c.work_item.task_code, c.author.get_full_name(), c.body, c.created_at.strftime("%Y-%m-%d %H:%M")])
+            author_str = "N/A"
+            if c.author:
+                author_str = c.author.get_full_name().strip() or c.author.email
+            comment_w.writerow([c.work_item.task_code, author_str, c.body, c.created_at.strftime("%d/%m/%Y %H:%M")])
 
         # 4. Universal Activity Audit Sheet
         activity_csv = io.StringIO()
@@ -168,7 +190,7 @@ class Command(BaseCommand):
                 a.action,
                 a.entity_type,
                 a.entity_id,
-                a.created_at.strftime("%Y-%m-%d %H:%M")
+                a.created_at.strftime("%d/%m/%Y %H:%M")
             ])
 
         # Send Email to the system email account (the 5GB vault)
@@ -197,6 +219,71 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"Successfully emailed MASTER sheets to {vault_email}"))
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Failed to email backups: {str(e)}"))
+
+        # Upload to Google Drive into a Separate Folder
+        drive_key_path = os.path.join(settings.BASE_DIR, 'google_drive_key.json')
+        if os.path.exists(drive_key_path):
+            self.stdout.write(f"Uploading {month_str} backup to Google Drive...")
+            try:
+                from google.oauth2 import service_account
+                from googleapiclient.discovery import build
+                from googleapiclient.http import MediaIoBaseUpload
+
+                SCOPES = ['https://www.googleapis.com/auth/drive']
+                creds = service_account.Credentials.from_service_account_file(
+                    drive_key_path, scopes=SCOPES)
+                drive_service = build('drive', 'v3', credentials=creds)
+                
+                # 1. Check for Master Folder (Must be created and shared by the User)
+                master_folder_name = "TMS_Agency_Backups"
+                query = f"name='{master_folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+                results = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
+                items = results.get('files', [])
+                
+                if not items:
+                    error_msg = (
+                        f"Master folder '{master_folder_name}' not found! "
+                        "Because this is an automated bot, it has 0 bytes of its own storage. "
+                        "You MUST create a folder named 'TMS_Agency_Backups' in your personal Google Drive, "
+                        "and share it as an Editor with: tms-backup-bot@colour-parrot-backup.iam.gserviceaccount.com"
+                    )
+                    raise Exception(error_msg)
+                
+                master_id = items[0].get('id')
+
+                # 2. Create a folder for the month inside the User's Master Folder
+                folder_name = first_day_prev_month.strftime("%d/%m/%Y")
+                folder_metadata = {
+                    'name': folder_name,
+                    'parents': [master_id],
+                    'mimeType': 'application/vnd.google-apps.folder'
+                }
+                folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
+                folder_id = folder.get('id')
+                
+                # 2. Helper to upload files
+                def upload_to_drive(filename, file_content_bytes, mime_type):
+                    file_metadata = {
+                        'name': filename,
+                        'parents': [folder_id]
+                    }
+                    media = MediaIoBaseUpload(io.BytesIO(file_content_bytes), mimetype=mime_type, resumable=True)
+                    drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+                
+                # 3. Upload CSVs
+                upload_to_drive(f"MASTER_TASK_SHEET_{month_str}.csv", task_csv.getvalue().encode('utf-8'), "text/csv")
+                upload_to_drive(f"EFFORT_LOGS_{month_str}.csv", time_csv.getvalue().encode('utf-8'), "text/csv")
+                upload_to_drive(f"COMMUNICATION_LOGS_{month_str}.csv", comment_csv.getvalue().encode('utf-8'), "text/csv")
+                upload_to_drive(f"ACTIVITY_HISTORY_{month_str}.csv", activity_csv.getvalue().encode('utf-8'), "text/csv")
+                
+                # 4. Upload DB Backup
+                if os.path.exists(db_path):
+                    with open(db_path, 'rb') as f:
+                        upload_to_drive(f"db_backup_{month_str}.sql", f.read(), "application/sql")
+                
+                self.stdout.write(self.style.SUCCESS(f"Successfully uploaded backups to Google Drive in folder: Backup_{month_str}"))
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"Failed to upload to Google Drive: {str(e)}"))
 
         notify_roles(
             roles=[User.Role.ADMIN, User.Role.PROJECT_MANAGER],

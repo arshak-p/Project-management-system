@@ -1,9 +1,18 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api';
 import type { User, Task } from '../api';
-import { motion } from 'framer-motion';
-import { ClipboardList, Users, Clock, AlertTriangle, Calendar } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ClipboardList, Users } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 16, scale: 0.97 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0, scale: 1,
+    transition: { delay: i * 0.055, duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
+  }),
+  exit: { opacity: 0, y: -8, scale: 0.96, transition: { duration: 0.18 } }
+};
 
 export default function TeamHeadDashboard({ me }: { me: User | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -68,33 +77,6 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
     }
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
-
-  const getCardStyle = useCallback((t: Task) => {
-    if (t.is_client_approved) {
-      return 'card-emerald-glow';
-    }
-    if (t.state_slug === 'completed-launched') {
-      return 'card-emerald-glow';
-    }
-    if (t.state_slug === 'rework-revision' || t.state_slug === 're-edit') {
-      return 'card-red-glow';
-    }
-    if (['client-review', 'team-head-review'].includes(t.state_slug || '')) {
-      return 'card-blue-glow';
-    }
-    if (t.priority === 'urgent' || (t.deadline && t.deadline < todayStr)) {
-      return 'card-red-glow';
-    }
-    if (t.priority === 'high') {
-      return 'card-amber-glow';
-    }
-    if (t.state_slug === 'in-progress') {
-      return 'card-primary-glow';
-    }
-    return 'border-white/5 hover:border-primary/30';
-  }, [todayStr]);
-
   const personalTasks = tasks.filter(t => t.assignee?.id === me?.id);
   const teamTasks = tasks.filter(t => t.assignee?.id !== me?.id);
 
@@ -109,17 +91,26 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
   );
 
   return (
-    <div className="space-y-12 pb-24 font-inter">
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="space-y-12 pb-24 font-inter"
+    >
       {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} me={me} />}
 
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <motion.div
+        initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.45 }}
+        className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+      >
         <div>
           <h1 className="text-3xl lg:text-5xl font-black tracking-tighter text-white">
             Lead Overview
           </h1>
           <p className="text-[10px] text-text-muted mt-2 font-bold tracking-widest uppercase opacity-60 italic">Personal Workflow // Team Output</p>
         </div>
-      </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         
@@ -138,41 +129,33 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
             {personalTasks.length === 0 ? (
               <p className="text-xs text-text-muted/40 text-center py-10 font-bold uppercase italic">No active personal tasks.</p>
             ) : (
-              personalTasks.map(task => (
-                <div 
-                  key={task.id}
-                  onClick={() => setSelectedTaskId(task.id)}
-                  className={`p-5 glass rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between hover:bg-white/5 transition-all cursor-pointer group gap-4 ${getCardStyle(task)}`}
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">{task.task_code}</span>
-                      <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded border ${
-                        task.state_slug === 'pending' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' :
-                        task.state_slug === 'in-progress' ? 'bg-primary/10 text-primary border-primary/20' :
-                        task.state_slug === 'team-head-review' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' :
-                        task.state_slug === 'client-review' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                        'bg-white/5 text-text-muted border-white/10'
-                      }`}>
-                        {task.state__name || task.state_slug}
+              <AnimatePresence>
+                {personalTasks.map((task, i) => (
+                  <motion.div
+                    key={task.id}
+                    custom={i}
+                    variants={cardVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    layout
+                    onClick={() => setSelectedTaskId(task.id)}
+                    whileHover={{ y: -3, scale: 1.005 }}
+                    className="task-card p-4 bg-background border border-white/5 rounded-2xl flex items-center justify-between cursor-pointer group"
+                  >
+                    <div>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-primary">{task.task_code} • {task.project__slug || 'GENERAL'} {task.module_slug && `• ${task.module_slug}`}</span>
+                      <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors">{task.title}</h4>
+                      <span className="text-[8px] font-black uppercase text-text-muted/40 block mt-1">Assignee: {task.assignee?.first_name || 'Generic Operator'} • Status: {task.state__name || task.state_slug?.replace(/-/g, ' ')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[8px] font-black uppercase tracking-widest bg-white/5 text-text-muted px-2.5 py-1 rounded-lg">
+                        {task.state__name}
                       </span>
                     </div>
-                    <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors uppercase tracking-wide">{task.title}</h4>
-                    <div className="flex flex-wrap items-center gap-2 text-[9px] text-text-muted font-bold">
-                       {task.posting_date && (
-                          <div className="flex items-center gap-1 text-sky-400 bg-sky-950/20 px-2 py-0.5 rounded border border-sky-500/20">
-                             <Calendar className="w-2.5 h-2.5" /> {task.posting_date}
-                          </div>
-                       )}
-                       {task.due_date && (
-                          <div className="flex items-center gap-1 text-amber-400 bg-amber-950/20 px-2 py-0.5 rounded border border-amber-500/20">
-                             <Clock className="w-2.5 h-2.5" /> {task.due_date}
-                          </div>
-                       )}
-                    </div>
-                  </div>
-                </div>
-              ))
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             )}
           </div>
         </div>
@@ -192,59 +175,42 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
             {teamTasks.length === 0 ? (
               <p className="text-xs text-text-muted/40 text-center py-10 font-bold uppercase italic">No team tasks in the pipeline.</p>
             ) : (
-              teamTasks.map(task => (
-                <div 
-                  key={task.id}
-                  onClick={() => setSelectedTaskId(task.id)}
-                  className={`p-5 glass rounded-[2rem] flex flex-col hover:bg-white/5 transition-all cursor-pointer group gap-4 ${getCardStyle(task)}`}
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="space-y-2 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-[#8b5cf6] bg-[#8b5cf6]/10 px-2 py-0.5 rounded border border-[#8b5cf6]/20">{task.task_code} • {task.project__slug || 'GENERAL'} {task.module_slug && `• ${task.module_slug}`}</span>
-                        {task.is_client_approved ? (
-                          <span className="text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20">🟢 Client Approved</span>
-                        ) : ['client-review', 'completed-launched'].includes(task.state_slug || '') ? (
-                          <span className="text-[8px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded border border-blue-500/20">🔵 In-House Approved</span>
-                        ) : null}
-                      </div>
-                      <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors uppercase tracking-wide truncate">{task.title}</h4>
-                      <span className="text-[8px] font-black uppercase text-text-muted/50 block">Assignee: {task.assignee?.first_name || 'Generic Operator'} • Status: {task.state__name || task.state_slug?.replace(/-/g, ' ')}</span>
-                      
-                      <div className="flex flex-wrap items-center gap-2 text-[9px] text-text-muted font-bold mt-2">
-                         {task.posting_date && (
-                            <div className="flex items-center gap-1 text-sky-400 bg-sky-950/20 px-2 py-0.5 rounded border border-sky-500/20">
-                               <Calendar className="w-2.5 h-2.5" /> {task.posting_date}
-                            </div>
-                         )}
-                         {task.due_date && (
-                            <div className="flex items-center gap-1 text-amber-400 bg-amber-950/20 px-2 py-0.5 rounded border border-amber-500/20">
-                               <Clock className="w-2.5 h-2.5" /> {task.due_date}
-                            </div>
-                         )}
-                         {task.deadline && (
-                            <div className="flex items-center gap-1 text-red-400 bg-red-950/35 px-2 py-0.5 rounded border border-red-500/30 animate-pulse">
-                               <AlertTriangle className="w-2.5 h-2.5 text-red-500" /> {task.deadline}
-                            </div>
-                         )}
-                      </div>
+              <AnimatePresence>
+                {teamTasks.map((task, i) => (
+                  <motion.div
+                    key={task.id}
+                    custom={i}
+                    variants={cardVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    layout
+                    onClick={() => setSelectedTaskId(task.id)}
+                    whileHover={{ y: -3, scale: 1.005 }}
+                    className="task-card p-4 bg-background border border-white/5 rounded-2xl flex items-center justify-between cursor-pointer group"
+                  >
+                    <div>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-[#8b5cf6]">{task.task_code} • {task.project__slug || 'GENERAL'} {task.module_slug && `• ${task.module_slug}`}</span>
+                      <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors">{task.title}</h4>
+                      <span className="text-[8px] font-black uppercase text-text-muted/40 block mt-1">Assignee: {task.assignee?.first_name || 'Generic Operator'} • Status: {task.state__name || task.state_slug?.replace(/-/g, ' ')}</span>
                     </div>
-                    
-                    <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                    <div className="flex items-center gap-2">
                       {task.state_slug === 'team-head-review' && (
                         <div className="flex items-center gap-1.5">
-                          <button 
+                          <motion.button
+                            whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
                             onClick={(e) => handleQuickApprove(e, task.id)}
-                            className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white font-black uppercase tracking-widest text-[8px] rounded border border-emerald-500/30 transition-all hover:scale-105"
+                            className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white font-black uppercase tracking-widest text-[8px] rounded border border-emerald-500/30 transition-all"
                           >
                             Approve
-                          </button>
-                          <button 
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
                             onClick={(e) => handleQuickReject(e, task.id)}
-                            className="px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-black uppercase tracking-widest text-[8px] rounded border border-red-500/30 transition-all hover:scale-105"
+                            className="px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-black uppercase tracking-widest text-[8px] rounded border border-red-500/30 transition-all"
                           >
                             Reject
-                          </button>
+                          </motion.button>
                         </div>
                       )}
                       <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${
@@ -253,9 +219,9 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
                         {task.state__name}
                       </span>
                     </div>
-                  </div>
-                </div>
-              ))
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             )}
           </div>
         </div>
@@ -332,6 +298,6 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
           </table>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

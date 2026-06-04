@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Trash2, Loader2, Layers, CheckCircle2, X } from 'lucide-react';
+import { Plus, Trash2, Loader2, Layers, CheckCircle2, X, Edit2 } from 'lucide-react';
 import { api } from '../api';
 import type { WorkModule, User } from '../api';
 
@@ -7,6 +7,7 @@ import type { WorkModule, User } from '../api';
 export default function ModulesPage({ me: _me }: { me: User | null }) {
   const [modules, setModules] = useState<WorkModule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -21,25 +22,36 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
       console.error(err);
     }
     setIsLoading(false);
-  }, []);
+  }, [showArchived]);
 
-  useEffect(() => { Promise.resolve().then(() => load()); }, [load, showArchived]);
+  useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
     setSaving(true);
     setError('');
     try {
       const safeSlug = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      await api.createModule({ name: newName, slug: safeSlug });
+      if (editingId) {
+        await api.updateModule(editingId, { name: newName, slug: safeSlug });
+      } else {
+        await api.createModule({ name: newName, slug: safeSlug });
+      }
       setNewName('');
+      setEditingId(null);
       setShowModal(false);
       load();
     } catch (err: unknown) {
-      const errorMsg = (err as { response?: { data?: { name?: string[] } } })?.response?.data?.name?.[0] || 'Failed to create module';
+      const errorMsg = (err as { response?: { data?: { name?: string[] } } })?.response?.data?.name?.[0] || 'Failed to save module';
       setError(errorMsg);
     } finally { setSaving(false); }
+  };
+
+  const startEdit = (mod: WorkModule) => {
+    setNewName(mod.name);
+    setEditingId(mod.id);
+    setShowModal(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -92,10 +104,18 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
                 <Layers className="w-5 h-5 text-emerald-500" />
               </div>
               <div className="flex gap-2">
+                {mod.is_active && (
+                   <button 
+                     onClick={() => startEdit(mod)}
+                     className="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all"
+                   >
+                     <Edit2 className="w-4 h-4" />
+                   </button>
+                )}
                 {mod.is_active ? (
                   <button 
                     onClick={() => handleDelete(mod.id)}
-                    className="opacity-0 group-hover:opacity-100 p-2 text-error hover:bg-error/10 rounded-xl transition-all"
+                    className="p-2 text-error hover:bg-error/10 rounded-xl transition-all"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -132,15 +152,15 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
           <div className="glass w-full lg:max-w-md h-full lg:h-auto lg:rounded-[2.5rem] border-primary/30 p-6 lg:p-8 shadow-2xl animate-in zoom-in-95 flex flex-col justify-center">
             <div className="flex justify-between items-start mb-8">
               <div>
-                <h3 className="text-2xl font-black italic">Create Module</h3>
-                <p className="text-xs text-text-muted mt-1 uppercase tracking-widest font-black opacity-50">Define a new task category</p>
+                <h3 className="text-2xl font-black italic">{editingId ? 'Edit Module' : 'Create Module'}</h3>
+                <p className="text-xs text-text-muted mt-1 uppercase tracking-widest font-black opacity-50">{editingId ? 'Update category details' : 'Define a new task category'}</p>
               </div>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+              <button onClick={() => { setShowModal(false); setEditingId(null); setNewName(''); }} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-6">
+            <form onSubmit={handleSave} className="space-y-6">
               {error && <div className="p-4 bg-error/10 border border-error/20 rounded-2xl text-xs text-error font-bold italic">{error}</div>}
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-text-muted">Module Name</label>
@@ -166,7 +186,7 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
                   className="flex-[2] py-4 bg-primary text-white rounded-2xl font-bold text-xs uppercase shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  Create Module
+                  {editingId ? 'Update Module' : 'Create Module'}
                 </button>
               </div>
             </form>

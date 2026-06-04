@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api';
+import { api, API_URL } from '../../api';
 import type { User } from '../../api';
 import { User2, Mail, Phone, Briefcase, Save, Loader2, CheckCircle2 } from 'lucide-react';
 
@@ -11,56 +11,39 @@ const ROLE_LABELS: Record<string, string> = {
   client: '🏢 Client',
 };
 
-export default function ProfilePage({ me: initialMe, onUpdateMe }: { me: User | null; onUpdateMe?: (user: User) => void }) {
-  const [me, setMe] = useState<User | null>(initialMe);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function ProfilePage({ me: _me }: { me: User | null }) {
+  const [me, setMe] = useState<User | null>(null);
   const [form, setForm] = useState({ first_name: '', last_name: '', title: '', phone: '' });
-  const [isLoading, setIsLoading] = useState(!initialMe);
+  const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (initialMe) {
-      setMe(initialMe);
+    api.getMe().then(r => {
+      setMe(r.data);
       setForm({
-        first_name: initialMe.first_name || '',
-        last_name: initialMe.last_name || '',
-        title: initialMe.title || '',
-        phone: initialMe.phone || '',
+        first_name: r.data.first_name || '',
+        last_name: r.data.last_name || '',
+        title: r.data.title || '',
+        phone: r.data.phone || '',
       });
-      setIsLoading(false);
-    } else {
-      setIsLoading(true);
-      api.getMe().then(r => {
-        setMe(r.data);
-        setForm({
-          first_name: r.data.first_name || '',
-          last_name: r.data.last_name || '',
-          title: r.data.title || '',
-          phone: r.data.phone || '',
-        });
-      }).catch(err => {
-        console.error("Failed to load profile", err);
-      }).finally(() => setIsLoading(false));
-    }
-  }, [initialMe]);
+    }).finally(() => setIsLoading(false));
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!me) return;
     setSaving(true);
     try {
-      const res = await api.updateUser(me.id, form);
-      const updatedUser = res.data;
-      setMe(updatedUser);
-      if (onUpdateMe) {
-        onUpdateMe(updatedUser);
-      }
+      const token = localStorage.getItem('access_token');
+      await fetch(`${API_URL}/users/${me.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(form),
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch (err: any) {
-      const errorData = err.response?.data || {};
-      const errorMsg = errorData.detail || Object.values(errorData).flat().join(', ') || 'Failed to update profile';
-      alert(`Error: ${errorMsg}`);
     } finally { setSaving(false); }
   };
 

@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp, X, Calendar, CalendarCheck, Clock } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp, X } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
 import type { Project, TaskState, WorkModule, User, Task } from '../api';
@@ -36,45 +36,15 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [filterDueDate, setFilterDueDate] = useState('');
   const [filterDeadline, setFilterDeadline] = useState('');
   const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    return new Date().toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+    return new Date().toISOString().split('T')[0];
   });
   const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
-
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
-
-  const getCardStyle = useCallback((t: Task) => {
-    if (t.is_client_approved) {
-      return 'card-emerald-glow';
-    }
-    if (t.state_slug === 'completed-launched') {
-      return 'card-emerald-glow';
-    }
-    if (t.state_slug === 'rework-revision' || t.state_slug === 're-edit') {
-      return 'card-red-glow';
-    }
-    if (['client-review', 'team-head-review'].includes(t.state_slug || '')) {
-      return 'card-blue-glow';
-    }
-    if (t.priority === 'urgent' || (t.deadline && t.deadline < todayStr)) {
-      return 'card-red-glow';
-    }
-    if (t.priority === 'high') {
-      return 'card-amber-glow';
-    }
-    if (t.state_slug === 'in-progress') {
-      return 'card-primary-glow';
-    }
-    return 'border-white/5 hover:border-primary/30';
-  }, [todayStr]);
-
 
   const load = useCallback(() => {
     Promise.all([
@@ -189,7 +159,7 @@ export default function TasksPage({ me }: { me: User | null }) {
           <h1 className="text-3xl lg:text-5xl font-black tracking-tighter">Work Items</h1>
           <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mt-1 opacity-60 italic">Live Task Engine // Agency Operations</p>
         </div>
-        {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
+        {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'sales_manager') && (
           <button 
             onClick={() => setShowForm(!showForm)} 
             className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
@@ -278,17 +248,22 @@ export default function TasksPage({ me }: { me: User | null }) {
                   <textarea value={form.reference_link} onChange={e => setForm({ ...form, reference_link: e.target.value })} placeholder="Paste multiple links here (separated by newlines)..." rows={3} className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all placeholder:text-text-muted/30 custom-scrollbar" />
                 </div>
 
-                <div className="md:col-span-4 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Task Start Date</label>
+                <div className="md:col-span-3 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 ml-1">Task Start Date</label>
+                  <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} className="w-full px-6 py-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl text-sm font-bold focus:border-emerald-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
+                </div>
+
+                <div className="md:col-span-3 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Due Date</label>
                   <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-sm font-bold focus:border-amber-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
 
-                <div className="md:col-span-4 space-y-2.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 ml-1">Deadline (Finish)</label>
+                <div className="md:col-span-3 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 ml-1">Deadline</label>
                   <input type="date" value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} className="w-full px-6 py-4 bg-red-500/5 border border-red-500/20 rounded-2xl text-sm font-bold focus:border-red-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
 
-                <div className="md:col-span-4 space-y-2.5">
+                <div className="md:col-span-3 space-y-2.5">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 ml-1">Post Date</label>
                   <input type="date" value={form.posting_date} onChange={e => setForm({ ...form, posting_date: e.target.value })} className="w-full px-6 py-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl text-sm font-bold focus:border-indigo-500 outline-none transition-all" style={{ colorScheme: 'dark' }} />
                 </div>
@@ -383,38 +358,36 @@ export default function TasksPage({ me }: { me: User | null }) {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-end gap-4 pt-4 border-t border-white/5">
-          <div className="grid grid-cols-2 lg:flex items-end gap-4 flex-1 w-full">
+        <div className="flex flex-wrap lg:flex-nowrap items-end gap-3 pt-4 border-t border-white/5">
              {me?.role !== 'specialist' && (
-               <div className="flex flex-col flex-1">
+               <div className="flex flex-col flex-1 min-w-0">
                  <label className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-2 ml-1">Post Date</label>
-                 <input type="date" value={filterPostingDate} onChange={e => setFilterPostingDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+                 <input type="date" value={filterPostingDate} onChange={e => setFilterPostingDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-3 py-3 text-[10px] xl:text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
                </div>
              )}
-             <div className="flex flex-col flex-1">
+             <div className="flex flex-col flex-1 min-w-0">
                <label className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-2 ml-1">Start Date</label>
-               <input type="date" value={filterDueDate} onChange={e => setFilterDueDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <input type="date" value={filterDueDate} onChange={e => setFilterDueDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-3 py-3 text-[10px] xl:text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
-             <div className="flex flex-col flex-1">
+             <div className="flex flex-col flex-1 min-w-0">
                <label className="text-[9px] font-black uppercase tracking-widest text-red-500 mb-2 ml-1">Deadline</label>
-               <input type="date" value={filterDeadline} onChange={e => setFilterDeadline(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <input type="date" value={filterDeadline} onChange={e => setFilterDeadline(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-3 py-3 text-[10px] xl:text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
-             <div className="flex flex-col flex-1">
+             <div className="flex flex-col flex-1 min-w-0">
                <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-2 ml-1">Created From</label>
-               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-3 py-3 text-[10px] xl:text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
-             <div className="flex flex-col flex-1">
+             <div className="flex flex-col flex-1 min-w-0">
                <label className="text-[9px] font-black uppercase tracking-widest text-primary mb-2 ml-1">Created To</label>
-               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-surface border border-border rounded-xl px-4 py-3 text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
+               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-3 py-3 text-[10px] xl:text-xs outline-none focus:border-primary font-bold shadow-sm" style={{ colorScheme: 'dark' }} />
              </div>
-          </div>
-          <div className="flex items-center gap-2 w-full lg:w-auto h-[44px]">
+          <div className="flex items-center gap-2 w-full lg:w-auto shrink-0 h-[44px]">
              <button 
                onClick={() => {
                  const d = new Date().toISOString().split('T')[0];
                  setStartDate(d); setEndDate(d);
                }}
-               className="flex-1 lg:flex-none h-full px-5 glass border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/5 transition-all whitespace-nowrap"
+               className="flex-1 lg:flex-none h-full px-4 glass border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/5 transition-all whitespace-nowrap"
              >
                Today
              </button>
@@ -425,7 +398,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
                  setStartDate(start); setEndDate(end);
                }}
-               className="flex-1 lg:flex-none h-full px-5 glass border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/5 transition-all whitespace-nowrap"
+               className="flex-1 lg:flex-none h-full px-4 glass border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/5 transition-all whitespace-nowrap"
              >
                Month
              </button>
@@ -434,7 +407,7 @@ export default function TasksPage({ me }: { me: User | null }) {
                  setStartDate(''); setEndDate(''); setFilterProject(''); setFilterState(''); setFilterAssignee(''); setFilterModule(''); setFilterPostingDate(''); setFilterDueDate(''); setFilterDeadline(''); setSearch(''); 
                  setShowCompleted(false); setShowArchived(false);
                }}
-               className="flex-1 lg:flex-none h-full px-5 bg-error/10 text-error border border-error/20 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-error/20 transition-all whitespace-nowrap"
+               className="flex-1 lg:flex-none h-full px-4 bg-error/10 text-error border border-error/20 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-error/20 transition-all whitespace-nowrap"
              >
                Reset All
              </button>
@@ -445,8 +418,8 @@ export default function TasksPage({ me }: { me: User | null }) {
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
       ) : (
-        <div className="glass rounded-[2.5rem] border border-border p-6 shadow-2xl">
-          <div className="space-y-6">
+        <div className="glass rounded-2xl border border-border overflow-hidden">
+          <div className="divide-y divide-border/40">
             {filtered.length === 0 ? (
               <div className="p-12 text-center">
                 <CheckCircle2 className="w-12 h-12 text-text-muted mx-auto mb-4" />
@@ -455,133 +428,119 @@ export default function TasksPage({ me }: { me: User | null }) {
             ) : (
               filtered.map(task => (
                 <div 
-                  key={task.id} 
-                  onClick={() => setSelectedTaskId(task.id)} 
-                  className={`flex flex-col md:flex-row md:items-center gap-4 md:gap-6 p-5 glass rounded-[2rem] hover:bg-white/5 transition-all group cursor-pointer relative overflow-hidden ${getCardStyle(task)} ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''}`}
-                >
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className={`p-3 rounded-xl transition-all group-hover:shadow-glow ${
-                      task.is_client_approved ? 'bg-emerald-500/10 text-emerald-500' : 
-                      (task.state_slug === 'rework-revision' || task.state_slug === 're-edit') ? 'bg-red-500/10 text-red-500' :
-                      (['client-review', 'completed-launched'].includes(task.state_slug || '')) ? 'bg-blue-500/10 text-blue-500' : 
-                      task.priority === 'urgent' ? 'bg-error/10 text-error' : 
-                      task.priority === 'high' ? 'bg-amber-500/10 text-amber-500' :
-                      'bg-primary/10 text-primary'
-                    } hidden md:flex items-center justify-center`}>
-                       {PRIORITY_ICONS[task.priority] || <Circle className="w-4 h-4" />}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <code className="text-[10px] font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 shrink-0">{task.task_code}</code>
-                      {(() => {
-                        const mod = modules.find(m => m.id === task.module);
-                        return mod ? (
-                          <span className="text-[10px] font-black uppercase tracking-[0.1em] bg-surface border border-border px-2 py-0.5 rounded text-primary shadow-sm shrink-0">
-                            {mod.name}
-                          </span>
-                        ) : null;
-                      })()}
-                      <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${PRIORITY_COLORS[task.priority] || 'text-text-muted'}`}>
-                        {PRIORITY_ICONS[task.priority]} {task.priority}
-                      </span>
-                      {task.is_client_approved ? (
-                        <span className="flex items-center gap-1 text-[9px] bg-emerald-500/10 text-emerald-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.15)]">
-                          🟢 Client Approved
-                        </span>
-                      ) : ['client-review', 'completed-launched'].includes(task.state_slug || '') ? (
-                        <span className="flex items-center gap-1 text-[9px] bg-blue-500/10 text-blue-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.15)]">
-                          🔵 In-House Approved
-                        </span>
-                      ) : task.state_slug === 'team-head-review' ? (
-                        <span className="flex items-center gap-1 text-[9px] bg-amber-500/10 text-amber-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-amber-500/20 animate-pulse">
-                          🟡 Pending Review
-                        </span>
-                      ) : task.state_slug === 'rework-revision' ? (
-                        <span className="flex items-center gap-1 text-[9px] bg-red-500/10 text-red-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.15)] animate-pulse">
-                          🔴 Rework / Re-Edit
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-text text-sm md:text-base mb-1 group-hover:text-white transition-colors truncate uppercase tracking-tight">{task.title}</h4>
-                    <div className="flex flex-wrap items-center gap-2 text-[10px] md:text-xs text-text-muted">
-                      {(() => {
-                        const proj = projects.find(p => p.id === Number(task.project));
-                        return proj ? (
-                          <span className="font-bold flex items-center gap-1.5" style={{ color: proj.color }}>
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: proj.color }}></div>
-                            {proj.name}
-                          </span>
-                        ) : null;
-                      })()}
-                      <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[10px] font-bold text-text-muted">
-                        👤 {task.assignee?.first_name || task.assignee?.email || 'Unassigned'}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 mt-2.5 text-[10px] font-extrabold">
-                       {/* 1. Post Date */}
-                       {me?.role !== 'specialist' && task.posting_date && (
-                          <div className="flex items-center gap-1.5 text-sky-400 bg-sky-950/20 px-2.5 py-0.5 rounded border border-sky-500/20 shadow-sm shrink-0">
-                             <Calendar className="w-3 h-3 text-sky-400" />
-                             <span>POSTED: {task.posting_date}</span>
-                          </div>
-                       )}
-                       {/* 2. Start Date */}
-                       {task.scheduled_date && (
-                          <div className="flex items-center gap-1.5 text-emerald-400 bg-emerald-950/20 px-2.5 py-0.5 rounded border border-emerald-500/20 shadow-sm shrink-0">
-                             <CalendarCheck className="w-3 h-3 text-emerald-400" />
-                             <span>START: {task.scheduled_date}</span>
-                          </div>
-                       )}
-                       {/* 3. Due Date */}
-                       {task.due_date && (
-                          <div className="flex items-center gap-1.5 text-amber-400 bg-amber-950/20 px-2.5 py-0.5 rounded border border-amber-500/20 shadow-sm shrink-0">
-                             <Clock className="w-3 h-3 text-amber-400" />
-                             <span>DUE: {task.due_date}</span>
-                          </div>
-                       )}
-                       {/* 4. Deadline */}
-                       {task.deadline && (
-                          <div className="flex items-center gap-1.5 text-red-400 bg-red-950/35 px-2.5 py-0.5 rounded border border-red-500/30 shadow-[0_0_8px_rgba(239,68,68,0.15)] animate-pulse shrink-0">
-                             <AlertTriangle className="w-3 h-3 text-red-500" />
-                             <span className="font-black">DEADLINE: {task.deadline}</span>
-                          </div>
-                       )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0 self-end md:self-center">
+                key={task.id} 
+                onClick={() => setSelectedTaskId(task.id)} 
+                className={`flex flex-col md:flex-row md:items-center gap-3 md:gap-6 px-4 py-5 md:px-6 md:py-4 hover:bg-surface/30 transition-all group cursor-pointer relative overflow-hidden border-b border-white/5 md:border-b-0 ${!task.is_active ? 'opacity-60 italic grayscale-[0.5]' : ''}`}
+                style={{ 
+                  borderLeft: `4px solid ${task.is_client_approved ? '#10b981' : (['client-review', 'completed-launched'].includes(task.state_slug || '') ? '#3b82f6' : (states.find(s => s.id === task.state)?.color || '#3b82f6'))}`,
+                  backgroundColor: `${task.is_client_approved ? '#10b981' : (['client-review', 'completed-launched'].includes(task.state_slug || '') ? '#3b82f6' : (states.find(s => s.id === task.state)?.color || '#3b82f6'))}05`
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-1.5 h-8 rounded-full flex-shrink-0 hidden md:block" 
+                    style={{ 
+                      backgroundColor: task.is_client_approved ? '#10b981' : (['client-review', 'completed-launched'].includes(task.state_slug || '') ? '#3b82f6' : (states.find(s => s.id === task.state)?.color || '#3b82f6')),
+                      boxShadow: `0 0 10px ${task.is_client_approved ? '#10b981' : (['client-review', 'completed-launched'].includes(task.state_slug || '') ? '#3b82f6' : (states.find(s => s.id === task.state)?.color || '#3b82f6'))}40`
+                    }}
+                  ></div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <code className="text-[10px] font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 shrink-0">{task.task_code}</code>
                     {(() => {
-                      const stateObj = states.find(s => s.id === task.state);
-                      return (
-                        <span 
-                          className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border transition-all"
-                          style={{ 
-                            borderColor: `${stateObj?.color || '#3b82f6'}40`,
-                            color: stateObj?.color || '#3b82f6',
-                            backgroundColor: `${stateObj?.color || '#3b82f6'}10`
-                          }}
-                        >
-                          {stateObj?.name || 'Unknown'}
+                      const mod = modules.find(m => m.id === task.module);
+                      return mod ? (
+                        <span className="text-[10px] font-black uppercase tracking-[0.1em] bg-surface border border-border px-2 py-0.5 rounded text-primary shadow-sm shrink-0">
+                          {mod.name}
                         </span>
-                      );
+                      ) : null;
                     })()}
-                    {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager') && (
-                      task.is_active ? (
-                        <button onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }} title="Archive Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-500 text-text-muted rounded-lg transition-all">
-                          <Database className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <button onClick={(e) => { e.stopPropagation(); handleRestore(task.id); }} title="Restore Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-emerald-500/10 hover:text-emerald-500 text-text-muted rounded-lg transition-all">
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      )
+                    <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${PRIORITY_COLORS[task.priority] || 'text-text-muted'}`}>
+                      {PRIORITY_ICONS[task.priority]} {task.priority}
+                    </span>
+                    {task.is_client_approved ? (
+                      <span className="flex items-center gap-1 text-[9px] bg-emerald-500/10 text-emerald-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+                        🟢 Client Approved
+                      </span>
+                    ) : ['client-review', 'completed-launched'].includes(task.state_slug || '') ? (
+                      <span className="flex items-center gap-1 text-[9px] bg-blue-500/10 text-blue-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.15)]">
+                        🔵 In-House Approved
+                      </span>
+                    ) : task.state_slug === 'team-head-review' ? (
+                      <span className="flex items-center gap-1 text-[9px] bg-amber-500/10 text-amber-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-amber-500/20 animate-pulse">
+                        🟡 Pending Review
+                      </span>
+                    ) : task.state_slug === 'rework-revision' ? (
+                      <span className="flex items-center gap-1 text-[9px] bg-red-500/10 text-red-500 px-2.5 py-1 rounded-lg font-black uppercase tracking-widest border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.15)] animate-pulse">
+                        🔴 Rework / Re-Edit
+                      </span>
+                    ) : null}
+                    {task.timer_start && (
+                      <span className="flex items-center gap-1 text-[9px] bg-red-500 text-white px-2.5 py-1 rounded-lg font-black uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse">
+                        🔴 LIVE: TRACKING TIME
+                      </span>
                     )}
                   </div>
                 </div>
-              ))) }
+                
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-text text-sm md:text-base mb-1 truncate">{task.title}</h4>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] md:text-xs text-text-muted">
+                    {(() => {
+                      const proj = projects.find(p => p.id === Number(task.project));
+                      return proj ? (
+                        <span className="font-bold flex items-center gap-1.5" style={{ color: proj.color }}>
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: proj.color }}></div>
+                          {proj.name}
+                        </span>
+                      ) : null;
+                    })()}
+                    {me?.role !== 'specialist' && task.posting_date && <span className="flex items-center gap-1 opacity-80 text-indigo-400">📅 Post Date: {task.posting_date}</span>}
+                    {task.due_date && <span className="flex items-center gap-1 opacity-80 text-amber-500">🚩 Start: {task.due_date}</span>}
+                    {task.deadline && <span className="flex items-center gap-1 opacity-80 text-red-500">💀 Deadline: {task.deadline}</span>}
+                    <span className="flex items-center gap-1 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[10px] font-bold text-text-muted">
+                      👤 {task.assignee?.first_name || task.assignee?.email || 'Unassigned'}
+                    </span>
+                    {(task.total_minutes !== undefined && task.total_minutes > 0) && (
+                      <span className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-bold text-primary">
+                        ⏱️ {Math.floor(task.total_minutes / 60)}h {task.total_minutes % 60}m logged
+                      </span>
+                    )}
+                    <span className="md:hidden font-black text-primary/60 uppercase tracking-widest ml-auto">
+                      {states.find(s => s.id === task.state)?.name}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                  {(() => {
+                    const stateObj = states.find(s => s.id === task.state);
+                    return (
+                      <span 
+                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border transition-all"
+                        style={{ 
+                          borderColor: `${stateObj?.color || '#3b82f6'}40`,
+                          color: stateObj?.color || '#3b82f6',
+                          backgroundColor: `${stateObj?.color || '#3b82f6'}10`
+                        }}
+                      >
+                        {stateObj?.name || 'Unknown'}
+                      </span>
+                    );
+                  })()}
+                  {(me?.is_superuser || me?.role === 'admin' || me?.role === 'project_manager' || me?.role === 'sales_manager') && (
+                    task.is_active ? (
+                      <button onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }} title="Archive Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-500 text-text-muted rounded-lg transition-all">
+                        <Database className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button onClick={(e) => { e.stopPropagation(); handleRestore(task.id); }} title="Restore Task" className="p-2 opacity-0 group-hover:opacity-100 hover:bg-emerald-500/10 hover:text-emerald-500 text-text-muted rounded-lg transition-all">
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+            ))) }
           </div>
           {filtered.length > 0 && (
             <div className="px-5 py-3 border-t border-border/50 bg-surface/20 text-xs text-text-muted flex justify-between items-center">

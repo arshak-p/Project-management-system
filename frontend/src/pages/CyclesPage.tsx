@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import type { Cycle, Project, User } from '../api';
-import { Loader2, CalendarRange, Plus, ExternalLink, CalendarDays } from 'lucide-react';
+import { Loader2, CalendarRange, Plus, ExternalLink, CalendarDays, Edit2 } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function CyclesPage({ me: _me }: { me: User | null }) {
@@ -11,6 +11,7 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
   const [showArchived, setShowArchived] = useState(false);
 
   // Form
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', project: '', start_date: '', end_date: '', is_recurring: false });
   const [saving, setSaving] = useState(false);
@@ -26,20 +27,37 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
 
   useEffect(() => { load(); }, [showArchived]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.createCycle(form);
+      if (editingId) {
+        await api.updateCycle(editingId, form);
+      } else {
+        await api.createCycle(form);
+      }
       setShowModal(false);
+      setEditingId(null);
       setForm({ name: '', project: '', start_date: '', end_date: '', is_recurring: false });
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to create cycle.');
+      alert('Failed to save cycle.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const startEdit = (c: Cycle) => {
+    setForm({
+      name: c.name,
+      project: c.project.toString(),
+      start_date: c.start_date,
+      end_date: c.end_date,
+      is_recurring: c.is_recurring
+    });
+    setEditingId(c.id);
+    setShowModal(true);
   };
 
   const handleArchive = async (id: number) => {
@@ -70,9 +88,9 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="glass w-full max-w-md rounded-2xl border border-primary/30 shadow-2xl p-6">
             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <CalendarRange className="w-5 h-5 text-primary" /> New Sprint / Cycle
+              <CalendarRange className="w-5 h-5 text-primary" /> {editingId ? 'Edit Sprint / Cycle' : 'New Sprint / Cycle'}
             </h3>
-            <form onSubmit={handleCreate} className="space-y-4">
+            <form onSubmit={handleSave} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-text-muted uppercase">Cycle Name</label>
                 <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Q4 Marketing Campaign" required className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm outline-none focus:border-primary" />
@@ -100,8 +118,8 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
               </label>
 
               <div className="flex gap-3 pt-4 border-t border-border/50">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2 rounded-xl border border-border hover:bg-surface text-sm font-medium transition-colors">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/30 hover:opacity-90 disabled:opacity-50">Create</button>
+                <button type="button" onClick={() => { setShowModal(false); setEditingId(null); setForm({ name: '', project: '', start_date: '', end_date: '', is_recurring: false }); }} className="flex-1 py-2 rounded-xl border border-border hover:bg-surface text-sm font-medium transition-colors">Cancel</button>
+                <button type="submit" disabled={saving} className="flex-1 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/30 hover:opacity-90 disabled:opacity-50">{editingId ? 'Update' : 'Create'}</button>
               </div>
             </form>
           </div>
@@ -151,6 +169,11 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
                   </span>
                 )}
                 <div className="flex gap-2">
+                   {cycle.is_active && (
+                      <button onClick={() => startEdit(cycle)} className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                         <Edit2 className="w-4 h-4" />
+                      </button>
+                   )}
                    {cycle.is_active ? (
                      <button onClick={() => handleArchive(cycle.id)} className="p-2 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
                         <CalendarRange className="w-4 h-4" />

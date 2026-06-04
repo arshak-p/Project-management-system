@@ -24,7 +24,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
   const [saving, setSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', assignee: '' });
+  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', deadline: '', posting_date: '', assignee: '' });
   
   const [filterProject, setFilterProject] = useState('');
   const [filterModule, setFilterModule] = useState('');
@@ -56,11 +56,14 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
         project: Number(form.project),
         state: Number(form.state),
         module: Number(form.module),
-        assignee: form.assignee ? Number(form.assignee) : null,
+        assignee_id: form.assignee ? Number(form.assignee) : null,
         due_date: form.due_date || null,
+        scheduled_date: form.scheduled_date || null,
+        deadline: form.deadline || null,
+        posting_date: form.posting_date || null,
       });
       setShowCreateModal(false);
-      setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', assignee: '' });
+      setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', deadline: '', posting_date: '', assignee: '' });
       load();
     } catch (err: unknown) {
       console.error(err);
@@ -415,9 +418,26 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                        </select>
                     </div>
 
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-text-muted/60">Deadline (Temporal)</label>
-                       <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} required className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-primary outline-none font-bold text-sm" style={{ colorScheme: 'dark' }} />
+                    <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-emerald-400">Task Start</label>
+                         <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} className="w-full px-6 py-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl focus:border-emerald-500 outline-none font-bold text-sm" style={{ colorScheme: 'dark' }} />
+                      </div>
+                      
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-amber-500">Due Date</label>
+                         <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl focus:border-amber-500 outline-none font-bold text-sm" style={{ colorScheme: 'dark' }} />
+                      </div>
+
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-red-500">Deadline</label>
+                         <input type="date" value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} className="w-full px-6 py-4 bg-red-500/5 border border-red-500/20 rounded-2xl focus:border-red-500 outline-none font-bold text-sm" style={{ colorScheme: 'dark' }} />
+                      </div>
+
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-indigo-400">Post Date</label>
+                         <input type="date" value={form.posting_date} onChange={e => setForm({ ...form, posting_date: e.target.value })} className="w-full px-6 py-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl focus:border-indigo-500 outline-none font-bold text-sm" style={{ colorScheme: 'dark' }} />
+                      </div>
                     </div>
                   </div>
 
