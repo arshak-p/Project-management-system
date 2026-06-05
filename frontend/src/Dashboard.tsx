@@ -172,7 +172,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     { id: 'timesheets', icon: <History className="w-5 h-5" />, label: 'Timesheets', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr'] },
     { id: 'activity', icon: <Clock className="w-5 h-5" />, label: 'Activity Log', roles: ['admin', 'agency_manager', 'project_manager', 'hr'] },
     { id: 'workflow', icon: <Network className="w-5 h-5" />, label: 'Workflow', roles: ['admin', 'agency_manager'] },
-    { id: 'strategist', icon: <Star className="w-5 h-5" />, label: 'Strategist', roles: ['admin', 'agency_manager', 'project_manager', 'sales_manager'] },
+    { id: 'strategist', icon: <Star className="w-5 h-5" />, label: 'Strategist', roles: ['admin', 'agency_manager', 'project_manager', 'sales_manager', 'team_head', 'specialist'] },
     { id: 'roadmap', icon: <BookOpen className="w-5 h-5" />, label: 'Agency Roadmap', roles: ['admin', 'agency_manager'] },
     { id: 'backups', icon: <Database className="w-5 h-5" />, label: 'Backups', roles: ['admin', 'agency_manager'] },
   ].filter(item => !item.roles || (me && item.roles.includes(me.role)));
