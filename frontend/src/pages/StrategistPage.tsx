@@ -191,10 +191,17 @@ export default function StrategistPage({ me }: { me: User | null }) {
     setRows(prev => prev.filter(r => r._id !== id));
   };
 
-  const updateCell = (id: string, field: keyof StrategyRow, value: string) => {
+  const updateCell = useCallback((id: string, col: keyof StrategyRow, val: string) => {
     setRows(prev => prev.map(r => {
       if (r._id !== id) return r;
-      return { ...r, [field]: value, _dirty: true };
+      const newRow = { ...r, [col]: val, _dirty: true };
+      
+      // If module changes, clear the assignee since it might no longer be valid for the new module's job designation
+      if (col === 'module' && val !== r.module) {
+        newRow.assignee = '';
+      }
+      
+      return newRow;
     }));
 
     // Auto-save for existing rows
@@ -205,8 +212,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
         autoSave(id);
       }, 1000);
     }
-  };
-
+  }, [modules, rows]);
   const autoSave = async (id: string) => {
     const row = rows.find(r => r._id === id);
     if (!row || row._isNew || !row.taskId) return;
@@ -597,11 +603,18 @@ export default function StrategistPage({ me }: { me: User | null }) {
                           className={selectClass(!canEdit('assignee'))}
                         >
                           <option value="" className="bg-background">—</option>
-                          {users.map(u => (
-                            <option key={u.id} value={u.id} className="bg-background">
-                              {u.first_name || u.email}
-                            </option>
-                          ))}
+                          {users
+                            .filter(u => {
+                              if (!row.module) return true;
+                              const selectedMod = modules.find(m => m.id.toString() === row.module);
+                              if (!selectedMod || !selectedMod.job_title_name) return true;
+                              return u.title === selectedMod.job_title_name;
+                            })
+                            .map(u => (
+                              <option key={u.id} value={u.id} className="bg-background">
+                                {u.first_name || u.email} {u.title ? `(${u.title})` : ''}
+                              </option>
+                            ))}
                         </select>
                       </div>
 
