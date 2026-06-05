@@ -1,23 +1,28 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Plus, Trash2, Loader2, Layers, CheckCircle2, X, Edit2 } from 'lucide-react';
 import { api } from '../api';
-import type { WorkModule, User } from '../api';
+import type { WorkModule, User, JobTitle } from '../api';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function ModulesPage({ me: _me }: { me: User | null }) {
   const [modules, setModules] = useState<WorkModule[]>([]);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [newName, setNewName] = useState('');
+  const [selectedJobTitle, setSelectedJobTitle] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const r = await api.getModules({ archived: showArchived });
-      setModules(r.data);
+      const [mRes, jtRes] = await Promise.all([
+        api.getModules({ archived: showArchived }),
+        api.getJobTitles(),
+      ]);
+      setModules(mRes.data);
+      setJobTitles(jtRes.data);
     } catch (err) {
       console.error(err);
     }
@@ -26,6 +31,13 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
 
   useEffect(() => { Promise.resolve().then(() => load()); }, [load]);
 
+  const resetForm = () => {
+    setNewName('');
+    setSelectedJobTitle('');
+    setEditingId(null);
+    setShowModal(false);
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
@@ -33,14 +45,13 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
     setError('');
     try {
       const safeSlug = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const jobTitleVal = selectedJobTitle ? Number(selectedJobTitle) : null;
       if (editingId) {
-        await api.updateModule(editingId, { name: newName, slug: safeSlug });
+        await api.updateModule(editingId, { name: newName, slug: safeSlug, job_title: jobTitleVal });
       } else {
-        await api.createModule({ name: newName, slug: safeSlug });
+        await api.createModule({ name: newName, slug: safeSlug, job_title: jobTitleVal });
       }
-      setNewName('');
-      setEditingId(null);
-      setShowModal(false);
+      resetForm();
       load();
     } catch (err: unknown) {
       const errorMsg = (err as { response?: { data?: { name?: string[] } } })?.response?.data?.name?.[0] || 'Failed to save module';
@@ -51,6 +62,7 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
   const startEdit = (mod: WorkModule) => {
     setNewName(mod.name);
     setEditingId(mod.id);
+    setSelectedJobTitle(mod.job_title?.toString() || '');
     setShowModal(true);
   };
 
@@ -130,7 +142,11 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
               </div>
             </div>
             <h3 className="text-lg font-bold">{mod.name}</h3>
-            <p className="text-xs text-text-muted mt-1 uppercase tracking-widest font-black opacity-40">Workflow Category</p>
+            {mod.job_title_name ? (
+              <p className="text-xs text-primary mt-1 font-bold italic">Requires Specialist: {mod.job_title_name}</p>
+            ) : (
+              <p className="text-xs text-text-muted mt-1 uppercase tracking-widest font-black opacity-40">Workflow Category</p>
+            )}
             <div className="mt-6 flex items-center gap-2 text-[10px] font-black uppercase text-emerald-500/60">
                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
                Operational
@@ -155,7 +171,7 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
                 <h3 className="text-2xl font-black italic">{editingId ? 'Edit Module' : 'Create Module'}</h3>
                 <p className="text-xs text-text-muted mt-1 uppercase tracking-widest font-black opacity-50">{editingId ? 'Update category details' : 'Define a new task category'}</p>
               </div>
-              <button onClick={() => { setShowModal(false); setEditingId(null); setNewName(''); }} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+              <button onClick={resetForm} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -169,14 +185,29 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
                   placeholder="e.g. Graphic Design"
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm focus:border-primary outline-none transition-all placeholder:text-text-muted/40"
+                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm focus:border-primary outline-none transition-all placeholder:text-text-muted/40 text-white"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-text-muted">Job Title / Specialist Allowed</label>
+                <select
+                  value={selectedJobTitle}
+                  onChange={e => setSelectedJobTitle(e.target.value)}
+                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm focus:border-primary outline-none transition-all text-white cursor-pointer"
+                  style={{ colorScheme: 'dark' }}
+                >
+                  <option value="" className="bg-background">Select job title (optional)</option>
+                  {jobTitles.map(jt => (
+                    <option key={jt.id} value={jt.id} className="bg-background">{jt.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex gap-3 pt-4">
                 <button 
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={resetForm}
                   className="flex-1 py-4 text-xs font-black uppercase text-text-muted hover:text-text transition-colors"
                 >
                   Cancel

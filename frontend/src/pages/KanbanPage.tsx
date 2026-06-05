@@ -67,6 +67,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
         project: Number(taskForm.project),
         module: taskForm.module ? Number(taskForm.module) : null,
       });
+      alert('Task created successfully!');
       setShowAddModal(false);
       setTaskForm({ title: '', project: '', module: '', priority: 'medium' });
       load();

@@ -18,7 +18,7 @@ const ROLES = [
   { value: 'team_head', label: '⭐ Team Head' },
   { value: 'project_manager', label: '🎯 Project Manager' },
   { value: 'admin', label: '🔴 Admin' },
-  { value: 'sales_manager', label: '💰 Sales Manager' },
+  { value: 'sales_manager', label: '💰 Strategist' },
   { value: 'hr', label: '🛡️ Human Resources' },
 ];
 
@@ -589,7 +589,7 @@ export default function TeamPage({ me }: { me: User | null }) {
       <div className="flex flex-wrap gap-3">
         {Object.entries(roleStats).map(([role, count]) => (
           <span key={role} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${ROLE_COLORS[role] || 'text-text-muted bg-surface/50 border-border'}`}>
-            <Shield className="w-3 h-3" /> {role.replace('_', ' ')} ({count})
+            <Shield className="w-3 h-3" /> {(role === 'sales_manager' ? 'strategist' : role.replace('_', ' '))} ({count})
           </span>
         ))}
       </div>
@@ -663,7 +663,7 @@ export default function TeamPage({ me }: { me: User | null }) {
                   <p className="text-xs text-text-muted truncate">{user.email}</p>
                 </div>
                 <span className={`inline-flex items-center gap-1 mt-3 px-3 py-1 rounded-full text-xs font-semibold border capitalize ${ROLE_COLORS[user.role || 'specialist'] || 'text-text-muted bg-surface/50 border-border'}`}>
-                  <User2 className="w-3 h-3" /> {(user.role || 'specialist').replace('_', ' ')}
+                  <User2 className="w-3 h-3" /> {(user.role === 'sales_manager' ? 'strategist' : (user.role || 'specialist').replace('_', ' '))}
                 </span>
                 <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-2 gap-2 text-center">
                   <div className="flex flex-col items-center">

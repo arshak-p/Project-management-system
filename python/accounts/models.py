@@ -21,7 +21,7 @@ class User(AbstractUser):
         TEAM_HEAD = "team_head", "Team Head"
         SPECIALIST = "specialist", "Specialist / Creator"
         HR = "hr", "Human Resources"
-        SALES_MANAGER = "sales_manager", "Sales Manager"
+        SALES_MANAGER = "sales_manager", "Strategist"
         CLIENT = "client", "Client"
 
     email = models.EmailField("email address", unique=True)

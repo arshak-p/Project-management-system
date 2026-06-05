@@ -140,29 +140,17 @@ class SendOTPView(APIView):
         
         EmailOTP.objects.create(email=email, otp=otp_code)
 
-        import threading
-        def send_otp_email(email_addr, code):
-            try:
-                send_mail(
-                    subject='Welcome to Colour Parrot! - Your Tactical Clearance Code',
-                    message=(
-                        f'Hello,\n\n'
-                        'You are being recruited to the Colour Parrot Command Center. '
-                        f'Your unique tactical clearance code is: {code}\n\n'
-                        'System Portal: https://c1r9rt-workflow.in\n\n'
-                        'Please enter this code on the verification screen to finalize your account setup.\n\n'
-                        'Best regards,\n'
-                        'The Colour Parrot Team'
-                    ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[email_addr],
-                    fail_silently=False,
-                )
-            except Exception as e:
-                print(f"BACKGROUND SMTP FAILURE: {str(e)}")
-
-        # Start email in background so response is INSTANT
-        threading.Thread(target=send_otp_email, args=(email, otp_code)).start()
+        subject = 'Welcome to Colour Parrot! - Your Tactical Clearance Code'
+        message = (
+            f'Hello,\n\n'
+            'You are being recruited to the Colour Parrot Command Center. '
+            f'Your unique tactical clearance code is: {otp_code}\n\n'
+            'System Portal: https://c1r9rt-workflow.in\n\n'
+            'Please enter this code on the verification screen to finalize your account setup.\n\n'
+            'Best regards,\n'
+            'The Colour Parrot Team'
+        )
+        send_reliable_email_async(subject, message, [email])
 
         return Response({
             'detail': f'CODE: {otp_code} (Dispatched)',

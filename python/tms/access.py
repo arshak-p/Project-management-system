@@ -24,10 +24,11 @@ def work_items_for_user(user: User, include_archived: bool = False, lightweight:
             "state",
             "module",
             "assignee",
+            "content_writer",
             "cycle",
             "department",
             "created_by",
-        ).prefetch_related("labels")
+        ).prefetch_related("labels", "time_logs")
 
     if not user.is_authenticated:
         return base.none()

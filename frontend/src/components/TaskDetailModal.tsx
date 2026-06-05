@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
-import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState } from '../api';
+import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState, WorkModule } from '../api';
 import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars, Link2, ShieldAlert, Database, Trash2, Upload } from 'lucide-react';
 import { getWsUrl } from '../config';
 
@@ -22,6 +22,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
   const [users, setUsers] = useState<User[]>([]);
   const [states, setStates] = useState<TaskState[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [modules, setModules] = useState<WorkModule[]>([]);
   
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('details');
@@ -42,14 +43,16 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
       api.getStates(),
       api.getAttachments(taskId).catch(() => ({ data: [] })),
       api.getActivity().catch(() => ({ data: [] })),
+      api.getModules().catch(() => ({ data: [] })),
     ])
-      .then(([tRes, cRes, tlRes, uRes, sRes, aRes, actRes]) => {
+      .then(([tRes, cRes, tlRes, uRes, sRes, aRes, actRes, mRes]) => {
         setTask(tRes.data);
         setComments(cRes.data);
         setTimeLogs(tlRes.data);
         setUsers(uRes.data);
         setStates(sRes.data);
         setAttachments(aRes.data);
+        setModules(mRes?.data || []);
         if (actRes && actRes.data) {
           setActivities(actRes.data.filter((a: any) => a.entity_type === 'work_item' && a.entity_id === taskId.toString()));
         }
@@ -315,12 +318,14 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                       </div>
                     ))}
                   </div>
-                  <form onSubmit={handleAddComment} className="glass p-2 pl-4 rounded-2xl border border-primary/30 flex items-end gap-2 shrink-0">
-                    <textarea value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Type your comment..." className="flex-1 bg-transparent resize-none outline-none py-2 text-sm min-h-[44px] max-h-[120px]" rows={1} />
-                    <button type="submit" disabled={addingComment || !newComment.trim()} className="p-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl hover:opacity-90 disabled:opacity-50">
-                      {addingComment ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
-                    </button>
-                  </form>
+                  {me?.role !== 'hr' && (
+                    <form onSubmit={handleAddComment} className="glass p-2 pl-4 rounded-2xl border border-primary/30 flex items-end gap-2 shrink-0">
+                      <textarea value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Type your comment..." className="flex-1 bg-transparent resize-none outline-none py-2 text-sm min-h-[44px] max-h-[120px]" rows={1} />
+                      <button type="submit" disabled={addingComment || !newComment.trim()} className="p-2.5 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-xl hover:opacity-90 disabled:opacity-50">
+                        {addingComment ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
+                      </button>
+                    </form>
+                  )}
                 </div>
               )}
 
@@ -360,14 +365,16 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                       </div>
                     ))}
                   </div>
-                  <form onSubmit={handleAddTimeLog} className="glass p-4 rounded-2xl border border-border/80 shrink-0">
-                    <h4 className="text-sm font-bold mb-3 flex items-center gap-2"><Plus className="w-4 h-4" /> Add Time Log</h4>
-                    <div className="flex gap-3">
-                      <input type="number" required min="1" value={timeLogObj.minutes} onChange={e => setTimeLogObj({...timeLogObj, minutes: e.target.value})} placeholder="Minutes (e.g. 90)" className="w-32 px-3 py-2 bg-surface text-sm rounded-xl border border-border outline-none focus:border-primary" />
-                      <input type="text" value={timeLogObj.note} onChange={e => setTimeLogObj({...timeLogObj, note: e.target.value})} placeholder="What did you work on?" className="flex-1 px-3 py-2 bg-surface text-sm rounded-xl border border-border outline-none focus:border-primary" />
-                      <button type="submit" disabled={addingTime || !timeLogObj.minutes} className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50">Log</button>
-                    </div>
-                  </form>
+                  {me?.role !== 'hr' && (
+                    <form onSubmit={handleAddTimeLog} className="glass p-4 rounded-2xl border border-border/80 shrink-0">
+                      <h4 className="text-sm font-bold mb-3 flex items-center gap-2"><Plus className="w-4 h-4" /> Add Time Log</h4>
+                      <div className="flex gap-3">
+                        <input type="number" required min="1" value={timeLogObj.minutes} onChange={e => setTimeLogObj({...timeLogObj, minutes: e.target.value})} placeholder="Minutes (e.g. 90)" className="w-32 px-3 py-2 bg-surface text-sm rounded-xl border border-border outline-none focus:border-primary" />
+                        <input type="text" value={timeLogObj.note} onChange={e => setTimeLogObj({...timeLogObj, note: e.target.value})} placeholder="What did you work on?" className="flex-1 px-3 py-2 bg-surface text-sm rounded-xl border border-border outline-none focus:border-primary" />
+                        <button type="submit" disabled={addingTime || !timeLogObj.minutes} className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50">Log</button>
+                      </div>
+                    </form>
+                  )}
                 </div>
               )}
 
@@ -385,8 +392,9 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                         placeholder="https://drive...&#10;https://frame.io/..." 
                         value={task.reference_link || ''}
                         onChange={e => handleUpdateField('reference_link', e.target.value)}
+                        disabled={me?.role === 'hr'}
                         rows={3}
-                        className="flex-1 px-4 py-2 bg-surface border border-border rounded-xl text-xs focus:border-primary outline-none transition-all shadow-sm custom-scrollbar"
+                        className="flex-1 px-4 py-2 bg-surface border border-border rounded-xl text-xs focus:border-primary outline-none transition-all shadow-sm custom-scrollbar disabled:opacity-50"
                       />
                     </div>
                   </div>
@@ -399,8 +407,8 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                       <p className="text-[10px] text-text-muted mt-1 leading-relaxed">Upload specific files or assets directly to this task.</p>
                     </div>
                     <div>
-                      <input type="file" id="file-upload" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
-                      <label htmlFor="file-upload" className={`flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-bold cursor-pointer hover:bg-primary hover:text-white transition-all ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <input type="file" id="file-upload" className="hidden" onChange={handleFileUpload} disabled={isUploading || me?.role === 'hr'} />
+                      <label htmlFor="file-upload" className={`flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-bold cursor-pointer hover:bg-primary hover:text-white transition-all ${isUploading || me?.role === 'hr' ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}>
                         {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                         {isUploading ? 'Uploading...' : 'Upload File'}
                       </label>
@@ -477,19 +485,25 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               <select 
                 value={task.state} 
                 onChange={e => handleUpdateField('state', Number(e.target.value))}
-                className={`w-full px-3 py-2.5 bg-surface border rounded-xl text-sm outline-none transition-all shadow-sm ${task.state_slug === 'client-review' ? 'border-[#8b5cf6] shadow-[0_0_15px_rgba(139,92,246,0.1)]' : 'border-border focus:border-primary'}`}
+                disabled={me?.role === 'hr'}
+                className={`w-full px-3 py-2.5 bg-surface border rounded-xl text-sm outline-none transition-all shadow-sm ${task.state_slug === 'client-review' ? 'border-[#8b5cf6] shadow-[0_0_15px_rgba(139,92,246,0.1)]' : 'border-border focus:border-primary'} ${me?.role === 'hr' ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {states
                   .filter(s => {
-                    if (me?.role !== 'specialist') return true; // Managers see all states
-                    // Specialists cannot skip to Client Review or Completed
-                    return !['client-review', 'completed-launched', 'archived'].includes(s.slug);
+                    if (s.id === task.state) return true; // Always include current state
+                    if (me?.role === 'specialist') {
+                      return ['in-progress', 'team-head-review'].includes(s.slug);
+                    }
+                    if (me?.role === 'team_head') {
+                      return ['in-progress', 'client-review', 'rework-revision'].includes(s.slug);
+                    }
+                    return true; // Admins, PMs, etc. see all states
                   })
                   .map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
 
-            {task.state_slug === 'team-head-review' && (me?.role === 'admin' || me?.role === 'team_head') && (
+            {task.state_slug === 'team-head-review' && (me?.role === 'admin' || me?.role === 'team_head' || me?.role === 'project_manager') && (
               <div className="pt-2 animate-in slide-in-from-top-2 flex flex-col gap-2">
                 <button 
                   onClick={async () => {
@@ -539,11 +553,18 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               <select 
                 value={task.assignee?.id || ''} 
                 onChange={e => handleUpdateField('assignee_id', e.target.value ? Number(e.target.value) : null)}
-                disabled={users.length === 0}
+                disabled={users.length === 0 || me?.role === 'hr'}
                 className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:border-primary outline-none hover:border-primary/50 transition-colors disabled:opacity-50"
               >
                 <option value="">Unassigned</option>
-                {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
+                {users
+                  .filter(u => {
+                    if (!task.module) return true;
+                    const selectedMod = modules.find(m => m.id === task.module);
+                    if (!selectedMod || !selectedMod.job_title_name) return true;
+                    return u.title === selectedMod.job_title_name;
+                  })
+                  .map(u => <option key={u.id} value={u.id}>{u.first_name || u.email} {u.title ? `(${u.title})` : ''}</option>)}
               </select>
             </div>
 
@@ -580,7 +601,8 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                   type="date"
                   value={task.deadline || ''}
                   onChange={e => handleUpdateField('deadline', e.target.value || null)}
-                  className="w-full px-2 py-2 bg-red-500/5 border border-red-500/20 rounded-lg text-xs focus:border-red-500 outline-none hover:border-red-500/50 transition-colors font-bold"
+                  disabled={me?.role === 'hr'}
+                  className="w-full px-2 py-2 bg-red-500/5 border border-red-500/20 rounded-lg text-xs focus:border-red-500 outline-none hover:border-red-500/50 transition-colors font-bold disabled:opacity-50"
                   style={{ colorScheme: 'dark' }}
                 />
               </div>
@@ -593,7 +615,8 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                   type="date"
                   value={task.due_date || ''}
                   onChange={e => handleUpdateField('due_date', e.target.value || null)}
-                  className="w-full px-2 py-2 bg-amber-500/5 border border-amber-500/20 rounded-lg text-xs focus:border-amber-500 outline-none hover:border-amber-500/50 transition-colors font-bold"
+                  disabled={me?.role === 'hr'}
+                  className="w-full px-2 py-2 bg-amber-500/5 border border-amber-500/20 rounded-lg text-xs focus:border-amber-500 outline-none hover:border-amber-500/50 transition-colors font-bold disabled:opacity-50"
                   style={{ colorScheme: 'dark' }}
                 />
               </div>
@@ -606,7 +629,8 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                   type="date"
                   value={task.scheduled_date || ''}
                   onChange={e => handleUpdateField('scheduled_date', e.target.value || null)}
-                  className="w-full px-2 py-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg text-xs focus:border-emerald-500 outline-none hover:border-emerald-500/50 transition-colors font-bold"
+                  disabled={me?.role === 'hr'}
+                  className="w-full px-2 py-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg text-xs focus:border-emerald-500 outline-none hover:border-emerald-500/50 transition-colors font-bold disabled:opacity-50"
                   style={{ colorScheme: 'dark' }}
                 />
               </div>
@@ -619,9 +643,10 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
               <textarea 
                 value={task.reference_link || ''}
                 onChange={e => handleUpdateField('reference_link', e.target.value || null)}
+                disabled={me?.role === 'hr'}
                 placeholder="Paste links here (separated by newlines)..."
                 rows={3}
-                className="w-full px-3 py-2.5 bg-surface/50 border border-border rounded-xl text-xs focus:border-primary outline-none hover:border-primary/50 transition-colors custom-scrollbar"
+                className="w-full px-3 py-2.5 bg-surface/50 border border-border rounded-xl text-xs focus:border-primary outline-none hover:border-primary/50 transition-colors custom-scrollbar disabled:opacity-50"
               />
             </div>
 

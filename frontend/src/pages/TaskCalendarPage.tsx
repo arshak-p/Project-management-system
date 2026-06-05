@@ -62,6 +62,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
         deadline: form.deadline || null,
         posting_date: form.posting_date || null,
       });
+      alert('Task created successfully!');
       setShowCreateModal(false);
       setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', due_date: '', scheduled_date: '', deadline: '', posting_date: '', assignee: '' });
       load();

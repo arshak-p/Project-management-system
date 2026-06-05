@@ -324,6 +324,14 @@ class WorkItemSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
     )
+    content_writer = UserBriefSerializer(read_only=True)
+    content_writer_id = serializers.PrimaryKeyRelatedField(
+        source="content_writer",
+        queryset=User.objects.all(),
+        allow_null=True,
+        write_only=True,
+        required=False,
+    )
     state_slug = serializers.SlugField(source="state.slug", read_only=True)
     state__name = serializers.CharField(source="state.name", read_only=True)
     project__slug = serializers.SlugField(source="project.slug", read_only=True)
@@ -348,6 +356,8 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "module_slug",
             "assignee",
             "assignee_id",
+            "content_writer",
+            "content_writer_id",
             "posting_date",
             "due_date",
             "deadline",

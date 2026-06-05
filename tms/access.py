@@ -24,10 +24,11 @@ def work_items_for_user(user: User, include_archived: bool = False, lightweight:
             "state",
             "module",
             "assignee",
+            "content_writer",
             "cycle",
             "department",
             "created_by",
-        ).prefetch_related("labels")
+        ).prefetch_related("labels", "time_logs")
 
     if not user.is_authenticated:
         return base.none()
@@ -74,8 +75,8 @@ def projects_for_user(user: User, include_archived: bool = False) -> QuerySet:
 
 def users_for_user(user: User, include_archived: bool = False) -> QuerySet[User]:
     """
-    Agency Manager, HR, PM: All users.
-    Team Head: Only users sharing their Job Title (Team).
+    Agency Manager, HR, PM, and Strategist: All users.
+    Team Head: Only see members with the same Job Title (or if Content Writer Team Head, see all Content Writers).
     """
     from accounts.models import User as AccountUser
     qs = AccountUser.objects.filter(is_superuser=False)
@@ -85,14 +86,21 @@ def users_for_user(user: User, include_archived: bool = False) -> QuerySet[User]
     if not user.is_authenticated:
         return qs.none()
     
-    # Agency Manager (Admin), HR, and Project Manager can see everyone
-    if user.is_superuser or user.role in (AccountUser.Role.ADMIN, AccountUser.Role.PROJECT_MANAGER, AccountUser.Role.HR):
+    # Agency Manager (Admin), HR, Project Manager, and Strategist can see everyone
+    if user.is_superuser or user.role in (
+        AccountUser.Role.ADMIN,
+        AccountUser.Role.PROJECT_MANAGER,
+        AccountUser.Role.HR,
+        AccountUser.Role.SALES_MANAGER,
+    ):
         return qs
 
-    # Team Head: Only see members with the same Job Title
+    # Team Head: Only see members with the same Job Title, or if Content Writer Team Head, see all Content Writers
     if user.role == AccountUser.Role.TEAM_HEAD:
         user_title = getattr(user, "title", "")
         if user_title:
+            if "content writer" in user_title.lower():
+                return qs.filter(title__icontains="content writer")
             return qs.filter(title=user_title)
         return qs.filter(id=user.id) # Fallback to just themselves
 
@@ -105,17 +113,21 @@ def can_edit_work_item(user: User, work_item: WorkItem) -> bool:
     if user.is_superuser or user.role == User.Role.ADMIN:
         return True
     if user.role == User.Role.SALES_MANAGER:
-        return False
+        return True
     if user.role == User.Role.CLIENT:
         return work_item.project_id == user_client_project_id(user)
     if user.role == User.Role.PROJECT_MANAGER:
         return True
     if user.role == User.Role.TEAM_HEAD:
+        user_title = getattr(user, "title", "")
+        # Content Writer Team Head can edit to assign/manage content writers
+        if user_title and "content writer" in user_title.lower():
+            return True
+
         if work_item.assignee_id == user.id:
             return True
             
         dept_id = user_department_id(user)
-        user_title = getattr(user, "title", "")
         
         # Check by Title (The new way)
         if user_title and work_item.assignee and work_item.assignee.title == user_title:
@@ -132,7 +144,7 @@ def can_edit_work_item(user: User, work_item: WorkItem) -> bool:
             return True
         return False
     if user.role == User.Role.SPECIALIST:
-        return work_item.assignee_id == user.id
+        return work_item.assignee_id == user.id or work_item.content_writer_id == user.id
     return False
 
 def client_may_approve_work_item(user: User, work_item: WorkItem) -> bool:

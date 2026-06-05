@@ -62,6 +62,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   const isAdmin = me?.role === 'admin' || me?.role === 'agency_manager';
   const isTeamHead = me?.role === 'team_head';
+  const isHR = me?.role === 'hr';
 
   const loadProfile = useCallback(async () => {
     try {
@@ -70,6 +71,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       // Redirect specialists to their specific view
       if (res.data.role === 'specialist' && page === 'overview') {
         setPage('my_tasks');
+      }
+      // HR lands on overview (not my_tasks)
+      if (res.data.role === 'hr' && page === 'my_tasks') {
+        setPage('overview');
       }
     } catch (err) {
       console.error("Profile load failed", err);
@@ -155,7 +160,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   `;
 
   const navItems = [
-    { id: 'overview', icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', roles: ['admin', 'agency_manager', 'project_manager', 'team_head'] },
+    { id: 'overview', icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr'] },
     { id: 'my_tasks', icon: <Target className="w-5 h-5" />, label: 'My Workspace', roles: ['specialist', 'team_head'] },
     { id: 'projects', icon: <Briefcase className="w-5 h-5" />, label: 'Projects', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr'] },
     { id: 'tasks', icon: <Boxes className="w-5 h-5" />, label: 'Tasks', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr'] },
@@ -164,10 +169,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     { id: 'calendar', icon: <Calendar className="w-5 h-5" />, label: 'Calendar', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr', 'specialist'] },
     { id: 'team', icon: <Users className="w-5 h-5" />, label: 'Team', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr'] },
     { id: 'intelligence', icon: <Zap className="w-5 h-5" />, label: 'Team Intelligence', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr'] },
-    { id: 'timesheets', icon: <History className="w-5 h-5" />, label: 'Timesheets', roles: ['admin', 'agency_manager', 'project_manager', 'team_head'] },
-    { id: 'activity', icon: <Clock className="w-5 h-5" />, label: 'Activity Log', roles: ['admin', 'agency_manager', 'project_manager'] },
+    { id: 'timesheets', icon: <History className="w-5 h-5" />, label: 'Timesheets', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr'] },
+    { id: 'activity', icon: <Clock className="w-5 h-5" />, label: 'Activity Log', roles: ['admin', 'agency_manager', 'project_manager', 'hr'] },
     { id: 'workflow', icon: <Network className="w-5 h-5" />, label: 'Workflow', roles: ['admin', 'agency_manager'] },
-    { id: 'strategist', icon: <Star className="w-5 h-5" />, label: 'Strategist', roles: ['admin', 'agency_manager'] },
+    { id: 'strategist', icon: <Star className="w-5 h-5" />, label: 'Strategist', roles: ['admin', 'agency_manager', 'project_manager', 'sales_manager'] },
     { id: 'roadmap', icon: <BookOpen className="w-5 h-5" />, label: 'Agency Roadmap', roles: ['admin', 'agency_manager'] },
     { id: 'backups', icon: <Database className="w-5 h-5" />, label: 'Backups', roles: ['admin', 'agency_manager'] },
   ].filter(item => !item.roles || (me && item.roles.includes(me.role)));
@@ -194,7 +199,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] md:translate-x-0'}
       `}>
         <div className="p-8 flex flex-col flex-1 min-h-0">
-          <div className="flex items-center gap-4 mb-10 group cursor-pointer shrink-0" onClick={() => handleNav((isAdmin || isTeamHead) ? 'overview' : 'my_tasks')}>
+          <div className="flex items-center gap-4 mb-10 group cursor-pointer shrink-0" onClick={() => handleNav((isAdmin || isTeamHead || isHR) ? 'overview' : 'my_tasks')}>
              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform shadow-glow">
                 <img src="/colour parrot-icon.png" alt="CP" className="w-7 h-7 object-contain" />
              </div>

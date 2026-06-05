@@ -57,6 +57,8 @@ export interface WorkModule {
   name: string;
   slug: string;
   is_active: boolean;
+  job_title?: number | null;
+  job_title_name?: string | null;
 }
 
 export interface Task {
@@ -75,6 +77,13 @@ export interface Task {
   scheduled_date: string | null;
   reference_link?: string;
   assignee: {
+    id: number;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    title?: string;
+  } | null;
+  content_writer: {
     id: number;
     email: string;
     first_name?: string;
@@ -307,4 +316,6 @@ export const api = {
   triggerManualBackup: () => apiClient.post('/backups/trigger-manual/'),
   sendCreationOTP: (email: string) => apiClient.post('/auth/send-creation-otp/', { email }),
   verifyCreationOTP: (email: string, otp: string) => apiClient.post('/auth/verify-creation-otp/', { email, otp }),
+  bulkCreateTasks: (items: object[]) => apiClient.post('work-items/bulk-create/', { items }),
+  getJobTitleUsers: (title: string) => apiClient.get('users/', { params: { title } }),
 };

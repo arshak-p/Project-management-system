@@ -94,6 +94,7 @@ export default function TasksPage({ me }: { me: User | null }) {
         scheduled_date: form.scheduled_date || null,
         reference_link: form.reference_link || null,
       });
+      alert('Task created successfully!');
       setShowForm(false);
       setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
       load();

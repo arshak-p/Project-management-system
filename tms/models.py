@@ -104,6 +104,14 @@ class Module(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=64, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    job_title = models.ForeignKey(
+        "JobTitle",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="modules",
+        help_text="Designation/Specialist type that is allowed to work on this module",
+    )
     is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
@@ -202,6 +210,14 @@ class WorkItem(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="assigned_work_items",
+    )
+    content_writer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="content_writer_work_items",
+        help_text="Content writer assigned to create content for this task",
     )
     due_date = models.DateField(null=True, blank=True)
     deadline = models.DateField(null=True, blank=True)

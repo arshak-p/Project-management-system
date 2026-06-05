@@ -94,6 +94,7 @@ export default function TasksPage({ me }: { me: User | null }) {
         scheduled_date: form.scheduled_date || null,
         reference_link: form.reference_link || null,
       });
+      alert('Task created successfully!');
       setShowForm(false);
       setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
       load();
@@ -206,7 +207,7 @@ export default function TasksPage({ me }: { me: User | null }) {
 
                 <div className="md:col-span-6 space-y-2.5">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Module / Scope</label>
-                  <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value })} required className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all cursor-pointer">
+                  <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value, assignee: '' })} required className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all cursor-pointer">
                     <option value="">Select Module *</option>
                     {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
@@ -239,7 +240,15 @@ export default function TasksPage({ me }: { me: User | null }) {
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted ml-1">Assign Specialist</label>
                   <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all cursor-pointer">
                     <option value="">Unassigned (Optional)</option>
-                    {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.email}</option>)}
+                    {users
+                      .filter(u => {
+                        if (!form.module) return true;
+                        const selectedMod = modules.find(m => m.id.toString() === form.module.toString());
+                        if (!selectedMod || !selectedMod.job_title_name) return true;
+                        // For Admin/PM, they can technically assign anyone, but UI filters to the right job title to help them
+                        return u.title === selectedMod.job_title_name;
+                      })
+                      .map(u => <option key={u.id} value={u.id}>{u.first_name || u.email} {u.title ? `(${u.title})` : ''}</option>)}
                   </select>
                 </div>
 

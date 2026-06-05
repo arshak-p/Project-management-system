@@ -203,6 +203,14 @@ class WorkItem(models.Model):
         on_delete=models.SET_NULL,
         related_name="assigned_work_items",
     )
+    content_writer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="content_writer_work_items",
+        help_text="Content writer assigned to create content for this task",
+    )
     due_date = models.DateField(null=True, blank=True)
     deadline = models.DateField(null=True, blank=True)
     posting_date = models.DateField(null=True, blank=True)

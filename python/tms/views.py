@@ -119,7 +119,7 @@ class JobTitleViewSet(SalesSafeViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_permissions(self):
-        if self.action in ("create", "update", "partial_update", "destroy"):
+        if self.action in ("create", "update", "partial_update", "destroy", "restore"):
             return [permissions.IsAuthenticated(), IsAgencyManagerOrHR()]
         return super().get_permissions()
 
@@ -146,7 +146,28 @@ class UserViewSet(SalesSafeViewSet):
 
     def get_queryset(self):
         include_archived = self.kwargs.get('pk') or self.request.query_params.get("archived") == "true"
-        return access.users_for_user(self.request.user, include_archived=include_archived).select_related("tms_profile")
+        qs = access.users_for_user(self.request.user, include_archived=include_archived).select_related("tms_profile")
+        
+        from django.db.models import Subquery, OuterRef, Count, Sum
+        from django.db.models.functions import Coalesce
+        from tms.models import WorkItem, TimeLog
+        
+        completed_subquery = Subquery(
+            WorkItem.objects.filter(
+                assignee=OuterRef('pk'),
+                state__slug__in=['completed-launched', 'completed', 'launched', 'done']
+            ).values('assignee').annotate(cnt=Count('id')).values('cnt')
+        )
+        total_time_subquery = Subquery(
+            TimeLog.objects.filter(
+                work_item__assignee=OuterRef('pk')
+            ).values('work_item__assignee').annotate(total=Sum('minutes')).values('total')
+        )
+        
+        return qs.annotate(
+            completed_tasks_count=Coalesce(completed_subquery, 0),
+            total_minutes_logged=Coalesce(total_time_subquery, 0)
+        )
 
     def get_permissions(self):
         if self.action in ("update", "partial_update", "retrieve"):
@@ -517,6 +538,39 @@ class WorkItemViewSet(SalesSafeViewSet):
             wi.save(update_fields=["state_id", "board_position", "updated_at"])
         return Response({"status": "ok"})
 
+    @action(detail=False, methods=["post"], url_path="bulk-create")
+    def bulk_create(self, request):
+        """Bulk create work items from strategy sheet."""
+        u = request.user
+        if not (
+            u.is_superuser
+            or u.role == User.Role.ADMIN
+            or u.role == User.Role.PROJECT_MANAGER
+            or u.role == User.Role.SALES_MANAGER
+        ):
+            raise PermissionDenied("Only admins, project managers, and strategists can bulk-create tasks.")
+
+        items_data = request.data.get("items", [])
+        if not items_data:
+            return Response({"error": "No items provided"}, status=400)
+
+        created = []
+        errors = []
+        for idx, item_data in enumerate(items_data):
+            serializer = self.get_serializer(data=item_data)
+            if serializer.is_valid():
+                serializer.save()
+                created.append(serializer.data)
+            else:
+                errors.append({"index": idx, "errors": serializer.errors})
+
+        return Response({
+            "created": created,
+            "errors": errors,
+            "total_created": len(created),
+            "total_errors": len(errors),
+        }, status=201 if created else 400)
+
 
 class WorkItemCommentViewSet(SalesSafeViewSet):
     serializer_class = WorkItemCommentSerializer
@@ -543,7 +597,7 @@ class WorkItemAttachmentViewSet(SalesSafeViewSet):
 
     def get_queryset(self):
         visible = access.work_items_for_user(self.request.user).values_list("id", flat=True)
-        return WorkItemAttachment.objects.filter(work_item_id__in=visible)
+        return WorkItemAttachment.objects.filter(work_item_id__in=visible).select_related("uploaded_by")
 
     def perform_create(self, serializer):
         wi = serializer.validated_data["work_item"]
@@ -829,7 +883,7 @@ class AgencyReportPDF(FPDF):
         self.ln(6)
 
 class BackupViewSet(viewsets.ModelViewSet):
-    queryset = Backup.objects.all()
+    queryset = Backup.objects.all().select_related("approved_by")
     serializer_class = BackupSerializer
 
     def get_permissions(self):
