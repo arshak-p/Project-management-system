@@ -1,8 +1,11 @@
 import os
 import subprocess
+import csv
 from django.conf import settings
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
+from django.http import HttpResponse
+from django.core.management import call_command
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -30,6 +33,7 @@ from tms.models import (
     WorkItemAttachment,
     WorkItemComment,
     Backup,
+    ProjectStrategy,
 )
 from tms.permissions import (
     BlockSalesWrites, IsAdminRole, IsPMOrAdmin, IsLeadPMOrAdmin, 
@@ -55,6 +59,7 @@ from tms.serializers import (
     WorkItemAttachmentSerializer,
     WorkItemCommentSerializer,
     WorkItemSerializer,
+    ProjectStrategySerializer,
 )
 
 
@@ -411,7 +416,7 @@ class CycleMemberViewSet(SalesSafeViewSet):
 
 class WorkItemViewSet(SalesSafeViewSet):
     serializer_class = WorkItemSerializer
-    filterset_fields = ("project", "state", "module", "assignee", "cycle", "posting_date", "due_date", "deadline")
+    filterset_fields = ("project", "state", "module", "assignee", "cycle", "posting_date", "due_date", "deadline", "strategy")
     search_fields = ("title", "task_code", "description")
 
     def get_permissions(self):
@@ -705,6 +710,16 @@ class WorkItemCommentViewSet(SalesSafeViewSet):
             raise PermissionDenied()
         serializer.save()
 
+    def perform_update(self, serializer):
+        if self.request.user != serializer.instance.author and getattr(self.request.user, "role", None) not in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]:
+            raise PermissionDenied("You can only edit your own comments.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if self.request.user != instance.author and getattr(self.request.user, "role", None) not in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]:
+            raise PermissionDenied("You can only delete your own comments.")
+        instance.delete()
+
 
 class WorkItemAttachmentViewSet(SalesSafeViewSet):
     serializer_class = WorkItemAttachmentSerializer
@@ -722,6 +737,16 @@ class WorkItemAttachmentViewSet(SalesSafeViewSet):
             raise PermissionDenied()
         serializer.save()
 
+    def perform_update(self, serializer):
+        if self.request.user != serializer.instance.uploaded_by and getattr(self.request.user, "role", None) not in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]:
+            raise PermissionDenied("You can only edit your own attachments.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if self.request.user != instance.uploaded_by and getattr(self.request.user, "role", None) not in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]:
+            raise PermissionDenied("You can only delete your own attachments.")
+        instance.delete()
+
 
 class TimeLogViewSet(SalesSafeViewSet):
     serializer_class = TimeLogSerializer
@@ -738,6 +763,16 @@ class TimeLogViewSet(SalesSafeViewSet):
         if self.request.user.role == User.Role.SALES_MANAGER:
             raise PermissionDenied()
         serializer.save()
+
+    def perform_update(self, serializer):
+        if self.request.user != serializer.instance.user and getattr(self.request.user, "role", None) not in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]:
+            raise PermissionDenied("You can only edit your own time logs.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if self.request.user != instance.user and getattr(self.request.user, "role", None) not in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]:
+            raise PermissionDenied("You can only delete your own time logs.")
+        instance.delete()
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
@@ -936,6 +971,70 @@ class AnalyticsSummaryView(APIView):
         )
 
 
+class BestWorkerView(APIView):
+    """Calculates the best worker of the last 30 days based on performance score."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        import math
+        from django.utils.timezone import now, timedelta
+        
+        start_date = now() - timedelta(days=30)
+        users = User.objects.filter(is_active=True, is_superuser=False)
+        
+        terminal_states = ['completed-launched', 'completed', 'launched', 'done']
+        
+        user_stats = users.annotate(
+            tasks_completed=Count(
+                'assigned_work_items', 
+                filter=Q(
+                    assigned_work_items__state__slug__in=terminal_states,
+                    assigned_work_items__updated_at__gte=start_date
+                )
+            ),
+            time_logged=Sum(
+                'time_logs__minutes',
+                filter=Q(time_logs__created_at__gte=start_date)
+            )
+        )
+
+        leaderboard = []
+        for u in user_stats:
+            tasks_completed = u.tasks_completed or 0
+            time_logged_mins = u.time_logged or 0
+            time_logged_hours = time_logged_mins / 60.0
+            
+            efficiency = 0
+            if time_logged_mins > 0:
+                efficiency = min(100, int((tasks_completed * 90) / time_logged_mins * 100))
+            elif tasks_completed > 0:
+                efficiency = 100
+                
+            score = (tasks_completed * 50) + (time_logged_hours * 10) + efficiency
+            
+            if tasks_completed == 0 and time_logged_mins == 0:
+                score = -1
+                
+            if score > -1:
+                leaderboard.append({
+                    "id": u.id,
+                    "name": f"{u.first_name or ''} {u.last_name or ''}".strip() or u.email,
+                    "title": u.title or u.get_role_display(),
+                    "avatar": u.avatar.url if u.avatar else None,
+                    "score": math.floor(score),
+                    "tasks_completed": tasks_completed,
+                    "time_logged_hours": round(time_logged_hours, 1),
+                    "efficiency": efficiency
+                })
+
+        leaderboard.sort(key=lambda x: x['score'], reverse=True)
+        
+        return Response({
+            "best_worker": leaderboard[0] if leaderboard else None,
+            "runner_ups": leaderboard[1:4] if len(leaderboard) > 1 else []
+        })
+
+
 class CycleProgressView(APIView):
     """Per-cycle task counts for sprint tracking."""
 
@@ -952,12 +1051,6 @@ class CycleProgressView(APIView):
         items = WorkItem.objects.filter(cycle=cy)
         by_state = list(items.values("state__slug", "state__name").annotate(c=Count("id")))
         return Response({"cycle_id": cy.id, "name": cy.name, "by_state": by_state})
-
-import zipfile
-import io
-import csv
-from django.http import HttpResponse
-
 
 
 from fpdf import FPDF
@@ -996,6 +1089,106 @@ class AgencyReportPDF(FPDF):
         self.set_line_width(0.5)
         self.line(self.get_x(), self.get_y(), self.get_x() + 180, self.get_y())
         self.ln(6)
+
+class ProjectStrategyViewSet(viewsets.ModelViewSet):
+    queryset = ProjectStrategy.objects.select_related("project", "created_by").all()
+    serializer_class = ProjectStrategySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        project_id = self.request.query_params.get("project")
+        if project_id:
+            qs = qs.filter(project_id=project_id)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    @action(detail=True, methods=["post"])
+    def deploy(self, request, pk=None):
+        strategy = self.get_object()
+        if strategy.is_deployed:
+            return Response({"detail": "Strategy is already deployed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Set as deployed
+        strategy.is_deployed = True
+        strategy.save(update_fields=["is_deployed"])
+
+        project = strategy.project
+        # Get all work items assigned to this strategy
+        work_items = WorkItem.objects.filter(strategy=strategy).select_related('content_writer')
+        
+        # Determine stakeholders
+        writers_to_notify = set()
+        for item in work_items:
+            if item.content_writer:
+                writers_to_notify.add(item.content_writer)
+
+        msg = f"New strategy '{strategy.name}' has been deployed for project {project.name}."
+
+        # Notify Project Manager if exists
+        pms = User.objects.filter(role=User.Role.PROJECT_MANAGER, is_active=True)
+        # Ideally only PMs associated with the project, but we'll notify project managers linked to this project
+        # In this system, agency manager / admin are superusers, and PMs might be general or specific.
+        # Let's notify PMs who are project members
+        project_pms = User.objects.filter(projectmember__project=project, role=User.Role.PROJECT_MANAGER)
+        if not project_pms.exists():
+            project_pms = pms  # Fallback to all PMs if none directly assigned
+            
+        for pm in project_pms:
+            Notification.objects.create(
+                user=pm,
+                title="Strategy Deployed",
+                message=msg,
+                link=f"/strategist?project={project.id}"
+            )
+
+        # Notify Content Writers
+        for writer in writers_to_notify:
+            Notification.objects.create(
+                user=writer,
+                title="Strategy Deployed - New Tasks",
+                message=f"You have been assigned to tasks in the deployed strategy '{strategy.name}' for {project.name}.",
+                link="/my-tasks"
+            )
+
+        # Also notify Team Heads
+        ths = User.objects.filter(role=User.Role.TEAM_HEAD, is_active=True)
+        for th in ths:
+            Notification.objects.create(
+                user=th,
+                title="Strategy Deployed - Supervision Needed",
+                message=f"Strategy '{strategy.name}' has been deployed for project {project.name}.",
+                link="/kanban"
+            )
+
+        return Response({"status": "Strategy deployed successfully."})
+
+    @action(detail=True, methods=["get"], url_path="export-sheet")
+    def export_sheet(self, request, pk=None):
+        strategy = self.get_object()
+        work_items = WorkItem.objects.filter(strategy=strategy).select_related("state", "assignee", "content_writer", "module")
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="Strategy_Sheet_{strategy.name}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Task Code', 'Title', 'Module', 'Assignee', 'Content Writer', 'State', 'Due Date', 'Posting Date'])
+        
+        for item in work_items:
+            writer.writerow([
+                item.task_code,
+                item.title,
+                item.module.name if item.module else '',
+                item.assignee.get_full_name() if item.assignee else '',
+                item.content_writer.get_full_name() if item.content_writer else '',
+                item.state.name if item.state else '',
+                item.due_date or '',
+                item.posting_date or ''
+            ])
+            
+        return response
 
 class BackupViewSet(viewsets.ModelViewSet):
     queryset = Backup.objects.all().select_related("approved_by")
@@ -1184,5 +1377,25 @@ class BackupViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="Full_Agency_Backup_{backup.month}.zip"'
         return response
 
+    @action(detail=True, methods=["get"], url_path="download")
+    def download(self, request, pk=None):
+        backup = self.get_object()
+        file_path = backup.file.path
+        if not os.path.exists(file_path):
+            return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        from django.http import FileResponse
+        response = FileResponse(open(file_path, 'rb'))
+        response['Content-Disposition'] = f'attachment; filename="Full_Agency_Backup_{backup.month}.zip"'
+        return response
 
-
+    @action(detail=False, methods=["post"], url_path="trigger-automated")
+    def trigger_automated(self, request):
+        if not (request.user.is_superuser or request.user.role == User.Role.ADMIN):
+            raise PermissionDenied("Only Admins can manually trigger an automated backup.")
+            
+        try:
+            call_command('run_monthly_backup')
+            return Response({"status": "Backup completed successfully"})
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

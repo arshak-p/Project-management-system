@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Plus, Search, Loader2, Database, CheckCircle2, Circle, AlertTriangle, ArrowUp, X } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { api } from '../api';
-import type { Project, TaskState, WorkModule, User, Task } from '../api';
+import type { Project, TaskState, WorkModule, User, Task, ProjectStrategy } from '../api';
 
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'text-red-400 bg-red-400/10',
@@ -23,6 +23,7 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [states, setStates] = useState<TaskState[]>([]);
   const [modules, setModules] = useState<WorkModule[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [strategies, setStrategies] = useState<ProjectStrategy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -41,7 +42,7 @@ export default function TasksPage({ me }: { me: User | null }) {
   const [endDate, setEndDate] = useState(() => {
     return new Date().toISOString().split('T')[0];
   });
-  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
+  const [form, setForm] = useState({ title: '', description: '', project: '', state: '', module: '', strategy: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -52,14 +53,16 @@ export default function TasksPage({ me }: { me: User | null }) {
       api.getProjects(), 
       api.getStates(), 
       api.getModules(), 
-      api.getAssignableUsers().catch(() => ({ data: [] }))
+      api.getAssignableUsers().catch(() => ({ data: [] })),
+      api.getStrategies().catch(() => ({ data: [] }))
     ])
-      .then(([t, p, s, m, u]) => {
+      .then(([t, p, s, m, u, st]) => {
         setTasks(t.data);
         setProjects(p.data);
         setStates(s.data);
         setModules(m.data);
         setUsers(u.data);
+        setStrategies(st.data);
       })
       .catch((err) => console.error('Fetching issue on Tasks:', err))
       .finally(() => setIsLoading(false));
@@ -87,6 +90,7 @@ export default function TasksPage({ me }: { me: User | null }) {
         project: Number(form.project),
         state: Number(form.state),
         module: Number(form.module),
+        strategy: form.strategy ? Number(form.strategy) : null,
         assignee_id: form.assignee ? Number(form.assignee) : null,
         due_date: form.due_date || null,
         deadline: form.deadline || null,
@@ -96,7 +100,7 @@ export default function TasksPage({ me }: { me: User | null }) {
       });
       alert('Task created successfully!');
       setShowForm(false);
-      setForm({ title: '', description: '', project: '', state: '', module: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
+      setForm({ title: '', description: '', project: '', state: '', module: '', strategy: '', priority: 'medium', posting_date: '', due_date: '', deadline: '', scheduled_date: '', reference_link: '', assignee: '' });
       load();
     } catch (err: unknown) {
       const errorData = (err as { response?: { data?: unknown } })?.response?.data;
@@ -210,6 +214,16 @@ export default function TasksPage({ me }: { me: User | null }) {
                   <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value, assignee: '' })} required className="w-full px-6 py-4 bg-surface border border-border rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all cursor-pointer">
                     <option value="">Select Module *</option>
                     {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="md:col-span-12 space-y-2.5">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 ml-1">Link to Strategy Sheet (Optional)</label>
+                  <select value={form.strategy} onChange={e => setForm({ ...form, strategy: e.target.value })} className="w-full px-6 py-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl text-sm font-bold focus:border-indigo-500 outline-none transition-all cursor-pointer text-indigo-100">
+                    <option value="">No Strategy</option>
+                    {strategies.filter(s => !form.project || s.project.toString() === form.project).map(s => (
+                      <option key={s.id} value={s.id}>{s.name} (Deployed: {s.is_deployed ? 'Yes' : 'No'})</option>
+                    ))}
                   </select>
                 </div>
 

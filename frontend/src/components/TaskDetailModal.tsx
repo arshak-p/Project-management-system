@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
-import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState, WorkModule } from '../api';
+import type { Task, TaskComment, TimeLog, WorkItemAttachment, User, TaskState, WorkModule, ProjectStrategy } from '../api';
 import { Loader2, X, MessageSquare, Clock, User2, AlignLeft, ChevronRight, Activity, Paperclip, FileIcon, Download, ShieldCheck, Stars, Link2, ShieldAlert, Database, Trash2, Upload } from 'lucide-react';
 import { getWsUrl } from '../config';
 
@@ -23,6 +23,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
   const [states, setStates] = useState<TaskState[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [modules, setModules] = useState<WorkModule[]>([]);
+  const [strategies, setStrategies] = useState<ProjectStrategy[]>([]);
   
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('details');
@@ -44,8 +45,9 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
       api.getAttachments(taskId).catch(() => ({ data: [] })),
       api.getActivity().catch(() => ({ data: [] })),
       api.getModules().catch(() => ({ data: [] })),
+      api.getStrategies().catch(() => ({ data: [] })),
     ])
-      .then(([tRes, cRes, tlRes, uRes, sRes, aRes, actRes, mRes]) => {
+      .then(([tRes, cRes, tlRes, uRes, sRes, aRes, actRes, mRes, stratRes]) => {
         setTask(tRes.data);
         setComments(cRes.data);
         setTimeLogs(tlRes.data);
@@ -53,6 +55,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
         setStates(sRes.data);
         setAttachments(aRes.data);
         setModules(mRes?.data || []);
+        setStrategies(stratRes?.data || []);
         if (actRes && actRes.data) {
           setActivities(actRes.data.filter((a: any) => a.entity_type === 'work_item' && a.entity_id === taskId.toString()));
         }
@@ -565,6 +568,23 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                     return u.title === selectedMod.job_title_name;
                   })
                   .map(u => <option key={u.id} value={u.id}>{u.first_name || u.email} {u.title ? `(${u.title})` : ''}</option>)}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1 h-3 bg-indigo-500 rounded-full"></div> Strategy Sheet
+              </label>
+              <select 
+                value={task.strategy || ''} 
+                onChange={e => handleUpdateField('strategy', e.target.value ? Number(e.target.value) : null)}
+                disabled={strategies.length === 0 || me?.role === 'hr'}
+                className="w-full px-3 py-2.5 bg-indigo-500/5 border border-indigo-500/20 rounded-xl text-sm focus:border-indigo-500 outline-none hover:border-indigo-500/50 transition-colors disabled:opacity-50 text-indigo-100 font-bold"
+              >
+                <option value="">None / Isolated Task</option>
+                {strategies
+                  .filter(s => s.project === task.project)
+                  .map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
 

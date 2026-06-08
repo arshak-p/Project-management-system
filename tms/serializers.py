@@ -16,6 +16,7 @@ from tms.models import (
     Notification,
     Project,
     ProjectMember,
+    ProjectStrategy,
     ProjectTaskSequence,
     State,
     TimeLog,
@@ -315,6 +316,15 @@ class TimeLogSerializer(serializers.ModelSerializer):
         return TimeLog.objects.create(user=request.user, **validated_data)
 
 
+class ProjectStrategySerializer(serializers.ModelSerializer):
+    created_by = UserBriefSerializer(read_only=True)
+
+    class Meta:
+        model = ProjectStrategy
+        fields = ("id", "project", "name", "created_by", "is_deployed", "created_at")
+        read_only_fields = ("created_by", "created_at")
+
+
 class WorkItemSerializer(serializers.ModelSerializer):
     labels = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Label.objects.all(), required=False
@@ -368,6 +378,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "timer_start",
             "reference_link",
             "cycle",
+            "strategy",
             "department",
             "labels",
             "label_details",

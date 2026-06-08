@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
-import type { Project, TaskState, WorkModule, User, Task } from '../api';
+import type { Project, TaskState, WorkModule, User, Task, ProjectStrategy } from '../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BrainCircuit, Target, Zap, Plus,
   LayoutGrid, ShieldCheck,
-  ChevronRight, Trash2, Download, Rocket
+  ChevronRight, Trash2, Download, Rocket, FolderOpen
 } from 'lucide-react';
 
 /* ─── Row shape ─── */
@@ -43,13 +43,7 @@ function getDayAbbr(dateStr: string): string {
   return full.slice(0, 3);
 }
 
-function monthRange(ym: string): { start: string; end: string } {
-  const [y, m] = ym.split('-').map(Number);
-  const start = `${y}-${String(m).padStart(2, '0')}-01`;
-  const lastDay = new Date(y, m, 0).getDate();
-  const end = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-  return { start, end };
-}
+
 
 let _uid = 0;
 function uid() { return `draft_${++_uid}_${Date.now()}`; }
@@ -102,10 +96,12 @@ export default function StrategistPage({ me }: { me: User | null }) {
   const [rows, setRows] = useState<StrategyRow[]>([]);
 
   const [selectedProject, setSelectedProject] = useState<string>('');
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
+
+
+  const [strategies, setStrategies] = useState<ProjectStrategy[]>([]);
+  const [selectedStrategy, setSelectedStrategy] = useState<ProjectStrategy | null>(null);
+  const [isCreatingStrategy, setIsCreatingStrategy] = useState(false);
+  const [newStrategyName, setNewStrategyName] = useState('');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDeploying, setIsDeploying] = useState(false);
@@ -138,16 +134,18 @@ export default function StrategistPage({ me }: { me: User | null }) {
   const loadMasterData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [pRes, mRes, sRes, uRes] = await Promise.all([
+      const [pRes, mRes, sRes, uRes, stratRes] = await Promise.all([
         api.getProjects(),
         api.getModules(),
         api.getStates(),
         api.getUsers(),
+        api.getStrategies(),
       ]);
       setProjects(pRes.data);
       setModules(mRes.data);
       setStates(sRes.data);
       setUsers(uRes.data);
+      setStrategies(stratRes.data);
       if (pRes.data.length > 0 && !selectedProject) {
         setSelectedProject(pRes.data[0].id.toString());
       }
@@ -162,13 +160,14 @@ export default function StrategistPage({ me }: { me: User | null }) {
   useEffect(() => { loadMasterData(); }, [loadMasterData]);
 
   const loadTasks = useCallback(async () => {
-    if (!selectedProject) return;
-    const { start, end } = monthRange(selectedMonth);
+    if (!selectedProject || !selectedStrategy) {
+      setRows([]);
+      return;
+    }
     try {
       const res = await api.getTasks({
         project: selectedProject,
-        posting_date_after: start,
-        posting_date_before: end,
+        strategy: selectedStrategy.id,
       });
       const existingRows = (res.data as Task[]).map(taskToRow);
       setRows(prev => {
@@ -178,7 +177,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
     } catch (e) {
       console.error('Load tasks failed', e);
     }
-  }, [selectedProject, selectedMonth]);
+  }, [selectedProject, selectedStrategy]);
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
 
@@ -238,28 +237,38 @@ export default function StrategistPage({ me }: { me: User | null }) {
 
   /* ─── Deploy all drafts ─── */
   const deployAll = async () => {
-    const drafts = rows.filter(r => r._isNew && r.title.trim());
-    if (drafts.length === 0) return;
+    if (!selectedStrategy) return;
     setIsDeploying(true);
     setDeployMsg('Deploying strategy...');
     try {
-      const items = drafts.map(d => ({
-        title: d.title,
-        project: Number(selectedProject),
-        posting_date: d.posting_date || null,
-        module: d.module ? Number(d.module) : (modules[0]?.id || 1),
-        reference_link: d.reference_link,
-        content_writer_id: d.content_writer ? Number(d.content_writer) : null,
-        state: d.state ? Number(d.state) : (states[0]?.id || 1),
-        priority: d.priority,
-        assignee_id: d.assignee ? Number(d.assignee) : null,
-        scheduled_date: d.scheduled_date || null,
-        due_date: d.due_date || null,
-        deadline: d.deadline || null,
-        description: '',
-      }));
-      await api.bulkCreateTasks(items);
-      setDeployMsg(`Deployed ${drafts.length} tasks successfully!`);
+      const drafts = rows.filter(r => r._isNew && r.title.trim());
+      if (drafts.length > 0) {
+        const items = drafts.map(d => ({
+          title: d.title,
+          project: Number(selectedProject),
+          strategy: selectedStrategy.id,
+          posting_date: d.posting_date || null,
+          module: d.module ? Number(d.module) : (modules[0]?.id || 1),
+          reference_link: d.reference_link,
+          content_writer_id: d.content_writer ? Number(d.content_writer) : null,
+          state: d.state ? Number(d.state) : (states[0]?.id || 1),
+          priority: d.priority,
+          assignee_id: d.assignee ? Number(d.assignee) : null,
+          scheduled_date: d.scheduled_date || null,
+          due_date: d.due_date || null,
+          deadline: d.deadline || null,
+          description: '',
+        }));
+        await api.bulkCreateTasks(items);
+      }
+      
+      if (!selectedStrategy.is_deployed) {
+        await api.deployStrategy(selectedStrategy.id);
+        setStrategies((prev: any) => prev.map((s: any) => s.id === selectedStrategy.id ? { ...s, is_deployed: true } : s));
+        setSelectedStrategy((prev: any) => prev ? { ...prev, is_deployed: true } : prev);
+      }
+      
+      setDeployMsg(`Deployed strategy successfully!`);
       await loadTasks();
       setTimeout(() => setDeployMsg(''), 3000);
     } catch (e) {
@@ -271,37 +280,40 @@ export default function StrategistPage({ me }: { me: User | null }) {
     }
   };
 
+  const createStrategy = async () => {
+    if (!newStrategyName.trim() || !selectedProject) return;
+    try {
+      const res = await api.createStrategy({
+        name: newStrategyName,
+        project: Number(selectedProject)
+      });
+      setStrategies(prev => [res.data, ...prev]);
+      setNewStrategyName('');
+      setIsCreatingStrategy(false);
+      setSelectedStrategy(res.data);
+    } catch (e) {
+      console.error('Failed to create strategy', e);
+    }
+  };
+
   /* ─── CSV Export ─── */
-  const exportCSV = () => {
-    if (rows.length === 0) return;
-    const headers = [
-      'Post Date', 'Day', 'Module/Scope', 'Content Type', 'Content Link',
-      'Content Writer', 'Workflow State', 'Priority', 'Assign Specialist',
-      'Task Start Date', 'Due Date', 'Deadline'
-    ];
-    const csvRows = rows.map(r => [
-      r.posting_date,
-      getDayAbbr(r.posting_date),
-      modules.find(m => m.id.toString() === r.module)?.name || '',
-      r.title,
-      r.reference_link,
-      (() => { const u = users.find(u => u.id.toString() === r.content_writer); return u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email : ''; })(),
-      states.find(s => s.id.toString() === r.state)?.name || '',
-      r.priority,
-      (() => { const u = users.find(u => u.id.toString() === r.assignee); return u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email : ''; })(),
-      r.scheduled_date,
-      r.due_date,
-      r.deadline,
-    ]);
-    const csv = [headers, ...csvRows].map(row => row.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Strategy_${selectedMonth}_${new Date().toISOString().split('T')[0]}.csv`;
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const exportCSV = async () => {
+    if (!selectedStrategy) return;
+    try {
+      const response = await api.exportStrategy(selectedStrategy.id);
+      
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `strategy_${selectedStrategy.name.replace(/\s+/g, '_')}_full.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('Failed to export strategy', e);
+      alert('Failed to export strategy.');
+    }
   };
 
   /* ─── Column Definitions ─── */
@@ -354,7 +366,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
             Strategy Planner <BrainCircuit className="w-10 h-10 text-primary animate-pulse" />
           </h1>
           <p className="text-text-muted mt-3 font-bold tracking-[0.4em] uppercase text-[10px] opacity-50 italic">
-            Excel-Style Bulk Planning // {selectedMonth}
+            Excel-Style Bulk Planning // {selectedStrategy?.name || ''}
           </p>
         </div>
 
@@ -362,7 +374,10 @@ export default function StrategistPage({ me }: { me: User | null }) {
           {/* Project selector */}
           <select
             value={selectedProject}
-            onChange={e => setSelectedProject(e.target.value)}
+            onChange={e => {
+              setSelectedProject(e.target.value);
+              setSelectedStrategy(null);
+            }}
             className="px-6 py-3.5 glass border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all text-white"
           >
             <option value="" className="bg-background text-white">Select Project</option>
@@ -371,16 +386,68 @@ export default function StrategistPage({ me }: { me: User | null }) {
             ))}
           </select>
 
-          {/* Month picker */}
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={e => setSelectedMonth(e.target.value)}
-            className="px-6 py-3.5 glass border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all text-white"
-            style={{ colorScheme: 'dark' }}
-          />
+          {/* Strategy selector */}
+          <select
+            value={selectedStrategy?.id || ''}
+            onChange={e => {
+              const strat = strategies.find(s => s.id.toString() === e.target.value);
+              setSelectedStrategy(strat || null);
+            }}
+            disabled={!selectedProject}
+            className="px-6 py-3.5 glass border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all text-white disabled:opacity-50"
+          >
+            <option value="" className="bg-background text-white">Select Strategy</option>
+            {strategies.filter(s => s.project.toString() === selectedProject).map(s => (
+              <option key={s.id} value={s.id} className="bg-background text-white">
+                {s.name} {s.is_deployed ? '(Deployed)' : '(Draft)'}
+              </option>
+            ))}
+          </select>
+
+          {selectedProject && (
+            <button
+              onClick={() => setIsCreatingStrategy(true)}
+              className="px-4 py-3.5 glass hover:bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center transition-all text-primary"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {isCreatingStrategy && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="flex items-center gap-4 p-4 glass rounded-2xl border border-white/5">
+              <input
+                type="text"
+                placeholder="e.g. Monthly Strategy - January 2024"
+                value={newStrategyName}
+                onChange={e => setNewStrategyName(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none text-sm text-white placeholder:text-white/20"
+              />
+              <button
+                onClick={() => setIsCreatingStrategy(false)}
+                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createStrategy}
+                disabled={!newStrategyName.trim()}
+                className="px-6 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                Create
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ─── Action Bar ─── */}
       <motion.div
@@ -398,19 +465,22 @@ export default function StrategistPage({ me }: { me: User | null }) {
           </button>
           <button
             onClick={deployAll}
-            disabled={draftCount === 0 || isDeploying}
+            disabled={!selectedStrategy || (draftCount === 0 && selectedStrategy?.is_deployed) || isDeploying}
             className="flex items-center gap-3 px-8 py-3.5 bg-gradient-to-r from-primary to-[#d946ef] text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-premium hover:opacity-90 disabled:opacity-40 transition-all overflow-hidden relative group"
           >
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
             <Rocket className="w-4 h-4 relative z-10" />
-            <span className="relative z-10">{isDeploying ? 'Deploying...' : 'Deploy All'}</span>
+            <span className="relative z-10">
+              {isDeploying ? 'Deploying...' : (selectedStrategy?.is_deployed ? (draftCount > 0 ? 'Save New Drafts' : 'Deployed') : 'Deploy Strategy')}
+            </span>
           </button>
           <button
             onClick={exportCSV}
-            disabled={rows.length === 0}
-            className="flex items-center gap-2 px-6 py-3.5 glass hover:bg-white/5 border border-white/5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all text-white disabled:opacity-30"
+            disabled={!selectedStrategy || !selectedStrategy.is_deployed}
+            title={selectedStrategy && !selectedStrategy.is_deployed ? 'Deploy strategy to export full sheet' : 'Export Full Strategy Sheet'}
+            className="flex items-center gap-2 px-6 py-3.5 glass hover:bg-white/5 border border-white/5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all text-white disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <Download className="w-4 h-4 text-primary" /> Export CSV
+            <Download className="w-4 h-4 text-emerald-400" /> Export Sheet
           </button>
         </div>
 
@@ -457,7 +527,18 @@ export default function StrategistPage({ me }: { me: User | null }) {
 
             {/* Rows */}
             <AnimatePresence>
-              {rows.length === 0 ? (
+              {!selectedStrategy ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="py-24 text-center"
+                >
+                  <FolderOpen className="w-12 h-12 mx-auto text-text-muted/20 mb-4" />
+                  <p className="text-sm font-bold uppercase tracking-widest opacity-30">
+                    Select a strategy above to begin planning.
+                  </p>
+                </motion.div>
+              ) : rows.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -707,7 +788,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="flex gap-4">
             <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary shrink-0">01</div>
-            <p className="text-xs font-bold text-text-muted">Select your project and month, then add rows for each content item.</p>
+            <p className="text-xs font-bold text-text-muted">Select your project and Strategy, then add rows for each content item. (Click + to create a Strategy)</p>
           </div>
           <div className="flex gap-4">
             <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary shrink-0">02</div>

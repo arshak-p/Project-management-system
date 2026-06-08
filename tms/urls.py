@@ -26,6 +26,7 @@ router.register(r"backups", views.BackupViewSet, basename="backup")
 urlpatterns = [
     path("", include(router.urls)),
     path("analytics/summary/", views.AnalyticsSummaryView.as_view(), name="analytics-summary"),
+    path("analytics/best-worker/", views.BestWorkerView.as_view(), name="analytics-best-worker"),
     path(
         "analytics/cycles/<int:cycle_id>/progress/",
         views.CycleProgressView.as_view(),

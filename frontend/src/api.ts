@@ -76,6 +76,7 @@ export interface Task {
   deadline: string | null;
   scheduled_date: string | null;
   reference_link?: string;
+  strategy?: number | null;
   assignee: {
     id: number;
     email: string;
@@ -167,6 +168,19 @@ export interface Cycle {
   is_active: boolean;
 }
 
+export interface ProjectStrategy {
+  id: number;
+  project: number;
+  project_name: string;
+  name: string;
+  description: string;
+  target_date: string | null;
+  status: string;
+  is_deployed: boolean;
+  created_by: number;
+  created_at: string;
+}
+
 export interface TimeLog {
   id: number;
   work_item: number | null;
@@ -248,6 +262,10 @@ export const api = {
   getProjects: (params?: object) => apiClient.get('projects/', { params }),
   createProject: (data: object) => apiClient.post('projects/', data),
   updateProject: (id: number, data: object) => apiClient.patch(`projects/${id}/`, data),
+  getStrategies: (params?: object) => apiClient.get('strategies/', { params }),
+  createStrategy: (data: object) => apiClient.post('strategies/', data),
+  deployStrategy: (id: number) => apiClient.post(`strategies/${id}/deploy/`),
+  exportStrategy: (id: number) => apiClient.get(`strategies/${id}/export-sheet/`, { responseType: 'blob' }),
   deleteProject: (id: number) => apiClient.delete(`projects/${id}/`),
   getTasks: (params?: object) => apiClient.get('work-items/', { params }),
   getTask: (id: number) => apiClient.get(`work-items/${id}/`),
@@ -279,6 +297,7 @@ export const api = {
   deleteCycle: (id: number) => apiClient.delete(`cycles/${id}/`),
   getAllTimeLogs: () => apiClient.get('time-logs/'),
   getAnalytics: (params?: object) => apiClient.get('analytics/summary/', { params }),
+  getBestWorker: () => apiClient.get('analytics/best-worker/'),
   getActivity: () => apiClient.get('activity/'),
   getNotifications: () => apiClient.get('notifications/'),
   markNotificationRead: (id: number) => apiClient.post(`notifications/${id}/mark-read/`),
@@ -299,6 +318,8 @@ export const api = {
     apiClient.post(`/modules/${id}/restore/`),
   restoreState: (id: number) =>
     apiClient.post(`/states/${id}/restore/`),
+  deleteDepartment: (id: number) =>
+    apiClient.delete(`/departments/${id}/`),
   restoreDepartment: (id: number) =>
     apiClient.post(`/departments/${id}/restore/`),
   restoreJobTitle: (id: number) =>
@@ -313,7 +334,9 @@ export const api = {
   deleteJobTitle: (id: number) => apiClient.delete(`/job-titles/${id}/`),
   getBackups: () => apiClient.get('/backups/'),
   approveAndDownloadBackup: (id: number) => apiClient.post(`/backups/${id}/approve-and-download/`, {}, { responseType: 'blob' }),
+  downloadBackup: (id: number) => apiClient.get(`/backups/${id}/download/`, { responseType: 'blob' }),
   triggerManualBackup: () => apiClient.post('/backups/trigger-manual/'),
+  triggerAutomatedBackup: () => apiClient.post('/backups/trigger-automated/'),
   sendCreationOTP: (email: string) => apiClient.post('/auth/send-creation-otp/', { email }),
   verifyCreationOTP: (email: string, otp: string) => apiClient.post('/auth/verify-creation-otp/', { email, otp }),
   bulkCreateTasks: (items: object[]) => apiClient.post('work-items/bulk-create/', { items }),

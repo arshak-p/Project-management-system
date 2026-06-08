@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { 
   Users, Search, Target, TrendingUp, 
   ExternalLink, Briefcase,
-  ChevronRight, X
+  ChevronRight, X, Trophy
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -25,10 +25,20 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [dateRange, setDateRange] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('all');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [bestWorker, setBestWorker] = useState<any>(null);
 
   useEffect(() => {
-    api.getUsers().then(r => {
-      setUsers(r.data);
+    Promise.all([
+      api.getUsers(),
+      api.getBestWorker()
+    ]).then(([uRes, bwRes]) => {
+      setUsers(uRes.data);
+      if (bwRes.data.best_worker) {
+        setBestWorker(bwRes.data.best_worker);
+      }
+      setIsLoading(false);
+    }).catch(err => {
+      console.error(err);
       setIsLoading(false);
     });
   }, []);
@@ -177,6 +187,34 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10">
            {/* Sidebar: Member List - Locked in Position with Viewport Sync */}
            <div className="md:col-span-4 lg:col-span-3 space-y-4 md:sticky md:top-20 md:self-start h-[calc(100vh-140px)] overflow-y-auto custom-scrollbar pr-2 order-2 md:order-1">
+             {bestWorker && (
+               <div className="mb-6 glass p-4 rounded-3xl border border-[#fbbf24]/30 relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#fbbf24]/10 blur-[40px] rounded-full pointer-events-none" />
+                 <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-[#fbbf24] flex items-center gap-2 mb-3">
+                   <Trophy className="w-3 h-3" /> Best Worker (Last 30 Days)
+                 </h4>
+                 <div className="flex items-center gap-4 relative z-10">
+                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#fbbf24] to-[#d97706] flex items-center justify-center text-white font-black text-lg shadow-[0_0_15px_rgba(251,191,36,0.3)]">
+                     {bestWorker.name?.[0] || '?'}
+                   </div>
+                   <div className="flex-1 min-w-0">
+                     <p className="font-black text-sm text-white truncate capitalize">{bestWorker.name}</p>
+                     <p className="text-[9px] font-bold text-text-muted uppercase tracking-widest truncate">{bestWorker.title}</p>
+                   </div>
+                 </div>
+                 <div className="grid grid-cols-2 gap-2 mt-4">
+                   <div className="bg-background/40 p-2 rounded-xl text-center">
+                     <span className="block text-[8px] uppercase tracking-widest text-text-muted font-black mb-1">Tasks</span>
+                     <span className="block text-sm font-black text-[#fbbf24]">{bestWorker.tasks_completed}</span>
+                   </div>
+                   <div className="bg-background/40 p-2 rounded-xl text-center">
+                     <span className="block text-[8px] uppercase tracking-widest text-text-muted font-black mb-1">Hours</span>
+                     <span className="block text-sm font-black text-[#fbbf24]">{bestWorker.time_logged_hours}</span>
+                   </div>
+                 </div>
+               </div>
+             )}
+
              {uniqueTitles.map(title => {
                const titleUsers = filteredUsers.filter(u => (u.title || 'Team Member') === title);
                if (titleUsers.length === 0) return null;

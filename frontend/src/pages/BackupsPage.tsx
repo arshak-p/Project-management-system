@@ -70,6 +70,25 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
         <div className="flex gap-4">
           <button 
             onClick={async () => {
+              if (confirm('Force an automated End-of-Month backup now? This will generate the backup and notify admins.')) {
+                setIsLoading(true);
+                try {
+                  await api.triggerAutomatedBackup();
+                  await fetchBackups();
+                  alert('Automated backup triggered and notifications sent successfully.');
+                } catch {
+                  alert('Failed to trigger automated backup.');
+                } finally {
+                  setIsLoading(false);
+                }
+              }
+            }}
+            className="hidden md:flex items-center justify-center gap-2 px-6 py-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all"
+          >
+            <Clock className="w-4 h-4" /> Force EOM Backup
+          </button>
+          <button 
+            onClick={async () => {
               if (confirm('Generate backup for missing months now? This might take a minute.')) {
                 setIsLoading(true);
                 try {

@@ -186,6 +186,23 @@ class CycleMember(models.Model):
         unique_together = [("cycle", "user")]
 
 
+class ProjectStrategy(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="strategies")
+    name = models.CharField(max_length=200)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="created_strategies"
+    )
+    is_deployed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name_plural = "Project strategies"
+
+    def __str__(self) -> str:
+        return f"{self.project.name} - {self.name}"
+
+
 class WorkItem(models.Model):
     class Priority(models.TextChoices):
         URGENT = "urgent", "Urgent"
@@ -228,6 +245,14 @@ class WorkItem(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="work_items",
+    )
+    strategy = models.ForeignKey(
+        ProjectStrategy,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="work_items",
+        help_text="The strategy group this task belongs to",
     )
     department = models.ForeignKey(
         Department,
