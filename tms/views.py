@@ -792,14 +792,13 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"], url_path="mark-read")
     def mark_read(self, request, pk=None):
         n = self.get_object()
-        n.read = True
-        n.save(update_fields=["read"])
-        return Response({"status": "ok"})
+        n.delete()
+        return Response({"status": "deleted"})
 
     @action(detail=False, methods=["post"], url_path="mark-all-read")
     def mark_all_read(self, request):
-        Notification.objects.filter(user=request.user, read=False).update(read=True)
-        return Response({"status": "ok"})
+        Notification.objects.filter(user=request.user).delete()
+        return Response({"status": "deleted"})
 
 
 class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):

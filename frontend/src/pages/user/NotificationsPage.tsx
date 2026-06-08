@@ -14,7 +14,6 @@ export default function NotificationsPage({ me, onNavigate }: { me: User | null,
   useEffect(() => { load(); }, []);
 
   const unread = notifications.filter(n => !n.read);
-  const read = notifications.filter(n => n.read);
 
   const markRead = async (id: number) => {
     try {
@@ -216,42 +215,6 @@ export default function NotificationsPage({ me, onNavigate }: { me: User | null,
             )}
           </AnimatePresence>
 
-          {/* Read */}
-          {read.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: unread.length * 0.04 + 0.1 }}
-            >
-              <p className="text-[10px] font-black text-text-muted/50 uppercase tracking-[0.25em] mb-3">Earlier</p>
-              <div className="glass rounded-[2rem] border border-border overflow-hidden">
-                {read.map((n, i) => (
-                  <motion.div
-                    key={n.id}
-                    custom={i}
-                    variants={cardVariants}
-                    initial="hidden"
-                    animate="visible"
-                    onClick={() => handleNotifyClick(n)}
-                    className="notif-row flex items-start gap-4 p-5 hover:bg-surface/40 transition-colors opacity-60 hover:opacity-100 cursor-pointer border-b border-white/5 last:border-0 group"
-                  >
-                    <div className="p-2.5 rounded-xl bg-surface text-text-muted flex-shrink-0 mt-0.5 group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                      <Bell className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-sm text-text">{n.title}</h4>
-                      {n.body && <p className="text-xs text-text-muted mt-0.5 line-clamp-1 leading-relaxed">{n.body}</p>}
-                      <span className="flex items-center gap-1.5 text-[10px] text-text-muted/60 mt-2 font-bold uppercase tracking-widest">
-                        <Clock className="w-3 h-3" />
-                        {new Date(n.created_at).toLocaleString()}
-                      </span>
-                    </div>
-                    <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-1" />
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
         </div>
       )}
     </motion.div>
