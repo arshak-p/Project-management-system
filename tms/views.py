@@ -226,6 +226,7 @@ class UserViewSet(SalesSafeViewSet):
 
 
 class ProjectViewSet(SalesSafeViewSet):
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
@@ -267,6 +268,7 @@ class ProjectViewSet(SalesSafeViewSet):
 
 
 class ModuleViewSet(SalesSafeViewSet):
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = ModuleSerializer
 
     def get_queryset(self):

@@ -363,7 +363,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
         <div className="relative">
           <div className="absolute -left-10 top-0 w-24 h-24 bg-primary/20 blur-[60px] rounded-full"></div>
           <h1 className="text-5xl font-black tracking-tighter flex items-center gap-4 relative z-10 text-white">
-            Strategy Planner <BrainCircuit className="w-10 h-10 text-primary animate-pulse" />
+            Strategy Planner <BrainCircuit className="w-10 h-10 text-primary" />
           </h1>
           <p className="text-text-muted mt-3 font-bold tracking-[0.4em] uppercase text-[10px] opacity-50 italic">
             Excel-Style Bulk Planning // {selectedStrategy?.name || ''}

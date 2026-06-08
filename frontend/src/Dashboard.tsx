@@ -291,7 +291,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             <div className="flex items-center gap-4 pl-6 border-l border-white/5">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-black tracking-tight">{me?.first_name?.toUpperCase() || 'AGENT'}</p>
-                <p className="text-[9px] font-black uppercase tracking-widest text-primary mt-0.5">{me?.role || 'Clearance'}</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-primary mt-0.5">{me?.role === 'sales_manager' ? 'Strategist' : (me?.role || 'Clearance')}</p>
               </div>
               <button onClick={() => setPage('profile')} className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-[#8b5cf6] p-[1px] shadow-glow hover:scale-105 transition-transform">
                 <div className="w-full h-full rounded-[15px] bg-background flex items-center justify-center font-black text-sm">
