@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, FolderKanban, Users, LogOut, Bell, 
   Menu, Sun, Moon, ArrowLeft, Loader2, Calendar, 
-  Briefcase, Boxes, Network, History, Database, Zap, BookOpen, Clock, Target, Star
+  Briefcase, Boxes, Network, History, Database, Zap, BookOpen, Clock, Target, Star, Layers
 } from 'lucide-react';
 import { api } from './api';
 import type { User } from './api';
@@ -163,6 +163,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     { id: 'overview', icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr', 'sales_manager'] },
     { id: 'my_tasks', icon: <Target className="w-5 h-5" />, label: 'My Workspace', roles: ['specialist', 'team_head', 'hr'] },
     { id: 'projects', icon: <Briefcase className="w-5 h-5" />, label: 'Projects', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr', 'sales_manager'] },
+    { id: 'modules', icon: <Layers className="w-5 h-5" />, label: 'Modules', roles: ['admin', 'agency_manager', 'project_manager', 'sales_manager'] },
     { id: 'tasks', icon: <Boxes className="w-5 h-5" />, label: 'Tasks', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr', 'sales_manager'] },
     { id: 'cycles', icon: <Clock className="w-5 h-5" />, label: 'Cycles', roles: ['admin', 'agency_manager', 'project_manager', 'team_head'] },
     { id: 'kanban', icon: <FolderKanban className="w-5 h-5" />, label: 'Kanban Board', roles: ['admin', 'agency_manager', 'project_manager', 'team_head', 'hr', 'specialist', 'sales_manager'] },
