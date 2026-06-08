@@ -19,7 +19,7 @@ class IsAdminRole(permissions.BasePermission):
 class IsPMOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         u = request.user
-        return bool(u and u.is_authenticated and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]))
+        return bool(u and u.is_authenticated and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.SALES_MANAGER]))
 
 class IsLeadPMOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
