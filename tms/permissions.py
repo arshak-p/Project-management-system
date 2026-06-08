@@ -65,7 +65,7 @@ class IsUserListAuthorized(permissions.BasePermission):
         u = request.user
         if not (u and u.is_authenticated): return False
         role = getattr(u, "role", None)
-        if u.is_superuser or role in [User.Role.ADMIN, User.Role.HR, User.Role.TEAM_HEAD]:
+        if u.is_superuser or role in [User.Role.ADMIN, User.Role.HR, User.Role.TEAM_HEAD, User.Role.SALES_MANAGER]:
             return True
         if role == User.Role.PROJECT_MANAGER:
             return request.method in permissions.SAFE_METHODS
