@@ -67,6 +67,19 @@ class CreateUserView(APIView):
         if User.objects.filter(email=email).exists():
             return Response({'detail': 'A user with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Check if email is verified
+        from django.utils import timezone
+        import datetime
+        fifteen_mins_ago = timezone.now() - datetime.timedelta(minutes=15)
+        is_verified = EmailOTP.objects.filter(
+            email=email, 
+            is_used=True, 
+            created_at__gte=fifteen_mins_ago
+        ).exists()
+        
+        if not is_verified:
+            return Response({'detail': 'Email verification required before creating this account.'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             validate_password(password)
         except Exception as e:
@@ -153,8 +166,7 @@ class SendOTPView(APIView):
         send_reliable_email_async(subject, message, [email])
 
         return Response({
-            'detail': f'CODE: {otp_code} (Dispatched)',
-            'otp': otp_code,
+            'detail': 'Code Dispatched successfully.',
             'otp_sent': True
         }, status=status.HTTP_200_OK)
 
@@ -171,11 +183,32 @@ class VerifyOTPActionView(APIView):
         if not email or not otp_code:
             return Response({'detail': 'Email and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        otp_record = EmailOTP.objects.filter(email=email, otp=otp_code, is_used=False).first()
+        from django.utils import timezone
+        import datetime
+        now = timezone.now()
+
+        # 1. Reject immediately if locked
+        locked_record = EmailOTP.objects.filter(email=email, locked_until__gt=now).first()
+        if locked_record:
+            return Response({'detail': 'Too many failed attempts. Try again in 15 minutes.'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        # 2. Get the most recent unused OTP for this email
+        otp_record = EmailOTP.objects.filter(email=email, is_used=False).order_by("-created_at").first()
 
         if not otp_record or not otp_record.is_valid():
             return Response({'detail': 'Invalid or expired clearance code.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 3. Check the code
+        if otp_record.otp != otp_code:
+            otp_record.failed_attempts += 1
+            if otp_record.failed_attempts >= 3:
+                otp_record.locked_until = now + datetime.timedelta(minutes=15)
+                otp_record.save()
+                return Response({'detail': 'Too many failed attempts. Try again in 15 minutes.'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            otp_record.save()
+            return Response({'detail': 'Invalid or expired clearance code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 4. Success
         otp_record.is_used = True
         otp_record.save()
 

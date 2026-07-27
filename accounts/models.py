@@ -56,6 +56,8 @@ class EmailOTP(models.Model):
     otp = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
+    failed_attempts = models.IntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -63,5 +65,10 @@ class EmailOTP(models.Model):
     def is_valid(self):
         from django.utils import timezone
         import datetime
+        now = timezone.now()
+        
+        if self.locked_until and now < self.locked_until:
+            return False
+            
         # Expire in 10 minutes
-        return not self.is_used and timezone.now() < self.created_at + datetime.timedelta(minutes=10)
+        return not self.is_used and now < self.created_at + datetime.timedelta(minutes=10)

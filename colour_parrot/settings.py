@@ -19,7 +19,10 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = [
     h.strip()
-    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
+    for h in os.environ.get(
+        "DJANGO_ALLOWED_HOSTS", 
+        "colour-parrot-mgtsystem.onrender.com,c1r9rt-workflow.in,www.c1r9rt-workflow.in,localhost,127.0.0.1"
+    ).split(",")
     if h.strip()
 ]
 
@@ -172,8 +175,11 @@ SIMPLE_JWT = {
 # --- CORS & CSRF (always applied) ---
 CORS_ALLOW_CREDENTIALS = True
 
-# Temporarily allow all origins to prevent ERR_NETWORK on login
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("CORS_ALLOWED_ORIGINS", "https://c1r9rt-workflow.in").split(",")
+    if o.strip()
+]
 
 CSRF_TRUSTED_ORIGINS = [
     o.strip()
