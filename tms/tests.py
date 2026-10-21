@@ -219,3 +219,14 @@ class ReorderRuleTests(WorkflowTests):
             {"id": self.task.id, "state": self.s_client.id, "board_position": 0}], format="json")
         self.task.refresh_from_db()
         self.assertEqual(self.task.state_id, self.s_client.id)
+
+
+class ChangePasswordTests(Base):
+    def test_requires_current_password(self):
+        c = self.as_user(self.member)
+        self.assertEqual(c.post("/api/auth/change-password/", {"old_password": "nope", "new_password": "Brand-new-pass-77"}).status_code, 400)
+        self.assertEqual(c.post("/api/auth/change-password/", {"old_password": "Str0ng-pass-123", "new_password": "123"}).status_code, 400)
+        r = c.post("/api/auth/change-password/", {"old_password": "Str0ng-pass-123", "new_password": "Brand-new-pass-77"})
+        self.assertEqual(r.status_code, 200, r.data)
+        self.member.refresh_from_db()
+        self.assertTrue(self.member.check_password("Brand-new-pass-77"))

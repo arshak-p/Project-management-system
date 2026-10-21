@@ -228,3 +228,25 @@ class VerifyOTPActionView(APIView):
         otp_record.save()
 
         return Response({'detail': 'Identity verified. Member cleared for creation.', 'verified': True})
+
+
+class ChangePasswordView(APIView):
+    """Any signed-in user can change their own password by proving the current one."""
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
+
+    def post(self, request):
+        from django.core.exceptions import ValidationError
+
+        old = str(request.data.get('old_password', ''))
+        new = str(request.data.get('new_password', ''))
+        if not request.user.check_password(old):
+            return Response({'detail': 'Current password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            validate_password(new, request.user)
+        except ValidationError as e:
+            return Response({'detail': ' '.join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+        request.user.set_password(new)
+        request.user.save(update_fields=['password'])
+        return Response({'detail': 'Password updated.'})
