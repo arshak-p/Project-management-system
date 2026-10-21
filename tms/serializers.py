@@ -414,6 +414,18 @@ class WorkItemSerializer(serializers.ModelSerializer):
         if user.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD]:
             return attrs
 
+        # Clients may only review/approve: they can't reassign, retitle or reschedule work.
+        if user.role == User.Role.CLIENT:
+            locked = {
+                "assignee", "content_writer", "project", "module", "priority", "cycle", "strategy",
+                "department", "title", "is_active", "due_date", "deadline", "posting_date", "scheduled_date",
+            }
+            touched = locked & set(attrs.keys())
+            if touched:
+                raise serializers.ValidationError(
+                    {"detail": "You do not have permission to change: " + ", ".join(sorted(touched)).replace("_", " ")}
+                )
+
         state = attrs.get("state")
         if state and "state" in attrs:
             # Client Restrictions

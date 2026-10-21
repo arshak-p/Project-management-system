@@ -154,3 +154,39 @@ class ScopingTests(Base):
     def test_member_sees_only_own_tasks(self):
         ids = {t["id"] for t in self.as_user(self.member).get("/api/work-items/").data}
         self.assertEqual(ids, {self.task.id})
+
+
+class WorkflowTests(Base):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.s_prog, _ = State.objects.get_or_create(slug="in-progress", defaults={"name": "In Progress", "sort_order": 3})
+        cls.s_client, _ = State.objects.get_or_create(slug="client-review", defaults={"name": "Client Review", "sort_order": 4})
+
+    def test_specialist_can_start_own_task(self):
+        r = self.as_user(self.member).patch(f"/api/work-items/{self.task.id}/", {"state": self.s_prog.id}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.state_id, self.s_prog.id)
+
+    def test_specialist_cannot_approve_for_client(self):
+        r = self.as_user(self.member).patch(f"/api/work-items/{self.task.id}/", {"state": self.s_client.id}, format="json")
+        self.assertIn(r.status_code, (400, 403))
+        self.task.refresh_from_db()
+        self.assertNotEqual(self.task.state_id, self.s_client.id)
+
+    def test_specialist_cannot_reassign_or_edit_fields(self):
+        c = self.as_user(self.member)
+        url = f"/api/work-items/{self.task.id}/"
+        self.assertEqual(c.patch(url, {"assignee_id": self.member2.id}, format="json").status_code, 403)
+        self.assertEqual(c.patch(url, {"priority": "urgent"}, format="json").status_code, 403)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.assignee_id, self.member.id)
+
+    def test_specialist_cannot_touch_others_task(self):
+        r = self.as_user(self.member).patch(f"/api/work-items/{self.other_task.id}/", {"state": self.s_prog.id}, format="json")
+        self.assertEqual(r.status_code, 404)
+
+    def test_pm_can_reassign(self):
+        r = self.as_user(self.pm).patch(f"/api/work-items/{self.task.id}/", {"assignee_id": self.member2.id}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)

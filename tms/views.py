@@ -569,7 +569,7 @@ class WorkItemViewSet(SalesSafeViewSet):
             # Assignee can update state, board position, and reference link
             if is_assignee:
                 if "state" in data:
-                    from tms.models import TaskState
+                    from tms.models import State as TaskState
                     try:
                         new_state = TaskState.objects.get(id=data["state"])
                         if new_state.slug not in ['in-progress', 'team-head-review']:
@@ -598,7 +598,7 @@ class WorkItemViewSet(SalesSafeViewSet):
         if u.role == User.Role.TEAM_HEAD and not u.is_superuser:
             data = self.request.data
             if "state" in data:
-                from tms.models import TaskState
+                from tms.models import State as TaskState
                 try:
                     new_state = TaskState.objects.get(id=data["state"])
                     if new_state.slug not in ['in-progress', 'client-review', 'rework-revision']:
