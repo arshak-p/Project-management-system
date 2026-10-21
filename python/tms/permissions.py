@@ -2,6 +2,7 @@
 from rest_framework import permissions
 
 from accounts.models import User
+from tms import access
 
 
 class BlockSalesWrites(permissions.BasePermission):
@@ -17,18 +18,25 @@ class BlockSalesWrites(permissions.BasePermission):
 
 class IsAdminRole(permissions.BasePermission):
     def has_permission(self, request, view):
-        u = request.user
-        return bool(
-            u
-            and u.is_authenticated
-            and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN])
-        )
+        return access.is_admin(request.user)
+
 
 class IsPMOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        u = request.user
-        return bool(
-            u
-            and u.is_authenticated
-            and (u.is_superuser or getattr(u, "role", None) in [User.Role.ADMIN, User.Role.PROJECT_MANAGER])
-        )
+        return access.is_manager(request.user)
+
+
+class IsAuthorOrManager(permissions.BasePermission):
+    """Object-level: only the record's owner (or an admin / PM) may change or delete it."""
+
+    owner_fields = ("author", "user", "uploaded_by")
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        if access.is_manager(request.user):
+            return True
+        for field in self.owner_fields:
+            if hasattr(obj, f"{field}_id"):
+                return getattr(obj, f"{field}_id") == request.user.id
+        return False

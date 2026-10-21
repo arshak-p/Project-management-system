@@ -16,10 +16,10 @@ class User(AbstractUser):
     """
 
     class Role(models.TextChoices):
-        ADMIN = "admin", "Admin / Agency Manager"
+        ADMIN = "admin", "Admin"
         PROJECT_MANAGER = "project_manager", "Project Manager"
         TEAM_HEAD = "team_head", "Team Head"
-        SPECIALIST = "specialist", "Specialist / Creator"
+        SPECIALIST = "specialist", "Team Member"
         SALES_MANAGER = "sales_manager", "Sales Manager"
         CLIENT = "client", "Client"
 

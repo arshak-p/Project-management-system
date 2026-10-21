@@ -5,6 +5,7 @@ from tms.models import (
     Cycle,
     CycleMember,
     Department,
+    JobTitle,
     Label,
     Module,
     Notification,
@@ -106,3 +107,8 @@ class ProjectMemberAdmin(admin.ModelAdmin):
 @admin.register(ProjectTaskSequence)
 class ProjectTaskSequenceAdmin(admin.ModelAdmin):
     list_display = ("project", "last_number")
+
+
+@admin.register(JobTitle)
+class JobTitleAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active")

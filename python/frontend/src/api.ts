@@ -1,112 +1,196 @@
-import axios from 'axios';
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
-export const API_URL = 'http://127.0.0.1:8000/api';
+// Same-origin in production; Vite proxies /api to Django in development.
+export const API_URL: string = import.meta.env.VITE_API_URL ?? '/api';
 
-// Configure base axios instance with interceptors
-const apiClient = axios.create({
-  baseURL: API_URL,
-});
+export type Role = 'admin' | 'project_manager' | 'team_head' | 'specialist' | 'sales_manager' | 'client';
 
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+export const ROLE_LABELS: Record<Role, string> = {
+  admin: 'Admin',
+  project_manager: 'Project Manager',
+  team_head: 'Team Head',
+  specialist: 'Team Member',
+  sales_manager: 'Sales',
+  client: 'Client',
+};
+
+export interface User {
+  id: number;
+  username?: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: Role;
+  title: string;
+  phone?: string;
+  department_id?: number | null;
+  is_active?: boolean;
+}
+export interface Project { id: number; name: string; slug: string; description: string; total_minutes: number; is_active: boolean }
+export interface State { id: number; name: string; slug: string; sort_order: number }
+export interface Module { id: number; name: string; slug: string }
+export interface Department { id: number; name: string; slug: string }
+export interface JobTitle { id: number; name: string }
+export interface Label { id: number; name: string; key: string }
+export type Priority = 'urgent' | 'high' | 'medium' | 'low';
+export interface Task {
+  id: number;
+  project: number;
+  task_code: string;
+  title: string;
+  description: string;
+  state: number;
+  state_slug: string;
+  priority: Priority;
+  module: number;
+  assignee: User | null;
+  due_date: string | null;
+  scheduled_date: string | null;
+  cycle: number | null;
+  department: number | null;
+  board_position: number;
+  total_minutes: number;
+  created_at: string;
+  updated_at: string;
+}
+export interface Comment { id: number; work_item: number; author: User; body: string; created_at: string }
+export interface TimeLog { id: number; work_item: number; user: User; minutes: number; note: string; logged_at: string }
+export interface Cycle { id: number; project: number; name: string; start_date: string; end_date: string }
+export interface Notice { id: number; title: string; body: string; read: boolean; link: string; created_at: string }
+export interface Activity { id: number; entity_type: string; entity_id: string; action: string; user: number | null; payload: { title?: string; task_code?: string; name?: string } | null; created_at: string }
+export interface Analytics {
+  totals: { all: number; completed_or_launched: number; pending: number; total_time_minutes: number };
+  by_state: { state__slug: string; state__name: string; c: number }[];
+  by_project: { project_id: number; project__name: string; c: number }[];
+  assignee_workload: { assignee_id: number; assignee__first_name: string; assignee__last_name: string; open_tasks: number }[];
+  historical_trend: { date: string; created: number; completed: number }[];
+}
+
+const client = axios.create({ baseURL: API_URL });
+
+export const tokens = {
+  get access() { return localStorage.getItem('access_token'); },
+  get refresh() { return localStorage.getItem('refresh_token'); },
+  set(access: string, refresh?: string) {
+    localStorage.setItem('access_token', access);
+    if (refresh) localStorage.setItem('refresh_token', refresh);
+  },
+  clear() {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+  },
+};
+
+client.interceptors.request.use((config) => {
+  if (tokens.access) config.headers.Authorization = `Bearer ${tokens.access}`;
   return config;
 });
 
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        try {
-          const response = await axios.post(`${API_URL}/auth/refresh/`, {
-            refresh: refreshToken,
-          });
-          const newToken = response.data.access;
-          localStorage.setItem('access_token', newToken);
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          return axios(originalRequest);
-        } catch (refreshError) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          window.location.reload();
-        }
+let refreshing: Promise<string> | null = null;
+
+client.interceptors.response.use(
+  (r) => r,
+  async (error: AxiosError) => {
+    const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    if (error.response?.status === 401 && original && !original._retry && tokens.refresh) {
+      original._retry = true;
+      try {
+        refreshing ??= axios
+          .post(`${API_URL}/auth/refresh/`, { refresh: tokens.refresh })
+          .then((r) => {
+            tokens.set(r.data.access, r.data.refresh);
+            return r.data.access as string;
+          })
+          .finally(() => { refreshing = null; });
+        const access = await refreshing;
+        original.headers.Authorization = `Bearer ${access}`;
+        return client(original);
+      } catch {
+        tokens.clear();
+        window.dispatchEvent(new Event('auth:logout'));
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
+/** Human-readable message from a DRF error response. */
+export function errorMessage(err: unknown, fallback = 'Something went wrong.'): string {
+  const data = (err as AxiosError<Record<string, unknown>>)?.response?.data;
+  if (!data) return fallback;
+  if (typeof data === 'string') return fallback;
+  if (typeof data.detail === 'string') return data.detail;
+  const first = Object.entries(data)[0];
+  if (!first) return fallback;
+  const [key, val] = first;
+  const text = Array.isArray(val) ? val.join(' ') : String(val);
+  return key === 'non_field_errors' ? text : `${key}: ${text}`;
+}
+
+const list = <T,>(url: string, params?: object) => client.get<T[]>(url, { params }).then((r) => r.data);
+
 export const api = {
-  // Auth
   login: (email: string, password: string) =>
-    axios.post(`${API_URL}/auth/login/`, { email, password }),
+    axios.post(`${API_URL}/auth/login/`, { email, password }).then((r) => r.data as { access: string; refresh: string; user: User }),
+  changePassword: (old_password: string, new_password: string) =>
+    client.post('/auth/change-password/', { old_password, new_password }),
 
-  // Users
-  getMe: () => apiClient.get('/users/me/'),
-  getUsers: (params?: object) => apiClient.get('/users/', { params }),
-  getAssignableUsers: () => apiClient.get('/users/assignable/'),
+  me: () => client.get<User>('/users/me/').then((r) => r.data),
+  updateMe: (data: Partial<User>) => client.patch<User>('/users/me/', data).then((r) => r.data),
+  users: (params?: object) => list<User>('/users/', params),
+  assignable: () => list<User>('/users/assignable/'),
+  createUser: (data: object) => client.post('/auth/create-user/', data),
+  updateUser: (id: number, data: object) => client.patch(`/users/${id}/`, data),
+  deactivateUser: (id: number) => client.delete(`/users/${id}/`),
 
-  // Projects
-  getProjects: (params?: object) => apiClient.get('/projects/', { params }),
-  createProject: (data: object) => apiClient.post('/projects/', data),
-  updateProject: (id: number, data: object) => apiClient.patch(`/projects/${id}/`, data),
-  deleteProject: (id: number) => apiClient.delete(`/projects/${id}/`),
+  projects: () => list<Project>('/projects/'),
+  saveProject: (data: Partial<Project>, id?: number) =>
+    id ? client.patch(`/projects/${id}/`, data) : client.post('/projects/', data),
+  deleteProject: (id: number) => client.delete(`/projects/${id}/`),
 
-  // Tasks/WorkItems
-  getTasks: (params?: object) => apiClient.get('/work-items/', { params }),
-  getTask: (id: number) => apiClient.get(`/work-items/${id}/`),
-  createTask: (data: object) => apiClient.post('/work-items/', data),
-  updateTask: (id: number, data: object) => apiClient.patch(`/work-items/${id}/`, data),
-  deleteTask: (id: number) => apiClient.delete(`/work-items/${id}/`),
-  recordView: (id: number) => apiClient.post(`/work-items/${id}/record-view/`),
+  states: () => list<State>('/states/'),
+  modules: () => list<Module>('/modules/'),
+  departments: () => list<Department>('/departments/'),
+  labels: () => list<Label>('/labels/'),
 
-  // Comments
-  getComments: (taskId: number) => apiClient.get(`/comments/?work_item=${taskId}`),
-  createComment: (data: object) => apiClient.post('/comments/', data),
+  jobTitles: () => list<JobTitle>('/job-titles/'),
+  addJobTitle: (name: string) => client.post('/job-titles/', { name }),
+  deleteJobTitle: (id: number) => client.delete(`/job-titles/${id}/`),
 
-  // Attachments
-  getAttachments: (taskId: number) => apiClient.get(`/attachments/?work_item=${taskId}`),
-  createAttachment: (data: FormData) => apiClient.post('/attachments/', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  tasks: (params?: object) => list<Task>('/work-items/', params),
+  createTask: (data: object) => client.post<Task>('/work-items/', data).then((r) => r.data),
+  updateTask: (id: number, data: object) => client.patch<Task>(`/work-items/${id}/`, data).then((r) => r.data),
+  deleteTask: (id: number) => client.delete(`/work-items/${id}/`),
+  reorder: (rows: { id: number; state: number; board_position: number }[]) => client.post('/work-items/reorder/', rows),
 
-  // Time Logs
-  getTimeLogs: (taskId: number) => apiClient.get(`/time-logs/?work_item=${taskId}`),
-  createTimeLog: (data: object) => apiClient.post('/time-logs/', data),
+  comments: (taskId: number) => list<Comment>('/comments/', { work_item: taskId }),
+  addComment: (work_item: number, body: string) => client.post('/comments/', { work_item, body }),
+  deleteComment: (id: number) => client.delete(`/comments/${id}/`),
 
-  // States
-  getStates: () => apiClient.get('/states/'),
-  createState: (data: object) => apiClient.post('/states/', data),
+  timeLogs: (params?: object) => list<TimeLog>('/time-logs/', params),
+  addTimeLog: (work_item: number, minutes: number, note: string) =>
+    client.post('/time-logs/', { work_item, minutes, note, logged_at: new Date().toISOString() }),
+  deleteTimeLog: (id: number) => client.delete(`/time-logs/${id}/`),
 
-  // Modules
-  getModules: () => apiClient.get('/modules/'),
+  cycles: () => list<Cycle>('/cycles/'),
+  saveCycle: (data: object) => client.post('/cycles/', data),
+  deleteCycle: (id: number) => client.delete(`/cycles/${id}/`),
 
-  // Departments
-  getDepartments: () => apiClient.get('/departments/'),
+  analytics: (params?: object) => client.get<Analytics>('/analytics/summary/', { params }).then((r) => r.data),
+  activity: () => list<Activity>('/activity/'),
+  notifications: () => list<Notice>('/notifications/'),
+  markRead: (id: number) => client.post(`/notifications/${id}/mark-read/`),
+};
 
-  // Cycles (Sprints)
-  getCycles: () => apiClient.get('/cycles/'),
-  createCycle: (data: object) => apiClient.post('/cycles/', data),
+export const fullName = (u?: Pick<User, 'first_name' | 'last_name' | 'email'> | null) =>
+  u ? [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email : 'Unassigned';
 
-  // Time Logs (All logs for reporting)
-  getAllTimeLogs: () => apiClient.get('/time-logs/'),
-
-  // Analytics
-  getAnalytics: (params?: object) => apiClient.get('/analytics/summary/', { params }),
-
-  // Activity
-  getActivity: () => apiClient.get('/activity/'),
-
-  // Notifications
-  getNotifications: () => apiClient.get('/notifications/'),
-
-  // Create user (admin only)
-  createUser: (data: object) =>
-    apiClient.post('/auth/create-user/', data),
-  deleteUser: (id: number) =>
-    apiClient.delete(`/users/${id}/`),
+/** What each role may do - mirrors the backend rules in tms/access.py. */
+export const can = {
+  manage: (r?: Role) => r === 'admin' || r === 'project_manager',
+  admin: (r?: Role) => r === 'admin',
+  createTask: (r?: Role) => r === 'admin' || r === 'project_manager' || r === 'team_head',
+  editTaskFully: (r?: Role) => r === 'admin' || r === 'project_manager' || r === 'team_head',
+  moveTask: (r?: Role) => r !== 'sales_manager' && r !== undefined,
+  write: (r?: Role) => r !== 'sales_manager' && r !== undefined,
 };

@@ -1,154 +1,163 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
-import Dashboard from './Dashboard';
+import { useEffect, useState, type FormEvent } from 'react';
+import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom';
+import {
+  Bell, CheckSquare, Clock, FolderKanban, LayoutDashboard, LogOut, Menu, User as UserIcon, Users,
+} from 'lucide-react';
+import { api, errorMessage, fullName, ROLE_LABELS, type Role } from './api';
+import { AuthProvider, useAuth } from './auth';
+import { Button, ErrorBox, Field, Spinner, cx, inputCls } from './ui';
+import DashboardPage from './pages/DashboardPage';
+import TasksPage from './pages/TasksPage';
+import ProjectsPage from './pages/ProjectsPage';
+import TeamPage from './pages/TeamPage';
+import TimesheetsPage from './pages/TimesheetsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import ProfilePage from './pages/ProfilePage';
 
-import { API_URL } from './api';
-
-function App() {
+function Login() {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setBusy(true);
     setError('');
-
     try {
-      const response = await axios.post(`${API_URL}/auth/login/`, {
-        email,
-        password
-      });
-      
-      const token = response.data.access;
-      const refresh = response.data.refresh;
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('refresh_token', refresh);
-      setIsAuthenticated(true);
-      
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      if (err.response?.status === 401) {
-        setError("Invalid email or password.");
-      } else {
-        setError("Failed to connect to the backend server. Please make sure the Python server is running.");
-      }
+      await login(email, password);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      setError(
+        status === 401 ? 'Wrong email or password.'
+          : status === 429 ? 'Too many attempts. Please wait a minute and try again.'
+            : errorMessage(err, 'Cannot reach the server. Try again.'),
+      );
     } finally {
-      setIsLoading(false);
+      setBusy(false);
     }
   };
-
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    setIsAuthenticated(false);
-  };
-
-  if (isAuthenticated) {
-    return <Dashboard onLogout={handleLogout} />;
-  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
-      {/* Dynamic Background Elements */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary opacity-20 rounded-full blur-[120px]"></div>
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#8b5cf6] opacity-20 rounded-full blur-[120px]"></div>
-      
-      <div className="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl relative z-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
-        <div className="text-center mb-8">
-          <img 
-            src="/colour parrot-icon.webp" 
-            alt="Colour Parrot Logo" 
-            className="h-28 w-auto mx-auto mb-5 object-contain drop-shadow-[0_0_20px_rgba(59,130,246,0.2)]"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-              const fallback = document.getElementById('login-fallback-logo');
-              if (fallback) fallback.style.display = 'flex';
-            }}
-          />
-          <div id="login-fallback-logo" className="hidden w-16 h-16 bg-gradient-to-br from-primary to-[#8b5cf6] rounded-2xl items-center justify-center mx-auto mb-5 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
-            <span className="text-2xl font-black text-white">CP</span>
-          </div>
-          <h1 className="text-3xl font-bold text-text mb-2">Colour Parrot TMS</h1>
-          <p className="text-text-muted">Sign in to your workspace</p>
+    <div className="flex min-h-full items-center justify-center p-4">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+        <div className="text-center">
+          <img src="/colour parrot-icon.webp" alt="" className="mx-auto mb-3 h-14 w-auto" onError={(e) => (e.currentTarget.style.display = 'none')} />
+          <h1 className="text-xl font-semibold">Colour Parrot</h1>
+          <p className="text-sm text-slate-500">Sign in to your workspace</p>
         </div>
+        <ErrorBox text={error} />
+        <Field label="Email">
+          <input className={inputCls} type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
+        <Field label="Password">
+          <input className={inputCls} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+        </Field>
+        <Button type="submit" busy={busy} className="w-full">Sign in</Button>
+      </form>
+    </div>
+  );
+}
 
-        {error && (
-          <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
-            <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-error/90">{error}</p>
-          </div>
-        )}
+interface NavItem { to: string; label: string; icon: typeof Menu; roles?: Role[] }
 
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-muted ml-1">Email address</label>
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-text-muted group-focus-within:text-primary transition-colors">
-                <Mail className="w-5 h-5" />
-              </div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text placeholder-text-muted/50 transition-all outline-none"
-                placeholder="you@your.com"
-                required
-              />
-            </div>
-          </div>
+const NAV: NavItem[] = [
+  { to: '/', label: 'Home', icon: LayoutDashboard },
+  { to: '/tasks', label: 'Tasks', icon: CheckSquare },
+  { to: '/projects', label: 'Projects', icon: FolderKanban },
+  { to: '/timesheets', label: 'Timesheets', icon: Clock },
+  { to: '/team', label: 'Team', icon: Users, roles: ['admin', 'project_manager'] },
+];
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-muted ml-1">Password</label>
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-text-muted group-focus-within:text-primary transition-colors">
-                <Lock className="w-5 h-5" />
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text placeholder-text-muted/50 transition-all outline-none"
-                placeholder="Enter your password"
-                required
-              />
-            </div>
-          </div>
+function Layout() {
+  const { user, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-3.5 bg-gradient-to-r from-primary to-[#8b5cf6] hover:opacity-90 text-white rounded-xl font-medium transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(59,130,246,0.5)] flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed group relative overflow-hidden mt-8"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Authenticating...
-                </>
-              ) : (
-                'Sign in securely'
-              )}
-            </span>
+  useEffect(() => {
+    let alive = true;
+    const poll = () => api.notifications().then((n) => alive && setUnread(n.filter((x) => !x.read).length)).catch(() => undefined);
+    poll();
+    const t = setInterval(poll, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+
+  if (!user) return null;
+  const items = NAV.filter((n) => !n.roles || n.roles.includes(user.role));
+  const link = ({ isActive }: { isActive: boolean }) =>
+    cx('flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium', isActive ? 'bg-brand-soft text-brand' : 'text-slate-600 hover:bg-slate-100');
+
+  return (
+    <div className="flex min-h-full">
+      {open && <div className="fixed inset-0 z-30 bg-slate-900/30 lg:hidden" onClick={() => setOpen(false)} />}
+      <aside className={cx('fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-slate-200 bg-white p-4 transition-transform lg:static lg:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}>
+        <div className="mb-6 px-2 text-lg font-semibold text-brand">Colour Parrot</div>
+        <nav className="flex-1 space-y-1" onClick={() => setOpen(false)}>
+          {items.map((n) => (
+            <NavLink key={n.to} to={n.to} end={n.to === '/'} className={link}>
+              <n.icon className="h-4 w-4" /> {n.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="space-y-1 border-t border-slate-200 pt-3" onClick={() => setOpen(false)}>
+          <NavLink to="/notifications" className={link}>
+            <Bell className="h-4 w-4" /> Notifications
+            {unread > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-xs text-white">{unread}</span>}
+          </NavLink>
+          <NavLink to="/profile" className={link}>
+            <UserIcon className="h-4 w-4" />
+            <span className="min-w-0 flex-1 truncate">{fullName(user)}<span className="block text-xs font-normal text-slate-400">{ROLE_LABELS[user.role]}</span></span>
+          </NavLink>
+          <button onClick={logout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
+            <LogOut className="h-4 w-4" /> Sign out
           </button>
-        </form>
-        
-        <div className="mt-8 text-center text-xs text-text-muted/60">
-          Connected to local Python Database 🚀
         </div>
+      </aside>
+      <div className="min-w-0 flex-1">
+        <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+          <button onClick={() => setOpen(true)} aria-label="Open menu"><Menu className="h-5 w-5" /></button>
+          <span className="font-semibold text-brand">Colour Parrot</span>
+        </header>
+        <main className="mx-auto max-w-6xl p-4 sm:p-6"><Outlet /></main>
       </div>
     </div>
   );
 }
 
-export default App;
+function Guard({ roles, children }: { roles?: Role[]; children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (roles && user && !roles.includes(user.role)) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function Shell() {
+  const { user, loading } = useAuth();
+  if (loading) return <Spinner />;
+  if (!user) return <Login />;
+  const manager: Role[] = ['admin', 'project_manager'];
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<DashboardPage />} />
+        <Route path="tasks" element={<TasksPage />} />
+        <Route path="projects" element={<ProjectsPage />} />
+        <Route path="timesheets" element={<TimesheetsPage />} />
+        <Route path="team" element={<Guard roles={manager}><TeamPage /></Guard>} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Shell />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}

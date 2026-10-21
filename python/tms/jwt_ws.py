@@ -12,7 +12,7 @@ from accounts.models import User
 @database_sync_to_async
 def _user_from_id(uid: int):
     try:
-        return User.objects.get(pk=uid)
+        return User.objects.get(pk=uid, is_active=True)
     except User.DoesNotExist:
         return AnonymousUser()
 

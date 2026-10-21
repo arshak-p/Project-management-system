@@ -1,7 +1,15 @@
 """Real-time notification stream per authenticated user."""
 import json
 
+from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+
+from tms import access
+
+
+@database_sync_to_async
+def _can_view_task(user, task_id: int) -> bool:
+    return access.work_items_for_user(user).filter(pk=task_id).exists()
 
 
 class NotificationConsumer(AsyncJsonWebsocketConsumer):
@@ -29,6 +37,9 @@ class TaskConsumer(AsyncJsonWebsocketConsumer):
             return
         
         self.task_id = self.scope['url_route']['kwargs']['task_id']
+        if not await _can_view_task(user, self.task_id):
+            await self.close(code=4403)
+            return
         self.group_name = f"task_{self.task_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()

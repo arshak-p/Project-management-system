@@ -1,5 +1,6 @@
 """Serializers for TMS API — nested reads, validated writes, client approval rules."""
 from django.db import transaction
+from django.db.models import Sum
 from rest_framework import serializers
 
 from accounts.models import User
@@ -10,6 +11,7 @@ from tms.models import (
     Cycle,
     CycleMember,
     Department,
+    JobTitle,
     Label,
     Module,
     Notification,
@@ -41,6 +43,22 @@ class DepartmentSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "slug", "head_id", "created_at", "is_active")
 
 
+class JobTitleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobTitle
+        fields = ("id", "name", "is_active", "created_at")
+        read_only_fields = ("is_active", "created_at")
+
+    def validate_name(self, value):
+        value = value.strip()
+        qs = JobTitle.objects.filter(name__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("A job title with this name already exists.")
+        return value
+
+
 class UserBriefSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -68,6 +86,29 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
         )
         read_only_fields = ("id",)
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        qs = User.objects.filter(email__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_role(self, value):
+        request = self.context.get("request")
+        if request and (not self.instance or self.instance.role != value):
+            if not access.can_assign_role(request.user, value):
+                raise serializers.ValidationError("You are not allowed to assign this role.")
+        return value
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        if request and self.instance and self.instance.pk == request.user.pk:
+            if attrs.get("is_active") is False:
+                raise serializers.ValidationError("You cannot deactivate your own account.")
+        return attrs
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -100,7 +141,8 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "slug", "description", "created_at", "updated_at", "is_active", "total_minutes")
 
     def get_total_minutes(self, obj):
-        return sum(log.minutes for log in TimeLog.objects.filter(work_item__project=obj))
+        total = TimeLog.objects.filter(work_item__project=obj).aggregate(t=Sum("minutes"))["t"]
+        return total or 0
 
 
 class ModuleSerializer(serializers.ModelSerializer):
@@ -152,6 +194,12 @@ class WorkItemCommentSerializer(serializers.ModelSerializer):
         fields = ("id", "work_item", "author", "body", "created_at")
         read_only_fields = ("author",)
 
+    def validate_body(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Comment cannot be empty.")
+        return value
+
     def create(self, validated_data):
         request = self.context["request"]
         return WorkItemComment.objects.create(author=request.user, **validated_data)
@@ -175,6 +223,20 @@ class WorkItemAttachmentSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("file_name", "mime_type", "size_bytes", "uploaded_by")
 
+    MAX_BYTES = 25 * 1024 * 1024
+    BLOCKED_EXT = {
+        ".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".sh", ".ps1", ".vbs",
+        ".js", ".jar", ".dll", ".php", ".py", ".html", ".htm", ".svg",
+    }
+
+    def validate_file(self, f):
+        name = (getattr(f, "name", "") or "").lower()
+        if any(name.endswith(ext) for ext in self.BLOCKED_EXT):
+            raise serializers.ValidationError("This file type is not allowed.")
+        if getattr(f, "size", 0) > self.MAX_BYTES:
+            raise serializers.ValidationError("File is too large (25 MB maximum).")
+        return f
+
     def create(self, validated_data):
         request = self.context["request"]
         f = validated_data["file"]
@@ -193,6 +255,11 @@ class TimeLogSerializer(serializers.ModelSerializer):
         fields = ("id", "work_item", "user", "minutes", "note", "logged_at", "created_at")
         read_only_fields = ("user",)
 
+    def validate_minutes(self, value):
+        if value <= 0 or value > 24 * 60:
+            raise serializers.ValidationError("Minutes must be between 1 and 1440.")
+        return value
+
     def create(self, validated_data):
         request = self.context["request"]
         return TimeLog.objects.create(user=request.user, **validated_data)
@@ -205,7 +272,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
     assignee = UserBriefSerializer(read_only=True)
     assignee_id = serializers.PrimaryKeyRelatedField(
         source="assignee",
-        queryset=User.objects.all(),
+        queryset=User.objects.filter(is_active=True, is_superuser=False),
         allow_null=True,
         write_only=True,
         required=False,
@@ -231,6 +298,7 @@ class WorkItemSerializer(serializers.ModelSerializer):
             "assignee",
             "assignee_id",
             "due_date",
+            "scheduled_date",
             "cycle",
             "department",
             "labels",
@@ -247,10 +315,41 @@ class WorkItemSerializer(serializers.ModelSerializer):
     def get_total_minutes(self, obj):
         return sum(log.minutes for log in obj.time_logs.all())
 
+    # Fields a plain team member may change on a task assigned to them.
+    MEMBER_FIELDS = {"state", "description", "board_position", "labels"}
+
     def validate(self, attrs):
         request = self.context["request"]
         user = request.user
         instance: WorkItem | None = self.instance
+
+        if user.role == User.Role.SPECIALIST and not user.is_superuser:
+            if not instance:
+                raise serializers.ValidationError("Team members cannot create tasks.")
+            extra = set(attrs.keys()) - self.MEMBER_FIELDS
+            if extra:
+                raise serializers.ValidationError(
+                    "Team members can only update status, notes and labels."
+                )
+
+        if user.role == User.Role.TEAM_HEAD and not user.is_superuser:
+            dept_id = access.user_department_id(user)
+            if instance and "project" in attrs and attrs["project"] != instance.project:
+                raise serializers.ValidationError("Team heads cannot move tasks between projects.")
+            if not instance and not dept_id:
+                raise serializers.ValidationError("Your account has no department assigned.")
+            dept = attrs.get("department", instance.department if instance else None)
+            if dept_id and dept and dept.pk != dept_id:
+                raise serializers.ValidationError("You can only manage tasks in your own department.")
+            if dept_id and not instance and "department" not in attrs:
+                attrs["department_id"] = dept_id
+            assignee = attrs.get("assignee")
+            if dept_id and assignee and assignee.pk != user.pk:
+                if access.user_department_id(assignee) != dept_id:
+                    raise serializers.ValidationError(
+                        "You can only assign tasks to people in your department."
+                    )
+
         if user.role != User.Role.CLIENT:
             return attrs
         if not instance:

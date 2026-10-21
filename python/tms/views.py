@@ -1,5 +1,8 @@
 """REST viewsets for Colour Parrot TMS (scoped querysets + analytics)."""
-from django.db.models import Count, Q
+import datetime
+
+from django.db import transaction
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -15,6 +18,7 @@ from tms.models import (
     Cycle,
     CycleMember,
     Department,
+    JobTitle,
     Label,
     Module,
     Notification,
@@ -26,12 +30,13 @@ from tms.models import (
     WorkItemAttachment,
     WorkItemComment,
 )
-from tms.permissions import BlockSalesWrites, IsAdminRole, IsPMOrAdmin
+from tms.permissions import BlockSalesWrites, IsAdminRole, IsAuthorOrManager, IsPMOrAdmin
 from tms.serializers import (
     ActivityLogSerializer,
     CycleMemberSerializer,
     CycleSerializer,
     DepartmentSerializer,
+    JobTitleSerializer,
     LabelSerializer,
     ModuleSerializer,
     NotificationSerializer,
@@ -67,12 +72,26 @@ class DepartmentViewSet(SalesSafeViewSet):
         instance.save(update_fields=["is_active"])
 
 
+class JobTitleViewSet(SalesSafeViewSet):
+    queryset = JobTitle.objects.filter(is_active=True)
+    serializer_class = JobTitleSerializer
+
+    def get_permissions(self):
+        if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
+        return [permissions.IsAuthenticated(), BlockSalesWrites()]
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
+
+
 class UserViewSet(SalesSafeViewSet):
     serializer_class = UserSerializer
 
     def get_queryset(self):
         include_archived = self.request.query_params.get("archived") == "true"
-        qs = User.objects.filter(is_superuser=False).select_related("tms_profile").prefetch_related()
+        qs = User.objects.filter(is_superuser=False).select_related("tms_profile")
         if not include_archived:
             qs = qs.filter(is_active=True)
         return qs
@@ -80,32 +99,60 @@ class UserViewSet(SalesSafeViewSet):
     def get_permissions(self):
         if self.action in ("list", "create", "destroy", "update", "partial_update"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
-        if self.action == "assignable":
-            return [permissions.IsAuthenticated(), BlockSalesWrites()]
         if self.action == "me":
             return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), BlockSalesWrites()]
 
+    def retrieve(self, request, *args, **kwargs):
+        obj = self.get_object()
+        if obj.pk != request.user.pk and not access.is_manager(request.user):
+            raise PermissionDenied("You can only view your own profile.")
+        return Response(self.get_serializer(obj).data)
+
+    def create(self, request, *args, **kwargs):
+        # Account creation (with password handling) lives in /api/auth/create-user/.
+        return Response(
+            {"detail": "Use /api/auth/create-user/ to create users."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
+    def perform_update(self, serializer):
+        if not access.can_manage_user(self.request.user, serializer.instance):
+            raise PermissionDenied("You cannot modify this user.")
+        serializer.save()
+
     def perform_destroy(self, instance):
+        u = self.request.user
+        if instance.pk == u.pk:
+            raise PermissionDenied("You cannot deactivate your own account.")
+        if not access.can_manage_user(u, instance):
+            raise PermissionDenied("You cannot deactivate this user.")
         instance.is_active = False
         instance.save(update_fields=["is_active"])
 
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get", "patch"])
     def me(self, request):
+        if request.method == "PATCH":
+            allowed = {k: v for k, v in request.data.items() if k in ("first_name", "last_name", "phone")}
+            for k, v in allowed.items():
+                setattr(request.user, k, str(v).strip()[:150])
+            request.user.save(update_fields=list(allowed) or None)
         ser = UserSerializer(request.user, context={"request": request})
         return Response(ser.data)
 
     @action(detail=False, methods=["get"], url_path="assignable")
     def assignable(self, request):
         u = request.user
-        if not (
-            u.is_superuser
-            or u.role == User.Role.ADMIN
-            or u.role == User.Role.PROJECT_MANAGER
-            or u.role == User.Role.TEAM_HEAD
-        ):
+        if not (access.is_manager(u) or u.role == User.Role.TEAM_HEAD):
             return Response([])
-        qs = User.objects.filter(is_active=True, is_superuser=False).order_by("first_name", "last_name")[:300]
+        qs = User.objects.filter(is_active=True, is_superuser=False)
+        if u.role == User.Role.TEAM_HEAD:
+            dept_id = access.user_department_id(u)
+            if dept_id:
+                qs = qs.filter(Q(tms_profile__department_id=dept_id) | Q(pk=u.pk))
+            else:
+                qs = qs.filter(pk=u.pk)
+        qs = qs.order_by("first_name", "last_name")[:300]
         return Response(UserBriefSerializer(qs, many=True).data)
 
 
@@ -175,6 +222,11 @@ class LabelViewSet(SalesSafeViewSet):
 class CycleViewSet(SalesSafeViewSet):
     serializer_class = CycleSerializer
 
+    def get_permissions(self):
+        if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
+        return [permissions.IsAuthenticated(), BlockSalesWrites()]
+
     def get_queryset(self):
         u = self.request.user
         qs = Cycle.objects.filter(is_active=True).select_related("project")
@@ -188,6 +240,11 @@ class CycleViewSet(SalesSafeViewSet):
 
 class CycleMemberViewSet(SalesSafeViewSet):
     serializer_class = CycleMemberSerializer
+
+    def get_permissions(self):
+        if self.request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            return [permissions.IsAuthenticated(), IsPMOrAdmin()]
+        return [permissions.IsAuthenticated(), BlockSalesWrites()]
 
     def get_queryset(self):
         u = self.request.user
@@ -209,16 +266,10 @@ class WorkItemViewSet(SalesSafeViewSet):
             qs = qs.filter(project__slug=slug)
         return qs
 
-    def perform_create(self, serializer):
-        u = self.request.user
-        if not (
-            u.is_superuser
-            or u.role == User.Role.ADMIN
-            or u.role == User.Role.PROJECT_MANAGER
-            or u.role == User.Role.TEAM_HEAD
-        ):
-            raise PermissionDenied("Only admins and project managers can create tasks.")
-        serializer.save()
+    def create(self, request, *args, **kwargs):
+        if not access.can_create_work_item(request.user):
+            raise PermissionDenied("Only admins, project managers and team heads can create tasks.")
+        return super().create(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         u = self.request.user
@@ -229,7 +280,7 @@ class WorkItemViewSet(SalesSafeViewSet):
 
     def perform_destroy(self, instance):
         u = self.request.user
-        if not (u.is_superuser or u.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]):
+        if not access.is_manager(u):
             raise PermissionDenied("Only admins and project managers can delete tasks.")
         instance._activity_user = u
         instance.is_active = False
@@ -240,7 +291,7 @@ class WorkItemViewSet(SalesSafeViewSet):
         item = self.get_object()
         u = request.user
         # Don't notify if the viewer is the creator or the PM themselves
-        if u != item.created_by:
+        if item.created_by_id and u.pk != item.created_by_id:
             Notification.objects.create(
                 user=item.created_by,
                 title="Task Viewed",
@@ -258,25 +309,35 @@ class WorkItemViewSet(SalesSafeViewSet):
         items = request.data
         if not isinstance(items, list):
             return Response({"detail": "Expected a list."}, status=status.HTTP_400_BAD_REQUEST)
-        for row in items:
-            pk = row.get("id")
-            state_id = row.get("state")
-            pos = row.get("board_position", 0)
-            try:
-                wi = WorkItem.objects.get(pk=pk)
-            except WorkItem.DoesNotExist:
-                continue
-            if not access.can_edit_work_item(u, wi):
-                continue
-            if state_id is not None:
-                wi.state_id = state_id
-            wi.board_position = pos
-            wi._activity_user = u
-            wi.save(update_fields=["state_id", "board_position", "updated_at"])
-        return Response({"status": "ok"})
+        rows = [r for r in items if isinstance(r, dict) and isinstance(r.get("id"), int)]
+        valid_states = set(State.objects.filter(is_active=True).values_list("id", flat=True))
+        visible = {
+            w.pk: w
+            for w in access.work_items_for_user(u).filter(pk__in=[r["id"] for r in rows])
+        }
+        updated = 0
+        with transaction.atomic():
+            for row in rows:
+                wi = visible.get(row["id"])
+                if wi is None or not access.can_edit_work_item(u, wi):
+                    continue
+                state_id = row.get("state")
+                pos = row.get("board_position", 0)
+                if not isinstance(pos, int) or pos < 0:
+                    continue
+                if state_id is not None:
+                    if state_id not in valid_states:
+                        continue
+                    wi.state_id = state_id
+                wi.board_position = pos
+                wi._activity_user = u
+                wi.save(update_fields=["state_id", "board_position", "updated_at"])
+                updated += 1
+        return Response({"status": "ok", "updated": updated})
 
 
 class WorkItemCommentViewSet(SalesSafeViewSet):
+    permission_classes = [permissions.IsAuthenticated, BlockSalesWrites, IsAuthorOrManager]
     serializer_class = WorkItemCommentSerializer
     filterset_fields = ("work_item",)
 
@@ -296,6 +357,7 @@ class WorkItemCommentViewSet(SalesSafeViewSet):
 
 
 class WorkItemAttachmentViewSet(SalesSafeViewSet):
+    permission_classes = [permissions.IsAuthenticated, BlockSalesWrites, IsAuthorOrManager]
     serializer_class = WorkItemAttachmentSerializer
     filterset_fields = ("work_item",)
 
@@ -313,6 +375,7 @@ class WorkItemAttachmentViewSet(SalesSafeViewSet):
 
 
 class TimeLogViewSet(SalesSafeViewSet):
+    permission_classes = [permissions.IsAuthenticated, BlockSalesWrites, IsAuthorOrManager]
     serializer_class = TimeLogSerializer
     filterset_fields = ("work_item",)
 
@@ -373,6 +436,12 @@ class ProjectMemberViewSet(SalesSafeViewSet):
         return [permissions.IsAuthenticated(), BlockSalesWrites()]
 
 
+def _parse_date(value):
+    if not value:
+        return None
+    return datetime.date.fromisoformat(value)
+
+
 class AnalyticsSummaryView(APIView):
     """
     Dashboard metrics: workload, completed vs pending, per-project and per-department rollups.
@@ -395,20 +464,30 @@ class AnalyticsSummaryView(APIView):
             wis = wis.filter(project__slug=project_slug)
         dept_id = request.query_params.get("department")
         if dept_id:
+            if not dept_id.isdigit():
+                return Response({"detail": "Invalid department."}, status=status.HTTP_400_BAD_REQUEST)
             wis = wis.filter(
                 Q(department_id=dept_id) | Q(assignee__tms_profile__department_id=dept_id)
             )
             
-        start_date = request.query_params.get("start_date")
-        end_date = request.query_params.get("end_date")
+        try:
+            start_date = _parse_date(request.query_params.get("start_date"))
+            end_date = _parse_date(request.query_params.get("end_date"))
+        except ValueError:
+            return Response(
+                {"detail": "Dates must be in YYYY-MM-DD format."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if start_date:
             wis = wis.filter(created_at__date__gte=start_date)
         if end_date:
             wis = wis.filter(created_at__date__lte=end_date)
 
         total = wis.count()
-        total_time = sum(log.minutes for log in TimeLog.objects.filter(work_item__in=wis))
-        terminal = wis.filter(state__slug__in=["approved", "launched_completed"]).count()
+        total_time = (
+            TimeLog.objects.filter(work_item__in=wis.values("pk")).aggregate(t=Sum("minutes"))["t"] or 0
+        )
+        terminal = wis.filter(state__slug__in=access.DONE_STATE_SLUGS).count()
         by_state = list(
             wis.values("state__slug", "state__name").annotate(c=Count("id")).order_by()
         )
@@ -424,8 +503,8 @@ class AnalyticsSummaryView(APIView):
         )
 
         # Optimized Historical trend (last 30 days) - Query once, process in Python
-        now = timezone.now()
-        start_30 = (now - timezone.timedelta(days=29)).date()
+        today = timezone.localdate()
+        start_30 = today - datetime.timedelta(days=29)
         
         # Get all counts grouped by date in 2 clever queries
         created_counts = dict(
@@ -436,7 +515,7 @@ class AnalyticsSummaryView(APIView):
         )
         completed_counts = dict(
             wis.filter(
-                state__slug__in=["approved", "launched_completed"], 
+                state__slug__in=access.DONE_STATE_SLUGS, 
                 updated_at__date__gte=start_30
             )
             .values("updated_at__date")
@@ -446,7 +525,7 @@ class AnalyticsSummaryView(APIView):
 
         last_30_days = []
         for i in range(29, -1, -1):
-            day = (now - timezone.timedelta(days=i)).date()
+            day = today - datetime.timedelta(days=i)
             day_str = day.strftime("%Y-%m-%d")
             last_30_days.append({
                 "date": day_str,

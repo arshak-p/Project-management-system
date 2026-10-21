@@ -26,6 +26,20 @@ class Department(models.Model):
         return self.name
 
 
+class JobTitle(models.Model):
+    """Designation catalogue (Designer, Copywriter, ...) used in user dropdowns."""
+
+    name = models.CharField(max_length=120, unique=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Project(models.Model):
     """Client engagement — each client brand is a project."""
 
@@ -137,11 +151,8 @@ class Label(models.Model):
 
     key = models.SlugField(max_length=64, unique=True)
     name = models.CharField(max_length=120)
-    color_hint = models.CharField(
-        max_length=32,
-        blank=True,
-        help_text="UI hint: e.g. red, amber, violet (Tailwind semantic).",
-    )
+    # UI hint: e.g. red, amber, violet (Tailwind semantic).
+    color_hint = models.CharField(max_length=32, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
@@ -218,6 +229,9 @@ class WorkItem(models.Model):
         related_name="assigned_work_items",
     )
     due_date = models.DateField(null=True, blank=True)
+    scheduled_date = models.DateField(
+        null=True, blank=True, help_text="Date when work is planned to start"
+    )
     cycle = models.ForeignKey(
         Cycle,
         null=True,
@@ -233,10 +247,8 @@ class WorkItem(models.Model):
         related_name="work_items",
     )
     labels = models.ManyToManyField(Label, blank=True, related_name="work_items")
-    board_position = models.PositiveIntegerField(
-        default=0,
-        help_text="Ordering within a Kanban column (per state).",
-    )
+    # Ordering within a Kanban column (per state).
+    board_position = models.PositiveIntegerField(default=0)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
