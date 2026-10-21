@@ -154,3 +154,38 @@ def client_may_approve_work_item(user: User, work_item: WorkItem) -> bool:
         return False
     return True
 
+
+
+# --- user management rules -------------------------------------------------
+_ADMIN_ONLY_ROLES = (User.Role.ADMIN,)
+
+
+def can_manage_user(actor: User, target: User) -> bool:
+    """
+    Admin manages everyone. HR manages everyone except admins.
+    Project managers manage only ordinary staff (not admins, HR or other PMs).
+    """
+    if not actor.is_authenticated:
+        return False
+    if actor.is_superuser or actor.role == User.Role.ADMIN:
+        return True
+    if target.is_superuser or target.role == User.Role.ADMIN:
+        return False
+    if actor.role == User.Role.HR:
+        return True
+    if actor.role == User.Role.PROJECT_MANAGER:
+        return target.role not in (User.Role.HR, User.Role.PROJECT_MANAGER)
+    return False
+
+
+def can_assign_role(actor: User, role: str) -> bool:
+    """Only admins may create or promote admins; PMs may not grant HR/PM either."""
+    if actor.is_superuser or actor.role == User.Role.ADMIN:
+        return True
+    if role in _ADMIN_ONLY_ROLES:
+        return False
+    if actor.role == User.Role.HR:
+        return True
+    if actor.role == User.Role.PROJECT_MANAGER:
+        return role not in (User.Role.HR, User.Role.PROJECT_MANAGER)
+    return False

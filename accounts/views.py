@@ -1,4 +1,4 @@
-import random
+import secrets
 from django.conf import settings
 from django.core.mail import send_mail
 import threading
@@ -6,12 +6,14 @@ from django.contrib.auth.password_validation import validate_password
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework import permissions, status
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from accounts.models import User, EmailOTP
 from accounts.serializers import CustomTokenObtainPairSerializer
+from tms import access
 from tms.permissions import IsAdminRole, IsHRManagement
 
 from django.utils import timezone
@@ -39,10 +41,14 @@ def send_reliable_email_async(subject, message, recipient_list):
 @method_decorator(csrf_exempt, name='dispatch')
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    # Brute-force protection: per-IP limit on top of the site-wide defaults.
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
 
 class RefreshView(TokenRefreshView):
-    pass
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "refresh"
 
 
 class CreateUserView(APIView):
@@ -51,7 +57,7 @@ class CreateUserView(APIView):
 
     def post(self, request):
         data = request.data
-        email = data.get('email', '').strip()
+        email = str(data.get('email', '')).strip().lower()
         password = data.get('password', '')
         first_name = data.get('first_name', '').strip()
         last_name = data.get('last_name', '').strip()
@@ -64,7 +70,12 @@ class CreateUserView(APIView):
         if not email or not password:
             return Response({'detail': 'Email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if User.objects.filter(email=email).exists():
+        if role not in User.Role.values:
+            return Response({'detail': 'Invalid role.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not access.can_assign_role(request.user, role):
+            return Response({'detail': 'You are not allowed to create users with this role.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if User.objects.filter(email__iexact=email).exists():
             return Response({'detail': 'A user with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if email is verified
@@ -72,7 +83,7 @@ class CreateUserView(APIView):
         import datetime
         fifteen_mins_ago = timezone.now() - datetime.timedelta(minutes=15)
         is_verified = EmailOTP.objects.filter(
-            email=email, 
+            email__iexact=email, 
             is_used=True, 
             created_at__gte=fifteen_mins_ago
         ).exists()
@@ -140,16 +151,18 @@ class SendOTPView(APIView):
     Used during member creation to verify identity.
     """
     permission_classes = [permissions.IsAuthenticated, IsHRManagement]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "otp"
 
     def post(self, request):
-        email = request.data.get('email', '').strip()
+        email = str(request.data.get('email', '')).strip().lower()
         if not email:
             return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             return Response({'detail': 'This member already has an account.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        otp_code = f"{random.randint(100000, 999999)}"
+        otp_code = f"{secrets.randbelow(900000) + 100000}"
         
         EmailOTP.objects.create(email=email, otp=otp_code)
 
@@ -175,10 +188,12 @@ class VerifyOTPActionView(APIView):
     Verify the dispatched code to finalize member clearance.
     """
     permission_classes = [permissions.IsAuthenticated, IsHRManagement]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "otp"
 
     def post(self, request):
-        email = request.data.get('email', '').strip()
-        otp_code = request.data.get('otp', '').strip()
+        email = str(request.data.get('email', '')).strip().lower()
+        otp_code = str(request.data.get('otp', '')).strip()
 
         if not email or not otp_code:
             return Response({'detail': 'Email and code are required.'}, status=status.HTTP_400_BAD_REQUEST)

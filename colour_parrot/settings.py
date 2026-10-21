@@ -17,6 +17,11 @@ SECRET_KEY = os.environ.get(
 )
 DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() in ("1", "true", "yes")
 
+if not DEBUG and SECRET_KEY.startswith("dev-only-change-me"):
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured("Set a strong DJANGO_SECRET_KEY environment variable (DJANGO_DEBUG is off).")
+
 ALLOWED_HOSTS = [
     h.strip()
     for h in os.environ.get(
@@ -155,7 +160,10 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/day",
-        "user": "5000/hour"
+        "user": "5000/hour",
+        "login": os.environ.get("THROTTLE_LOGIN", "10/min"),
+        "refresh": os.environ.get("THROTTLE_REFRESH", "60/min"),
+        "otp": os.environ.get("THROTTLE_OTP", "20/hour"),
     }
 }
 

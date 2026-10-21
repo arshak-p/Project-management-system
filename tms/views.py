@@ -2,6 +2,7 @@ import os
 import subprocess
 import csv
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from django.http import HttpResponse
@@ -194,6 +195,10 @@ class UserViewSet(SalesSafeViewSet):
         serializer.save(_activity_user=self.request.user)
 
     def perform_destroy(self, instance):
+        if instance.pk == self.request.user.pk:
+            raise PermissionDenied("You cannot deactivate your own account.")
+        if not access.can_manage_user(self.request.user, instance):
+            raise PermissionDenied("You cannot deactivate this user.")
         instance.is_active = False
         instance._activity_user = self.request.user
         instance.save(update_fields=["is_active"])
@@ -201,6 +206,8 @@ class UserViewSet(SalesSafeViewSet):
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
         instance = self.get_object()
+        if not access.can_manage_user(request.user, instance):
+            raise PermissionDenied("You cannot restore this user.")
         instance.is_active = True
         instance._activity_user = request.user
         instance.save(update_fields=["is_active"])
@@ -643,21 +650,28 @@ class WorkItemViewSet(SalesSafeViewSet):
         items = request.data
         if not isinstance(items, list):
             return Response({"detail": "Expected a list."}, status=status.HTTP_400_BAD_REQUEST)
-        for row in items:
-            pk = row.get("id")
-            state_id = row.get("state")
-            pos = row.get("board_position", 0)
-            try:
-                wi = WorkItem.objects.get(pk=pk)
-            except WorkItem.DoesNotExist:
-                continue
-            if not access.can_edit_work_item(u, wi):
-                continue
-            if state_id is not None:
-                wi.state_id = state_id
-            wi.board_position = pos
-            wi._activity_user = u
-            wi.save(update_fields=["state_id", "board_position", "updated_at"])
+        valid_states = set(State.objects.filter(is_active=True).values_list("id", flat=True))
+        rows = [r for r in items if isinstance(r, dict) and isinstance(r.get("id"), int)]
+        visible = {
+            w.pk: w
+            for w in access.work_items_for_user(u, lightweight=True).filter(pk__in=[r["id"] for r in rows])
+        }
+        with transaction.atomic():
+            for row in rows:
+                wi = visible.get(row["id"])
+                if wi is None or not access.can_edit_work_item(u, wi):
+                    continue
+                state_id = row.get("state")
+                pos = row.get("board_position", 0)
+                if not isinstance(pos, int) or pos < 0:
+                    continue
+                if state_id is not None:
+                    if state_id not in valid_states:
+                        continue
+                    wi.state_id = state_id
+                wi.board_position = pos
+                wi._activity_user = u
+                wi.save(update_fields=["state_id", "board_position", "updated_at"])
         return Response({"status": "ok"})
 
     @action(detail=False, methods=["post"], url_path="bulk-create")
@@ -1095,6 +1109,11 @@ class ProjectStrategyViewSet(viewsets.ModelViewSet):
     queryset = ProjectStrategy.objects.select_related("project", "created_by").all()
     serializer_class = ProjectStrategySerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsPMOrAdmin()]
 
     def get_queryset(self):
         qs = super().get_queryset()

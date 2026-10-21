@@ -46,6 +46,15 @@ class TaskConsumer(AsyncJsonWebsocketConsumer):
             return
         
         self.task_id = self.scope['url_route']['kwargs']['task_id']
+        from channels.db import database_sync_to_async
+        from tms import access
+
+        can_view = await database_sync_to_async(
+            lambda: access.work_items_for_user(user, lightweight=True).filter(pk=self.task_id).exists()
+        )()
+        if not can_view:
+            await self.close(code=4403)
+            return
         self.group_name = f"task_{self.task_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()

@@ -108,6 +108,17 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         request = self.context.get("request")
+        if request and request.user and request.user.is_authenticated:
+            actor = request.user
+            if self.instance and self.instance.pk != actor.pk and not access.can_manage_user(actor, self.instance):
+                raise serializers.ValidationError("You are not allowed to modify this user.")
+            if "role" in attrs and (not self.instance or attrs["role"] != self.instance.role):
+                if self.instance and self.instance.pk == actor.pk:
+                    raise serializers.ValidationError({"role": "You cannot change your own role."})
+                if not access.can_assign_role(actor, attrs["role"]):
+                    raise serializers.ValidationError({"role": "You are not allowed to assign this role."})
+            if self.instance and self.instance.pk == actor.pk and attrs.get("is_active") is False:
+                raise serializers.ValidationError({"is_active": "You cannot deactivate your own account."})
         if request and request.user:
             user = request.user
             is_hr_or_admin = (
