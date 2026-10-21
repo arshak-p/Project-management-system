@@ -21,6 +21,7 @@ router.register(r"notifications", views.NotificationViewSet, basename="notificat
 router.register(r"activity", views.ActivityLogViewSet, basename="activity")
 router.register(r"project-members", views.ProjectMemberViewSet, basename="projectmember")
 router.register(r"backups", views.BackupViewSet, basename="backup")
+router.register(r"strategies", views.ProjectStrategyViewSet, basename="strategy")
 
 
 urlpatterns = [

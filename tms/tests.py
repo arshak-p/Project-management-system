@@ -148,7 +148,8 @@ class ScopingTests(Base):
         self.assertEqual(r.status_code, 200)
         self.task.refresh_from_db()
         self.other_task.refresh_from_db()
-        self.assertEqual(self.task.state_id, self.state2.id)
+        # 'doing' is not a stage a team member may move work into, and the other task isn't theirs
+        self.assertEqual(self.task.state_id, self.state.id)
         self.assertEqual(self.other_task.state_id, self.state.id)
 
     def test_member_sees_only_own_tasks(self):
@@ -190,3 +191,31 @@ class WorkflowTests(Base):
     def test_pm_can_reassign(self):
         r = self.as_user(self.pm).patch(f"/api/work-items/{self.task.id}/", {"assignee_id": self.member2.id}, format="json")
         self.assertEqual(r.status_code, 200, r.data)
+
+
+class StrategyTests(Base):
+    def test_strategies_endpoint_exists_and_is_role_gated(self):
+        self.assertEqual(self.as_user(self.strategist).post("/api/strategies/", {"project": self.project.id, "name": "May plan"}).status_code, 201)
+        self.assertEqual(self.as_user(self.member).post("/api/strategies/", {"project": self.project.id, "name": "X"}).status_code, 403)
+        self.assertEqual(self.as_user(self.member).get("/api/strategies/").status_code, 200)
+
+
+class ReorderRuleTests(WorkflowTests):
+    def test_specialist_cannot_drag_into_client_review(self):
+        r = self.as_user(self.member).post("/api/work-items/reorder/", [
+            {"id": self.task.id, "state": self.s_client.id, "board_position": 0}], format="json")
+        self.assertEqual(r.status_code, 200)
+        self.task.refresh_from_db()
+        self.assertNotEqual(self.task.state_id, self.s_client.id)
+
+    def test_specialist_can_drag_into_in_progress(self):
+        self.as_user(self.member).post("/api/work-items/reorder/", [
+            {"id": self.task.id, "state": self.s_prog.id, "board_position": 0}], format="json")
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.state_id, self.s_prog.id)
+
+    def test_pm_can_drag_anywhere(self):
+        self.as_user(self.pm).post("/api/work-items/reorder/", [
+            {"id": self.task.id, "state": self.s_client.id, "board_position": 0}], format="json")
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.state_id, self.s_client.id)

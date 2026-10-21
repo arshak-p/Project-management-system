@@ -650,7 +650,9 @@ class WorkItemViewSet(SalesSafeViewSet):
         items = request.data
         if not isinstance(items, list):
             return Response({"detail": "Expected a list."}, status=status.HTTP_400_BAD_REQUEST)
-        valid_states = set(State.objects.filter(is_active=True).values_list("id", flat=True))
+        state_slugs = dict(State.objects.filter(is_active=True).values_list("id", "slug"))
+        valid_states = set(state_slugs)
+        is_lead = u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD)
         rows = [r for r in items if isinstance(r, dict) and isinstance(r.get("id"), int)]
         visible = {
             w.pk: w
@@ -668,6 +670,14 @@ class WorkItemViewSet(SalesSafeViewSet):
                 if state_id is not None:
                     if state_id not in valid_states:
                         continue
+                    slug = state_slugs[state_id]
+                    # Same workflow rules as a normal task update: only leads approve or finish work,
+                    # and team members may only start work or send it for review.
+                    if state_id != wi.state_id:
+                        if slug in ("client-review", "completed-launched") and not is_lead:
+                            continue
+                        if u.role == User.Role.SPECIALIST and slug not in ("in-progress", "team-head-review"):
+                            continue
                     wi.state_id = state_id
                 wi.board_position = pos
                 wi._activity_user = u
