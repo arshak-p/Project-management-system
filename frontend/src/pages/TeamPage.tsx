@@ -54,7 +54,39 @@ export default function TeamPage() {
           </label>
         )}
       </div>
-      <Card className="mb-6 overflow-x-auto">
+      <Card className="mb-6 md:hidden">
+        <ul className="divide-y divide-slate-100">
+          {rows.map((u) => (
+            <li key={u.id} className="space-y-2 px-4 py-3 text-sm">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium">{fullName(u)}</div>
+                  <div className="truncate text-slate-500">{u.email}</div>
+                  <div className="text-slate-500">{u.title || 'No job title'}</div>
+                </div>
+                <Badge tone={u.role === 'admin' ? 'green' : 'slate'}>{ROLE_LABELS[u.role] ?? u.role}</Badge>
+              </div>
+              {manage && (
+                <div className="flex gap-2">
+                  {u.is_active === false
+                    ? <Button variant="ghost" onClick={() => run(() => api.restoreUser(u.id))}>Restore</Button>
+                    : (
+                      <>
+                        <Button variant="ghost" onClick={() => setEditing(u)}>Edit</Button>
+                        {u.id !== me?.id && (
+                          <Button variant="ghost" aria-label={`Deactivate ${fullName(u)}`} onClick={() => confirm(`Deactivate ${fullName(u)}? They will no longer be able to sign in.`) && run(() => api.deactivateUser(u.id))}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </>
+                    )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </Card>
+      <Card className="mb-6 hidden overflow-x-auto md:block">
         <table className="w-full min-w-[36rem] text-left text-sm">
           <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
             <tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Job title</th><th className="px-4 py-3" /></tr>

@@ -29,8 +29,11 @@ export default function CalendarView() {
     return m;
   }, [tasks.data]);
 
-  if (tasks.loading || opts.loading) return <Spinner />;
   const today = todayISO();
+  const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
+  const agenda = [...byDay.entries()].filter(([day]) => day.startsWith(monthKey)).sort(([a], [b]) => (a < b ? -1 : 1));
+
+  if (tasks.loading || opts.loading) return <Spinner />;
   const shift = (n: number) => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + n, 1));
 
   return (
@@ -41,7 +44,25 @@ export default function CalendarView() {
         <Button variant="ghost" aria-label="Next month" onClick={() => shift(1)}><ChevronRight className="h-4 w-4" /></Button>
       </div>
       <ErrorBox text={tasks.error} />
-      <Card className="overflow-x-auto">
+      <Card className="md:hidden">
+        {agenda.length === 0 ? (
+          <div className="px-4 py-10 text-center text-sm text-slate-500">No tasks due this month.</div>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {agenda.map(([day, items]) => (
+              <li key={day} className="px-4 py-3">
+                <div className={cx('mb-1 text-xs font-semibold uppercase', day === today ? 'text-brand' : 'text-slate-500')}>
+                  {new Date(day + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                </div>
+                {items.map((t) => (
+                  <button key={t.id} onClick={() => setOpen(t)} className="mb-1 block w-full rounded bg-brand-soft px-2 py-1.5 text-left text-sm text-brand">{t.title}</button>
+                ))}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+      <Card className="hidden overflow-x-auto md:block">
         <div className="grid min-w-[42rem] grid-cols-7 text-xs">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div key={d} className="border-b border-slate-200 p-2 font-medium text-slate-500">{d}</div>)}
           {days.map((d) => {

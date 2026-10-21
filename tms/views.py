@@ -837,8 +837,15 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
         if u.role == User.Role.CLIENT:
             pid = access.user_client_project_id(u)
             return qs.filter(project_id=pid) if pid else qs.none()
-        proj_ids = access.projects_for_user(u).values_list("id", flat=True)
-        return qs.filter(project_id__in=proj_ids).order_by('-created_at')
+        if u.role in (User.Role.PROJECT_MANAGER, User.Role.HR):
+            proj_ids = access.projects_for_user(u).values_list("id", flat=True)
+            return qs.filter(project_id__in=proj_ids).order_by('-created_at')
+        # Team heads and team members only see their own actions and changes to tasks they can see.
+        visible = access.work_items_for_user(u, include_archived=True, lightweight=True).values_list("id", flat=True)
+        visible_ids = [str(i) for i in visible]
+        return qs.filter(
+            Q(user=u) | Q(entity_type="work_item", entity_id__in=visible_ids)
+        ).order_by('-created_at')
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())[:50]
@@ -882,9 +889,14 @@ class AnalyticsSummaryView(APIView):
             
         assignee_id = request.query_params.get("assignee")
         if assignee_id:
+            if not str(assignee_id).isdigit():
+                return Response({"detail": "Invalid filter."}, status=status.HTTP_400_BAD_REQUEST)
             wis = wis.filter(assignee_id=assignee_id)
 
         dept_id = request.query_params.get("department")
+        assignee_id_ok = not assignee_id or str(assignee_id).isdigit()
+        if (dept_id and not dept_id.isdigit()) or not assignee_id_ok:
+            return Response({"detail": "Invalid filter."}, status=status.HTTP_400_BAD_REQUEST)
         if dept_id:
             wis = wis.filter(
                 Q(department_id=dept_id) | Q(assignee__tms_profile__department_id=dept_id)
@@ -892,7 +904,14 @@ class AnalyticsSummaryView(APIView):
             
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
-        
+        try:
+            for value in (start_date, end_date):
+                if value:
+                    import datetime as _dt
+                    _dt.date.fromisoformat(value)
+        except ValueError:
+            return Response({"detail": "Dates must be in YYYY-MM-DD format."}, status=status.HTTP_400_BAD_REQUEST)
+
         log_filter = Q()
         if start_date: log_filter &= Q(created_at__date__gte=start_date)
         if end_date: log_filter &= Q(created_at__date__lte=end_date)

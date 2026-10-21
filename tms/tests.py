@@ -230,3 +230,26 @@ class ChangePasswordTests(Base):
         self.assertEqual(r.status_code, 200, r.data)
         self.member.refresh_from_db()
         self.assertTrue(self.member.check_password("Brand-new-pass-77"))
+
+
+class ActivityScopeTests(Base):
+    def test_member_sees_only_activity_on_visible_tasks(self):
+        rows = self.as_user(self.member).get("/api/activity/").data
+        for row in rows:
+            if row["entity_type"] == "work_item":
+                self.assertEqual(row["entity_id"], str(self.task.id))
+            else:
+                self.assertEqual(row["user"]["id"] if row["user"] else None, self.member.id)
+
+    def test_admin_sees_activity_for_all_tasks(self):
+        ids = {r["entity_id"] for r in self.as_user(self.admin).get("/api/activity/").data if r["entity_type"] == "work_item"}
+        self.assertTrue({str(self.task.id), str(self.other_task.id)} <= ids)
+
+
+class AnalyticsParamTests(Base):
+    def test_bad_params_return_400(self):
+        c = self.as_user(self.pm)
+        self.assertEqual(c.get("/api/analytics/summary/?start_date=nope").status_code, 400)
+        self.assertEqual(c.get("/api/analytics/summary/?department=abc").status_code, 400)
+        self.assertEqual(c.get("/api/analytics/summary/?assignee=abc").status_code, 400)
+        self.assertEqual(c.get("/api/analytics/summary/?start_date=2026-01-01&end_date=2026-12-31").status_code, 200)

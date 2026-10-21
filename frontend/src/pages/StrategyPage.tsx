@@ -106,7 +106,26 @@ export default function StrategyPage() {
 
       {plan ? (
         <>
-          <Card className="mb-6 overflow-x-auto">
+          <Card className="mb-6 md:hidden">
+            {tasks.loading ? <Spinner /> : (tasks.data?.length ?? 0) === 0 ? <Empty text="No posts in this plan yet." /> : (
+              <ul className="divide-y divide-slate-100">
+                {tasks.data?.map((t) => (
+                  <li key={t.id}>
+                    <button className="block w-full space-y-1 px-4 py-3 text-left text-sm" onClick={() => setOpen(t)}>
+                      <div className="font-medium">{t.title}</div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <Badge tone="blue">{t.state__name}</Badge>
+                        <span>{moduleName(t.module)}</span>
+                        <span>{fmtDate(t.posting_date)}</span>
+                      </div>
+                      <div className="text-xs text-slate-500">{fullName(t.assignee)}{t.content_writer ? ` · writer ${fullName(t.content_writer)}` : ''}</div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <Card className="mb-6 hidden overflow-x-auto md:block">
             {tasks.loading ? <Spinner /> : (tasks.data?.length ?? 0) === 0 ? <Empty text="No posts in this plan yet." /> : (
               <table className="w-full min-w-[40rem] text-left text-sm">
                 <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">

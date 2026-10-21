@@ -66,7 +66,23 @@ export default function TimesheetsPage() {
           </ul>
         </Card>
       )}
-      <Card className="overflow-x-auto">
+      <Card className="md:hidden">
+        {rows.length === 0 ? <Empty text="No time logged in this period." /> : (
+          <ul className="divide-y divide-slate-100">
+            {rows.map((r) => (
+              <li key={r.id} className="px-4 py-3 text-sm">
+                <div className="flex justify-between gap-2">
+                  <span className="font-medium">{fullName(r.user)}</span>
+                  <span className="font-medium">{fmtMinutes(r.minutes)}</span>
+                </div>
+                <div className="text-slate-500">{r.task ? `${r.task.task_code} ${r.task.title}` : `#${r.work_item}`}</div>
+                <div className="text-xs text-slate-400">{fmtDate(r.logged_at)}{r.note ? ` · ${r.note}` : ''}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+      <Card className="hidden overflow-x-auto md:block">
         {rows.length === 0 ? <Empty text="No time logged in this period." /> : (
           <table className="w-full min-w-[36rem] text-left text-sm">
             <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">

@@ -54,7 +54,26 @@ export default function ListView() {
           </label>
         )}
       </div>
-      <Card className="overflow-x-auto">
+      <Card className="md:hidden">
+        {rows.length === 0 ? <Empty text="No tasks match." /> : (
+          <ul className="divide-y divide-slate-100">
+            {rows.map((t) => (
+              <li key={t.id}>
+                <button className="block w-full space-y-1.5 px-4 py-3 text-left" onClick={() => setEditing(t)}>
+                  <div className="font-medium"><span className="text-slate-400">{t.task_code}</span> {t.title}</div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <Badge tone="blue">{stateName(t.state)}</Badge>
+                    <PriorityBadge priority={t.priority} />
+                    <span>{projectName(t.project)}</span>
+                  </div>
+                  <div className="text-xs text-slate-500">{fullName(t.assignee)} · Due {fmtDate(t.due_date)}</div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+      <Card className="hidden overflow-x-auto md:block">
         {rows.length === 0 ? <Empty text="No tasks match." /> : (
           <table className="w-full min-w-[40rem] text-left text-sm">
             <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
