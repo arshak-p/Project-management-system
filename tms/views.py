@@ -461,7 +461,15 @@ class WorkItemViewSet(SalesSafeViewSet):
             try:
                 new_state = State.objects.get(pk=new_state_id)
                 if new_state.slug in ("client-review", "completed-launched") and new_state.id != inst.state_id:
-                    if not (u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD)):
+                    is_lead = u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD)
+                    # A client may approve work that is waiting in Client Review (their own project only,
+                    # which can_edit_work_item already checked above).
+                    client_approves = (
+                        u.role == User.Role.CLIENT
+                        and inst.state.slug == "client-review"
+                        and new_state.slug == "completed-launched"
+                    )
+                    if not (is_lead or client_approves):
                         raise PermissionDenied("Only Leads, Managers or Admins can approve work for Client Review or Completion.")
                 
                 # Notify Team Head when work is done and ready for review

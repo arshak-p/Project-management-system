@@ -253,3 +253,42 @@ class AnalyticsParamTests(Base):
         self.assertEqual(c.get("/api/analytics/summary/?department=abc").status_code, 400)
         self.assertEqual(c.get("/api/analytics/summary/?assignee=abc").status_code, 400)
         self.assertEqual(c.get("/api/analytics/summary/?start_date=2026-01-01&end_date=2026-12-31").status_code, 200)
+
+
+class ClientRoleTests(Base):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.client_user = make_user("client@x.com", R.CLIENT)
+        cls.other_project = Project.objects.create(name="Other", slug="other")
+        cls.client_user.tms_profile.client_project = cls.project
+        cls.client_user.tms_profile.save()
+        cls.review, _ = State.objects.get_or_create(slug="client-review", defaults={"name": "Client Review", "sort_order": 5})
+        cls.done, _ = State.objects.get_or_create(slug="completed-launched", defaults={"name": "Completed", "sort_order": 6})
+        cls.foreign = WorkItem.objects.create(
+            project=cls.other_project, title="Not yours", state=cls.state, module=cls.module
+        )
+
+    def test_client_sees_only_their_project(self):
+        rows = self.as_user(self.client_user).get("/api/work-items/").data
+        self.assertTrue(rows)
+        self.assertTrue(all(r["project"] == self.project.id for r in rows))
+        self.assertEqual(self.as_user(self.client_user).get(f"/api/work-items/{self.foreign.id}/").status_code, 404)
+
+    def test_client_can_approve_but_not_edit_details(self):
+        c = self.as_user(self.client_user)
+        url = f"/api/work-items/{self.task.id}/"
+        self.assertEqual(c.patch(url, {"title": "hacked"}, format="json").status_code, 400)
+        self.assertEqual(c.patch(url, {"assignee_id": self.member2.id}, format="json").status_code, 400)
+        self.assertEqual(c.patch(url, {"state": self.state2.id}, format="json").status_code, 400)
+        # approval only works for work that is waiting in Client Review
+        self.assertEqual(c.patch(url, {"state": self.done.id}, format="json").status_code, 403)
+        WorkItem.objects.filter(pk=self.task.pk).update(state=self.review)
+        r = c.patch(url, {"state": self.done.id}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+
+    def test_client_cannot_create_or_see_team(self):
+        c = self.as_user(self.client_user)
+        self.assertNotEqual(c.post("/api/work-items/", {"project": self.project.id, "title": "x", "state": self.state.id, "module": self.module.id}).status_code, 201)
+        self.assertEqual(c.get("/api/users/").status_code, 403)
+        self.assertEqual(c.post("/api/projects/", {"name": "N", "slug": "n"}).status_code, 403)

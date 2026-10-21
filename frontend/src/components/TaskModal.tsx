@@ -35,6 +35,7 @@ function editableFields(task: Task | null, user: ReturnType<typeof useAuth>['use
       if (task.content_writer?.id === user.id) f.add('reference_link');
       return f;
     }
+    case 'client': return new Set<Field_>(task.project ? ['state'] : []);
     default: return new Set();
   }
 }
@@ -73,7 +74,9 @@ export default function TaskModal({ task, options, onClose, onSaved }: Props) {
   // Team members can only move their own cards forward to these two stages.
   const stateChoices = user?.role === 'specialist'
     ? options.states.filter((s) => s.id === task?.state || ['in-progress', 'team-head-review'].includes(s.slug))
-    : options.states;
+    : user?.role === 'client'
+      ? options.states.filter((s) => s.id === task?.state || ['client-review', 'completed-launched'].includes(s.slug))
+      : options.states;
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
