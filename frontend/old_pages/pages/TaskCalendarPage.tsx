@@ -132,7 +132,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
             <select 
               value={filterProject} 
               onChange={e => setFilterProject(e.target.value)}
-              className="px-4 py-3 glass border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all"
+              className="px-4 py-3 glass border border-border/50 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all"
             >
               <option value="">All Projects</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -140,14 +140,14 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
             <select 
               value={filterModule} 
               onChange={e => setFilterModule(e.target.value)}
-              className="px-4 py-3 glass border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all"
+              className="px-4 py-3 glass border border-border/50 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all"
             >
               <option value="">All Modules</option>
               {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </div>
 
-          <div className="glass flex p-1 rounded-2xl border border-white/5">
+          <div className="glass flex p-1 rounded-2xl border border-border/50">
             <button 
               onClick={() => setViewMode('month')}
               className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'month' ? 'bg-primary text-white shadow-glow' : 'text-text-muted hover:text-text'}`}
@@ -173,7 +173,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <div className="lg:col-span-3 space-y-6 order-2 lg:order-1">
           <div className="bento-card p-0 overflow-hidden">
-            <div className="p-6 lg:p-8 flex flex-col sm:flex-row items-center justify-between border-b border-white/5 bg-surface/30 gap-4">
+            <div className="p-6 lg:p-8 flex flex-col sm:flex-row items-center justify-between border-b border-border/50 bg-surface/30 gap-4">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
                   <CalendarIcon className="w-5 h-5 text-primary" />
@@ -183,9 +183,9 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                 </h3>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={prevMonth} className="p-2 border border-white/10 rounded-xl hover:bg-white/5 text-text-muted hover:text-text transition-all"><ChevronLeft className="w-5 h-5" /></button>
-                <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-text hover:border-text/20 transition-all">Today</button>
-                <button onClick={nextMonth} className="p-2 border border-white/10 rounded-xl hover:bg-white/5 text-text-muted hover:text-text transition-all"><ChevronRight className="w-5 h-5" /></button>
+                <button onClick={prevMonth} className="p-2 border border-border rounded-xl hover:bg-surface/50 text-text-muted hover:text-text transition-all"><ChevronLeft className="w-5 h-5" /></button>
+                <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 border border-border rounded-xl text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-text hover:border-text/20 transition-all">Today</button>
+                <button onClick={nextMonth} className="p-2 border border-border rounded-xl hover:bg-surface/50 text-text-muted hover:text-text transition-all"><ChevronRight className="w-5 h-5" /></button>
               </div>
             </div>
 
@@ -196,7 +196,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                     <div key={day} className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-text-muted py-2">{day}</div>
                   ))}
                 </div>
-                <div className="grid grid-cols-7 gap-px bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl">
+                <div className="grid grid-cols-7 gap-px bg-surface/50 border border-border rounded-[2rem] overflow-hidden shadow-2xl">
                   {dayCells.map((day, idx) => {
                     const dayTasks = day ? getTasksForDay(day) : [];
                     const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
@@ -204,7 +204,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                     return (
                       <div 
                         key={idx} 
-                        className={`min-h-[100px] lg:min-h-[140px] p-2 lg:p-4 bg-background/40 hover:bg-white/5 transition-all relative group cursor-pointer border-r border-b border-white/5 ${!day ? 'bg-transparent pointer-events-none' : ''}`}
+                        className={`min-h-[100px] lg:min-h-[140px] p-2 lg:p-4 bg-background/40 hover:bg-surface/50 transition-all relative group cursor-pointer border-r border-b border-border/50 ${!day ? 'bg-transparent pointer-events-none' : ''}`}
                         onClick={() => {
                           if (!day) return;
                           const d = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
@@ -242,7 +242,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                                 >
                                   <span>{t.title}</span>
                                   {t.due_date && (
-                                    <span className="bg-white/10 px-1 rounded-md opacity-60 text-[7px] whitespace-nowrap">START: {new Date(t.due_date).getDate()}</span>
+                                    <span className="bg-surface px-1 rounded-md opacity-60 text-[7px] whitespace-nowrap">START: {new Date(t.due_date).getDate()}</span>
                                   )}
                                 </div>
                               ))}
@@ -284,7 +284,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                         <div 
                           key={t.id}
                           onClick={() => setSelectedTaskId(t.id)}
-                          className="p-4 glass rounded-[1.5rem] border border-white/5 hover:border-primary/30 transition-all cursor-pointer group"
+                          className="p-4 glass rounded-[1.5rem] border border-border/50 hover:border-primary/30 transition-all cursor-pointer group"
                         >
                           <div className="flex justify-between items-start mb-2">
                             <p className="text-[10px] font-black text-primary opacity-60">{t.task_code}</p>
@@ -304,7 +304,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                         </div>
                       ))
                     ) : (
-                      <div className="p-10 text-center glass rounded-3xl border border-dashed border-white/10">
+                      <div className="p-10 text-center glass rounded-3xl border border-dashed border-border">
                         <Info className="w-6 h-6 text-text-muted/20 mx-auto mb-3" />
                         <p className="text-[10px] font-black text-text-muted uppercase tracking-widest leading-loose">No active operations<br/>scheduled for this coordinate</p>
                       </div>
@@ -315,7 +315,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                       setForm({ ...form, due_date: selectedDay.toISOString().split('T')[0] });
                       setShowCreateModal(true);
                     }}
-                    className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:border-primary/30 transition-all"
+                    className="w-full py-4 bg-surface/50 border border-border rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-surface hover:border-primary/30 transition-all"
                   >
                     Add Task for this day
                   </button>
@@ -355,7 +355,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                initial={{ opacity: 0, scale: 0.9, y: 20 }}
                animate={{ opacity: 1, scale: 1, y: 0 }}
                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-               className="w-full max-w-2xl glass rounded-[2.5rem] border border-white/10 shadow-premium p-10 relative overflow-hidden"
+               className="w-full max-w-2xl glass rounded-[2.5rem] border border-border shadow-premium p-10 relative overflow-hidden"
              >
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-[#d946ef] to-primary"></div>
                 <div className="flex justify-between items-center mb-10">
@@ -363,7 +363,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                     <h3 className="text-2xl font-black tracking-tight">Deploy New Operation</h3>
                     <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em] mt-1 opacity-60 italic">Task Creation Sequence</p>
                   </div>
-                  <button onClick={() => setShowCreateModal(false)} className="p-3 hover:bg-white/5 rounded-2xl text-text-muted hover:text-text transition-all">
+                  <button onClick={() => setShowCreateModal(false)} className="p-3 hover:bg-surface/50 rounded-2xl text-text-muted hover:text-text transition-all">
                     <X className="w-6 h-6" />
                   </button>
                 </div>
@@ -374,12 +374,12 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2 space-y-2">
                        <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-text-muted/60">Operation Title</label>
-                       <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="What needs to be achieved?" required className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-primary outline-none font-bold text-sm" />
+                       <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="What needs to be achieved?" required className="w-full px-6 py-4 bg-surface/50 border border-border rounded-2xl focus:border-primary outline-none font-bold text-sm" />
                     </div>
 
                     <div className="space-y-2">
                        <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-text-muted/60">Assigned Project</label>
-                       <select value={form.project} onChange={e => setForm({ ...form, project: e.target.value })} required className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-primary outline-none font-bold text-sm appearance-none">
+                       <select value={form.project} onChange={e => setForm({ ...form, project: e.target.value })} required className="w-full px-6 py-4 bg-surface/50 border border-border rounded-2xl focus:border-primary outline-none font-bold text-sm appearance-none">
                          <option value="">Select Target...</option>
                          {projects.map(p => <option key={p.id} value={p.id} className="bg-background">{p.name}</option>)}
                        </select>
@@ -387,7 +387,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
 
                     <div className="space-y-2">
                        <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-text-muted/60">Work Flow State</label>
-                       <select value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} required className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-primary outline-none font-bold text-sm appearance-none">
+                       <select value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} required className="w-full px-6 py-4 bg-surface/50 border border-border rounded-2xl focus:border-primary outline-none font-bold text-sm appearance-none">
                          <option value="">Select State...</option>
                          {states.map(s => <option key={s.id} value={s.id} className="bg-background">{s.name}</option>)}
                        </select>
@@ -395,7 +395,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
 
                     <div className="space-y-2">
                        <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-text-muted/60">Module Category</label>
-                       <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value })} required className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-primary outline-none font-bold text-sm appearance-none">
+                       <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value })} required className="w-full px-6 py-4 bg-surface/50 border border-border rounded-2xl focus:border-primary outline-none font-bold text-sm appearance-none">
                          <option value="">Select Module...</option>
                          {modules.map(m => <option key={m.id} value={m.id} className="bg-background">{m.name}</option>)}
                        </select>
@@ -403,7 +403,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
 
                     <div className="space-y-2">
                        <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-text-muted/60">Priority Rating</label>
-                       <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-primary outline-none font-bold text-sm appearance-none text-primary">
+                       <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="w-full px-6 py-4 bg-surface/50 border border-border rounded-2xl focus:border-primary outline-none font-bold text-sm appearance-none text-primary">
                          <option value="urgent" className="bg-background text-error">🔴 URGENT</option>
                          <option value="high" className="bg-background text-orange-500">🟠 HIGH</option>
                          <option value="medium" className="bg-background text-primary">🔵 MEDIUM</option>
@@ -413,7 +413,7 @@ export default function TaskCalendarPage({ me }: { me: User | null }) {
 
                     <div className="space-y-2">
                        <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-text-muted/60">Operator (Assignee)</label>
-                       <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-primary outline-none font-bold text-sm appearance-none">
+                       <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} className="w-full px-6 py-4 bg-surface/50 border border-border rounded-2xl focus:border-primary outline-none font-bold text-sm appearance-none">
                          <option value="">Select Operator...</option>
                          {users.map(u => <option key={u.id} value={u.id} className="bg-background">{u.first_name || u.email}</option>)}
                        </select>

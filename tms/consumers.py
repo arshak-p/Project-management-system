@@ -65,3 +65,22 @@ class TaskConsumer(AsyncJsonWebsocketConsumer):
 
     async def task_comment(self, event):
         await self.send(text_data=json.dumps({"type": "comment", "data": event["payload"]}))
+
+
+class WorkspaceConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        user = self.scope["user"]
+        if not user.is_authenticated:
+            await self.close(code=4401)
+            return
+        
+        self.group_name = "workspace"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, code):
+        if hasattr(self, "group_name"):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def workspace_update(self, event):
+        await self.send(text_data=json.dumps({"type": "workspace_update", "data": event["payload"]}))

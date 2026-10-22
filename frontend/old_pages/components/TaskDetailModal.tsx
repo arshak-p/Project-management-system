@@ -411,7 +411,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                     </div>
                     <div>
                       <input type="file" id="file-upload" className="hidden" onChange={handleFileUpload} disabled={isUploading || me?.role === 'hr'} />
-                      <label htmlFor="file-upload" className={`flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-bold cursor-pointer hover:bg-primary hover:text-white transition-all ${isUploading || me?.role === 'hr' ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}>
+                      <label htmlFor="file-upload" className={`flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-bold cursor-pointer hover:bg-primary hover:text-text transition-all ${isUploading || me?.role === 'hr' ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}>
                         {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                         {isUploading ? 'Uploading...' : 'Upload File'}
                       </label>
@@ -513,7 +513,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                     const nextState = states.find(s => s.slug === 'client-review');
                     if (nextState) handleUpdateField('state', nextState.id);
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-emerald-500 hover:text-white transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-emerald-500 hover:text-text transition-all"
                 >
                   <ShieldCheck className="w-4 h-4" /> Approve for Client
                 </button>
@@ -522,7 +522,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                     const reworkState = states.find(s => s.slug === 'rework-revision');
                     if (reworkState) handleUpdateField('state', reworkState.id);
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500 hover:text-text transition-all"
                 >
                   Reject / Rework
                 </button>
@@ -542,7 +542,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                     const completedState = states.find(s => s.slug === 'completed-launched');
                     if (completedState) handleUpdateField('state', completedState.id);
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-blue-500/10 text-blue-500 border border-blue-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-500 hover:text-white transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-blue-500/10 text-blue-500 border border-blue-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-500 hover:text-text transition-all"
                 >
                   Bypass & Launch
                 </button>
@@ -683,7 +683,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                         onClose();
                       }
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all"
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-text transition-all"
                   >
                     <Database className="w-4 h-4" /> Archive Task
                   </button>
@@ -696,7 +696,7 @@ export default function TaskDetailModal({ taskId, onClose, me }: { taskId: numbe
                         onClose();
                       }
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-text transition-all"
                   >
                     <Trash2 className="w-4 h-4" /> Hard Delete
                   </button>

@@ -245,6 +245,21 @@ class ProjectViewSet(SalesSafeViewSet):
         qs = access.projects_for_user(self.request.user, include_archived=include_archived)
         return qs.annotate(total_minutes=Coalesce(Sum("work_items__time_logs__minutes"), Value(0)))
 
+    def list(self, request, *args, **kwargs):
+        from django.core.cache import cache
+        include_archived = request.query_params.get("archived") == "true"
+        cache_key = f"projects_list_{request.user.id}_{include_archived}"
+        
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return Response(cached_data)
+            
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        cache.set(cache_key, data, 30)
+        return Response(data)
+
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
             return [permissions.IsAuthenticated(), IsPMOrAdmin()]
@@ -333,9 +348,7 @@ class StateViewSet(SalesSafeViewSet):
         if not State.objects.exists():
             DEFAULTS = [
                 ('backlog', 'Pending', '#64748b', 0),
-                ('to-do', 'To Do', '#6366f1', 10),
                 ('in-progress', 'In Progress', '#3b82f6', 20),
-                ('team-head-review', 'Team Head Review', '#f59e0b', 40),
                 ('client-review', 'Client Review', '#8b5cf6', 50),
                 ('rework-revision', 'Rework / Revision', '#ef4444', 60),
                 ('completed-launched', 'Completed / Launched', '#10b981', 100),
@@ -462,32 +475,45 @@ class WorkItemViewSet(SalesSafeViewSet):
         if new_state_id:
             try:
                 new_state = State.objects.get(pk=new_state_id)
-                if new_state.slug in ("client-review", "completed-launched") and new_state.id != inst.state_id:
-                    is_lead = u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD)
-                    # A client may approve work that is waiting in Client Review (their own project only,
-                    # which can_edit_work_item already checked above).
-                    client_approves = (
-                        u.role == User.Role.CLIENT
-                        and inst.state.slug == "client-review"
-                        and new_state.slug == "completed-launched"
-                    )
-                    if not (is_lead or client_approves):
-                        raise PermissionDenied("Only Leads, Managers or Admins can approve work for Client Review or Completion.")
+                if not access.is_valid_state_transition(u, inst, new_state.slug):
+                    raise PermissionDenied(f"Invalid state transition from {inst.state.name if inst.state else 'None'} to {new_state.name}.")
                 
-                # Notify Team Head when work is done and ready for review
-                if new_state.slug == "team-head-review" and inst.state_id != new_state.id:
-                    ths = User.objects.filter(role=User.Role.TEAM_HEAD, is_active=True)
-                    if inst.assignee and inst.assignee.title:
-                        ths = ths.filter(title=inst.assignee.title)
-                        for th in ths:
-                            notify_user(
-                                user_id=th.id,
-                                title="Task Ready for Review 📋",
-                                body=f"Task '{inst.task_code}' has been moved to Team Head Review by {u.get_full_name() or u.email}.",
-                                link=f"/task/{inst.id}"
-                            )
+                # No internal Team Head review notification required.
             except State.DoesNotExist:
                 pass
+
+        # If CLIENT, restrict editing to ONLY state (and specifically only the allowed states).
+        if u.role == User.Role.CLIENT and not u.is_superuser:
+            data = self.request.data
+            update_fields = ["updated_at"]
+            modified = False
+            
+            if "state" in data:
+                try:
+                    new_state = State.objects.get(id=data["state"])
+                    if new_state.slug not in ['client-review', 'completed-launched', 'rework-revision']:
+                        raise PermissionDenied("Clients can only transition tasks to 'client-review', 'completed-launched', or 'rework-revision'.")
+                    inst.state_id = data["state"]
+                    
+                    # Update is_client_approved as a side effect
+                    if new_state.slug == 'completed-launched':
+                        inst.is_client_approved = True
+                        update_fields.append("is_client_approved")
+                    elif new_state.slug == 'rework-revision':
+                        inst.is_client_approved = False
+                        update_fields.append("is_client_approved")
+                        
+                    update_fields.append("state_id")
+                    modified = True
+                except State.DoesNotExist:
+                    pass
+                    
+            if modified:
+                inst._activity_user = u
+                inst.save(update_fields=update_fields)
+                return
+            else:
+                raise PermissionDenied("Clients are only permitted to approve work or request revisions (change status).")
 
         # If SALES_MANAGER (Strategist), restrict editing to ONLY posting_date, module, and title.
         if u.role == User.Role.SALES_MANAGER and not u.is_superuser:
@@ -534,9 +560,15 @@ class WorkItemViewSet(SalesSafeViewSet):
                 modified = True
                 
             if "state" in data:
-                inst.state_id = data["state"]
-                update_fields.append("state_id")
-                modified = True
+                try:
+                    new_state = State.objects.get(id=data["state"])
+                    if new_state.slug not in ['in-progress', 'client-review', 'rework-revision']:
+                        raise PermissionDenied("Team Heads can only transition tasks to 'in-progress', 'client-review', or 'rework-revision'.")
+                    inst.state_id = data["state"]
+                    update_fields.append("state_id")
+                    modified = True
+                except State.DoesNotExist:
+                    pass
             
             if "board_position" in data:
                 inst.board_position = data["board_position"]
@@ -579,15 +611,14 @@ class WorkItemViewSet(SalesSafeViewSet):
             # Assignee can update state, board position, and reference link
             if is_assignee:
                 if "state" in data:
-                    from tms.models import State as TaskState
                     try:
-                        new_state = TaskState.objects.get(id=data["state"])
-                        if new_state.slug not in ['in-progress', 'team-head-review']:
-                            raise PermissionDenied("Specialists can only transition tasks to 'in-progress' or 'team-head-review'.")
+                        new_state = State.objects.get(id=data["state"])
+                        if new_state.slug not in ['in-progress', 'client-review']:
+                            raise PermissionDenied("Specialists can only transition tasks to 'in-progress' or 'client-review'.")
                         inst.state_id = data["state"]
                         update_fields.append("state_id")
                         modified = True
-                    except TaskState.DoesNotExist:
+                    except State.DoesNotExist:
                         pass
                 if "board_position" in data:
                     inst.board_position = data["board_position"]
@@ -604,17 +635,6 @@ class WorkItemViewSet(SalesSafeViewSet):
                 return
             else:
                 raise PermissionDenied("Specialists are permitted to update their assigned task status and content link.")
-
-        if u.role == User.Role.TEAM_HEAD and not u.is_superuser:
-            data = self.request.data
-            if "state" in data:
-                from tms.models import State as TaskState
-                try:
-                    new_state = TaskState.objects.get(id=data["state"])
-                    if new_state.slug not in ['in-progress', 'client-review', 'rework-revision']:
-                        raise PermissionDenied("Team Heads can only transition tasks to 'in-progress', 'client-review', or 'rework-revision'.")
-                except TaskState.DoesNotExist:
-                    pass
 
         serializer.save(_activity_user=u)
 
@@ -653,7 +673,7 @@ class WorkItemViewSet(SalesSafeViewSet):
 
     @action(detail=False, methods=["post"], url_path="reorder")
     def reorder(self, request):
-        """Kanban drag-drop: [{\"id\": 1, \"state\": 3, \"board_position\": 0}, ...]"""
+        """Kanban drag-drop: [{"id": 1, "state": 3, "board_position": 0}, ...]"""
         u = request.user
         if u.role == User.Role.SALES_MANAGER:
             raise PermissionDenied()
@@ -661,38 +681,47 @@ class WorkItemViewSet(SalesSafeViewSet):
         if not isinstance(items, list):
             return Response({"detail": "Expected a list."}, status=status.HTTP_400_BAD_REQUEST)
         state_slugs = dict(State.objects.filter(is_active=True).values_list("id", "slug"))
-        valid_states = set(state_slugs)
-        is_lead = u.is_superuser or u.role in (User.Role.ADMIN, User.Role.PROJECT_MANAGER, User.Role.TEAM_HEAD)
+        # Same per-role limits as a normal task update (see WorkItemViewSet.perform_update).
+        role_caps = {
+            User.Role.SPECIALIST: {"in-progress", "client-review"},
+            User.Role.TEAM_HEAD: {"in-progress", "client-review", "rework-revision"},
+            User.Role.CLIENT: {"client-review", "completed-launched", "rework-revision"},
+        }
         rows = [r for r in items if isinstance(r, dict) and isinstance(r.get("id"), int)]
         visible = {
             w.pk: w
-            for w in access.work_items_for_user(u, lightweight=True).filter(pk__in=[r["id"] for r in rows])
+            for w in access.work_items_for_user(u, lightweight=True).select_related("state").filter(pk__in=[r["id"] for r in rows])
         }
+        rejected = []
         with transaction.atomic():
             for row in rows:
-                wi = visible.get(row["id"])
+                pk = row["id"]
+                wi = visible.get(pk)
                 if wi is None or not access.can_edit_work_item(u, wi):
+                    rejected.append({"id": pk, "reason": "Insufficient permissions"})
                     continue
                 state_id = row.get("state")
                 pos = row.get("board_position", 0)
                 if not isinstance(pos, int) or pos < 0:
+                    rejected.append({"id": pk, "reason": "Invalid position"})
                     continue
-                if state_id is not None:
-                    if state_id not in valid_states:
+                if state_id is not None and state_id != wi.state_id:
+                    slug = state_slugs.get(state_id)
+                    if slug is None:
+                        rejected.append({"id": pk, "reason": "State does not exist"})
                         continue
-                    slug = state_slugs[state_id]
-                    # Same workflow rules as a normal task update: only leads approve or finish work,
-                    # and team members may only start work or send it for review.
-                    if state_id != wi.state_id:
-                        if slug in ("client-review", "completed-launched") and not is_lead:
-                            continue
-                        if u.role == User.Role.SPECIALIST and slug not in ("in-progress", "team-head-review"):
-                            continue
+                    if not access.is_valid_state_transition(u, wi, slug):
+                        rejected.append({"id": pk, "reason": f"Invalid transition from {wi.state.name if wi.state else 'None'} to {slug}"})
+                        continue
+                    cap = role_caps.get(u.role)
+                    if cap is not None and not u.is_superuser and slug not in cap:
+                        rejected.append({"id": pk, "reason": f"Your role cannot move work to {slug}"})
+                        continue
                     wi.state_id = state_id
                 wi.board_position = pos
                 wi._activity_user = u
                 wi.save(update_fields=["state_id", "board_position", "updated_at"])
-        return Response({"status": "ok"})
+        return Response({"status": "ok", "rejected": rejected})
 
     @action(detail=False, methods=["post"], url_path="bulk-create")
     def bulk_create(self, request):
@@ -885,6 +914,17 @@ class AnalyticsSummaryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        from django.core.cache import cache
+        import hashlib
+        
+        query_str = request.META.get('QUERY_STRING', '')
+        key_str = f"analytics_{request.user.id}_{query_str}"
+        cache_key = hashlib.md5(key_str.encode('utf-8')).hexdigest()
+        
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data)
+
         u = request.user
         wis = access.work_items_for_user(u, lightweight=True)
         
@@ -1006,23 +1046,23 @@ class AnalyticsSummaryView(APIView):
         elif completed_or_launched > 0:
             efficiency = 100
 
-        return Response(
-            {
-                "generated_at": timezone.now().isoformat(),
-                "totals": {
-                    "all": total,
-                    "completed_or_launched": completed_or_launched,
-                    "pending": total - completed_or_launched,
-                    "total_time_minutes": total_time,
-                    "efficiency": efficiency,
-                },
-                "by_state": by_state,
-                "by_module": by_module,
-                "by_project": by_project,
-                "assignee_workload": workload,
-                "historical_trend": trend_list,
-            }
-        )
+        data = {
+            "generated_at": timezone.now().isoformat(),
+            "totals": {
+                "all": total,
+                "completed_or_launched": completed_or_launched,
+                "pending": total - completed_or_launched,
+                "total_time_minutes": total_time,
+                "efficiency": efficiency,
+            },
+            "by_state": by_state,
+            "by_module": by_module,
+            "by_project": by_project,
+            "assignee_workload": workload,
+            "historical_trend": trend_list,
+        }
+        cache.set(cache_key, data, 30)
+        return Response(data)
 
 
 class BestWorkerView(APIView):

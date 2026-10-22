@@ -135,28 +135,28 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
       
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-5xl font-black tracking-tighter text-white">Team Intelligence</h1>
+          <h1 className="text-5xl font-black tracking-tighter text-text">Team Intelligence</h1>
           <p className="text-text-muted mt-2 font-bold tracking-widest uppercase text-[10px] opacity-60 italic">Operator Review // Tactical Performance Deep-Dive</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-1 p-1 glass rounded-2xl border border-white/5">
+            <div className="flex items-center gap-1 p-1 glass rounded-2xl border border-border/50">
               {(['daily', 'weekly', 'monthly', 'all'] as const).map(r => (
                 <button 
                   key={r}
                   onClick={() => { setDateRange(r); setCustomRange({ start: '', end: '' }); }}
-                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${dateRange === r && !customRange.start ? 'bg-primary text-white shadow-glow' : 'text-text-muted hover:text-white'}`}
+                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${dateRange === r && !customRange.start ? 'bg-primary text-white shadow-glow' : 'text-text-muted hover:text-text'}`}
                 >
                   {r}
                 </button>
               ))}
            </div>
 
-           <div className="flex flex-col sm:flex-row items-center gap-2 p-2 sm:p-1 glass rounded-2xl border border-white/5 w-full sm:w-auto">
+           <div className="flex flex-col sm:flex-row items-center gap-2 p-2 sm:p-1 glass rounded-2xl border border-border/50 w-full sm:w-auto">
               <input 
                 type="date" 
                 value={customRange.start}
                 onChange={(e) => setCustomRange(p => ({ ...p, start: e.target.value }))}
-                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none border-b sm:border-b-0 sm:border-r border-white/5 w-full sm:w-auto" 
+                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none border-b sm:border-b-0 sm:border-r border-border/50 w-full sm:w-auto" 
               />
               <input 
                 type="date" 
@@ -165,7 +165,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                 className="bg-transparent text-[9px] font-black uppercase tracking-widest text-text px-2 py-1 outline-none w-full sm:w-auto" 
               />
               {(customRange.start || customRange.end) && (
-                <button onClick={() => setCustomRange({ start: '', end: '' })} className="p-1.5 hover:bg-white/5 rounded-lg">
+                <button onClick={() => setCustomRange({ start: '', end: '' })} className="p-1.5 hover:bg-surface/50 rounded-lg">
                   <X className="w-3 h-3 text-text-muted" />
                 </button>
               )}
@@ -178,7 +178,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                 placeholder="Find Member..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 glass border border-white/5 rounded-2xl outline-none focus:border-primary transition-all text-[10px] font-black uppercase tracking-widest text-text"
+                className="w-full pl-10 pr-4 py-3 glass border border-border/50 rounded-2xl outline-none focus:border-primary transition-all text-[10px] font-black uppercase tracking-widest text-text"
               />
            </div>
         </div>
@@ -198,7 +198,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                      {bestWorker.name?.[0] || '?'}
                    </div>
                    <div className="flex-1 min-w-0">
-                     <p className="font-black text-sm text-white truncate capitalize">{bestWorker.name}</p>
+                     <p className="font-black text-sm text-text truncate capitalize">{bestWorker.name}</p>
                      <p className="text-[9px] font-bold text-text-muted uppercase tracking-widest truncate">{bestWorker.title}</p>
                    </div>
                  </div>
@@ -230,15 +230,15 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                          key={user.id} 
                          onClick={() => setSelectedUserId(user.id)}
                          className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all group ${
-                           selectedUserId === user.id ? 'bg-primary border-primary shadow-glow text-white' : 'glass border-white/5 text-text-muted hover:border-primary/40'
+                           selectedUserId === user.id ? 'bg-primary border-primary shadow-glow text-white' : 'glass border-border/50 text-text-muted hover:border-primary/40'
                          }`}
                        >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black ${selectedUserId === user.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black ${selectedUserId === user.id ? 'bg-surface' : 'bg-primary/10 text-primary'}`}>
                              {user.first_name?.[0] || '?' }
                           </div>
                           <div className="text-left flex-1 min-w-0">
                              <p className="font-extrabold text-xs truncate capitalize">{user.first_name || 'Generic Operator'} {user.last_name}</p>
-                             <p className={`text-[8px] font-black uppercase tracking-widest ${selectedUserId === user.id ? 'text-white/60' : 'text-text-muted/40'}`}>{user.title || user.role.replace('_', ' ')}</p>
+                             <p className={`text-[8px] font-black uppercase tracking-widest ${selectedUserId === user.id ? 'text-text/60' : 'text-text-muted/40'}`}>{user.title || user.role.replace('_', ' ')}</p>
                           </div>
                           <ChevronRight className={`w-4 h-4 transition-transform ${selectedUserId === user.id ? 'translate-x-1' : 'opacity-0'}`} />
                        </button>
@@ -248,7 +248,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                );
              })}
             {filteredUsers.length === 0 && !isLoading && (
-              <div className="text-center py-10 glass rounded-3xl border-dashed border-white/5">
+              <div className="text-center py-10 glass rounded-3xl border-dashed border-border/50">
                 <p className="text-[10px] font-black uppercase tracking-widest text-text-muted/40 italic">No Operators in Sector</p>
               </div>
             )}
@@ -257,7 +257,7 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
         {/* Main Detail Area */}
         <div className="md:col-span-8 lg:col-span-9 order-1 md:order-2">
            {!selectedUserId ? (
-             <div className="h-full min-h-[50vh] flex flex-col items-center justify-center glass rounded-[3rem] border-dashed border-white/10 p-10 text-center">
+             <div className="h-full min-h-[50vh] flex flex-col items-center justify-center glass rounded-[3rem] border-dashed border-border p-10 text-center">
                 <Users className="w-16 h-16 text-text-muted/10 mb-6" />
                 <h3 className="text-xl font-black text-text-muted uppercase tracking-widest">Awaiting Operator Selection</h3>
                 <p className="text-xs text-text-muted/40 mt-2 font-bold max-w-xs leading-relaxed uppercase tracking-tighter italic">Select an active member from the left matrix to initialize performance analytics and tactical overview.</p>
@@ -272,16 +272,16 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                animate={{ opacity: 1, x: 0 }}
                className="space-y-8"
              >
-                <div className="glass p-10 rounded-[3rem] border border-white/5 relative overflow-hidden">
+                <div className="glass p-10 rounded-[3rem] border border-border/50 relative overflow-hidden">
                    <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 blur-[100px] -mr-40 -mt-40"></div>
                    <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
                       <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-primary to-[#d946ef] flex items-center justify-center text-4xl font-black text-white shadow-glow">
                          {selectedUser?.first_name?.[0]}
                       </div>
                       <div className="flex-1 text-center md:text-left">
-                         <h2 className="text-4xl font-black tracking-tighter text-white capitalize">{selectedUser?.first_name} {selectedUser?.last_name}</h2>
+                         <h2 className="text-4xl font-black tracking-tighter text-text capitalize">{selectedUser?.first_name} {selectedUser?.last_name}</h2>
                          <div className="flex flex-wrap justify-center md:justify-start items-center gap-4 mt-3">
-                            <span className="px-4 py-2 bg-white/5 rounded-xl border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-primary">{selectedUser?.role}</span>
+                            <span className="px-4 py-2 bg-surface/50 rounded-xl border border-border text-[10px] font-black uppercase tracking-[0.2em] text-primary">{selectedUser?.role}</span>
                             <span className="text-[10px] font-bold text-text-muted italic">{selectedUser?.email}</span>
                          </div>
                       </div>
@@ -292,15 +292,15 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                            <div className="flex flex-col md:flex-row items-center gap-4">
                               <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
                                  <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Time Tracked</span>
-                                 <span className="text-4xl font-black text-white">{Math.floor(totalTrackedMinutes / 60)}h {totalTrackedMinutes % 60}m</span>
+                                 <span className="text-4xl font-black text-text">{Math.floor(totalTrackedMinutes / 60)}h {totalTrackedMinutes % 60}m</span>
                               </div>
                               <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
                                  <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Efficiency</span>
-                                 <span className="text-4xl font-black text-white">{memberAnalytics?.totals?.efficiency !== undefined ? `${memberAnalytics.totals.efficiency}%` : 'N/A'}</span>
+                                 <span className="text-4xl font-black text-text">{memberAnalytics?.totals?.efficiency !== undefined ? `${memberAnalytics.totals.efficiency}%` : 'N/A'}</span>
                               </div>
                               <div className="flex flex-col items-center glass p-6 rounded-3xl border-primary/20">
                                  <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Workload</span>
-                                 <span className="text-4xl font-black text-white">
+                                 <span className="text-4xl font-black text-text">
                                     {memberAnalytics?.totals?.all ? Math.round((memberAnalytics.totals.pending / memberAnalytics.totals.all) * 100) : 0}%
                                  </span>
                               </div>
@@ -385,31 +385,31 @@ export default function TeamIntelligencePage({ me }: { me: User | null }) {
                    </div>
                 </div>
 
-                <div className="glass rounded-[3rem] overflow-hidden border border-white/5">
-                   <div className="px-8 py-6 bg-white/2 border-b border-white/5 flex items-center justify-between">
+                <div className="glass rounded-[3rem] overflow-hidden border border-border/50">
+                   <div className="px-8 py-6 bg-white/2 border-b border-border/50 flex items-center justify-between">
                       <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-text-muted italic flex items-center gap-3">
                          <Target className="w-4 h-4 text-primary" /> Recent Mission Parameters
                       </h3>
-                      <span className="text-[10px] font-black text-text-muted bg-white/5 px-4 py-1.5 rounded-full">{memberTasks.length} Operations Total</span>
+                      <span className="text-[10px] font-black text-text-muted bg-surface/50 px-4 py-1.5 rounded-full">{memberTasks.length} Operations Total</span>
                    </div>
                    <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
                       {memberTasks.length > 0 ? memberTasks.map(task => (
                         <div 
                           key={task.id} 
                           onClick={() => setSelectedTaskId(task.id)}
-                          className="p-4 bg-background border border-white/5 rounded-2xl flex items-center justify-between hover:bg-white/5 transition-all cursor-pointer group"
+                          className="p-4 bg-background border border-border/50 rounded-2xl flex items-center justify-between hover:bg-surface/50 transition-all cursor-pointer group"
                         >
                            <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-3 mb-1">
                                  <span className="text-[8px] font-black uppercase tracking-widest text-primary">{task.task_code}</span>
-                                 <span className="w-1 h-1 rounded-full bg-white/10"></span>
+                                 <span className="w-1 h-1 rounded-full bg-surface"></span>
                                  <span className="text-[8px] font-black text-text-muted uppercase italic tracking-tighter">{task.state__name}</span>
                               </div>
-                              <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors truncate">{task.title}</h4>
+                              <h4 className="text-xs font-bold text-text-muted group-hover:text-text transition-colors truncate">{task.title}</h4>
                            </div>
                            <div className="flex items-center gap-6">
                               <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${
-                                task.priority === 'urgent' ? 'bg-error/10 text-error' : 'bg-white/5 text-text-muted'
+                                task.priority === 'urgent' ? 'bg-error/10 text-error' : 'bg-surface/50 text-text-muted'
                               }`}>{task.priority}</span>
                               <ExternalLink className="w-4 h-4 text-text-muted/20 group-hover:text-primary transition-all" />
                            </div>

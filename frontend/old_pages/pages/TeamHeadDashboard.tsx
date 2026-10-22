@@ -105,7 +105,7 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
         className="flex flex-col md:flex-row md:items-end justify-between gap-6"
       >
         <div>
-          <h1 className="text-3xl lg:text-5xl font-black tracking-tighter text-white">
+          <h1 className="text-3xl lg:text-5xl font-black tracking-tighter text-text">
             Lead Overview
           </h1>
           <p className="text-[10px] text-text-muted mt-2 font-bold tracking-widest uppercase opacity-60 italic">Personal Workflow // Team Output</p>
@@ -120,7 +120,7 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
               <ClipboardList className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-white">Personal Workspace</h3>
+              <h3 className="text-xl font-black text-text">Personal Workspace</h3>
               <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Your Assigned missions</p>
             </div>
           </div>
@@ -141,15 +141,15 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
                     layout
                     onClick={() => setSelectedTaskId(task.id)}
                     whileHover={{ y: -3, scale: 1.005 }}
-                    className="task-card p-4 bg-background border border-white/5 rounded-2xl flex items-center justify-between cursor-pointer group"
+                    className="task-card p-4 bg-background border border-border/50 rounded-2xl flex items-center justify-between cursor-pointer group"
                   >
                     <div>
                       <span className="text-[8px] font-black uppercase tracking-widest text-primary">{task.task_code} • {task.project__slug || 'GENERAL'} {task.module_slug && `• ${task.module_slug}`}</span>
-                      <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors">{task.title}</h4>
+                      <h4 className="text-xs font-bold text-text-muted group-hover:text-text transition-colors">{task.title}</h4>
                       <span className="text-[8px] font-black uppercase text-text-muted/40 block mt-1">Assignee: {task.assignee?.first_name || 'Generic Operator'} • Status: {task.state__name || task.state_slug?.replace(/-/g, ' ')}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[8px] font-black uppercase tracking-widest bg-white/5 text-text-muted px-2.5 py-1 rounded-lg">
+                      <span className="text-[8px] font-black uppercase tracking-widest bg-surface/50 text-text-muted px-2.5 py-1 rounded-lg">
                         {task.state__name}
                       </span>
                     </div>
@@ -166,7 +166,7 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
               <Users className="w-6 h-6 text-[#8b5cf6]" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-white">Team Operations</h3>
+              <h3 className="text-xl font-black text-text">Team Operations</h3>
               <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Review Pipeline</p>
             </div>
           </div>
@@ -187,11 +187,11 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
                     layout
                     onClick={() => setSelectedTaskId(task.id)}
                     whileHover={{ y: -3, scale: 1.005 }}
-                    className="task-card p-4 bg-background border border-white/5 rounded-2xl flex items-center justify-between cursor-pointer group"
+                    className="task-card p-4 bg-background border border-border/50 rounded-2xl flex items-center justify-between cursor-pointer group"
                   >
                     <div>
                       <span className="text-[8px] font-black uppercase tracking-widest text-[#8b5cf6]">{task.task_code} • {task.project__slug || 'GENERAL'} {task.module_slug && `• ${task.module_slug}`}</span>
-                      <h4 className="text-xs font-bold text-text-muted group-hover:text-white transition-colors">{task.title}</h4>
+                      <h4 className="text-xs font-bold text-text-muted group-hover:text-text transition-colors">{task.title}</h4>
                       <span className="text-[8px] font-black uppercase text-text-muted/40 block mt-1">Assignee: {task.assignee?.first_name || 'Generic Operator'} • Status: {task.state__name || task.state_slug?.replace(/-/g, ' ')}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -200,21 +200,21 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
                           <motion.button
                             whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
                             onClick={(e) => handleQuickApprove(e, task.id)}
-                            className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white font-black uppercase tracking-widest text-[8px] rounded border border-emerald-500/30 transition-all"
+                            className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-text font-black uppercase tracking-widest text-[8px] rounded border border-emerald-500/30 transition-all"
                           >
                             Approve
                           </motion.button>
                           <motion.button
                             whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
                             onClick={(e) => handleQuickReject(e, task.id)}
-                            className="px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-black uppercase tracking-widest text-[8px] rounded border border-red-500/30 transition-all"
+                            className="px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-text font-black uppercase tracking-widest text-[8px] rounded border border-red-500/30 transition-all"
                           >
                             Reject
                           </motion.button>
                         </div>
                       )}
                       <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${
-                        task.state_slug === 'team-head-review' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : 'bg-white/5 text-text-muted'
+                        task.state_slug === 'team-head-review' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : 'bg-surface/50 text-text-muted'
                       }`}>
                         {task.state__name}
                       </span>
@@ -227,18 +227,18 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
         </div>
       </div>
 
-      <div className="glass rounded-[2.5rem] p-8 border border-white/5">
+      <div className="glass rounded-[2.5rem] p-8 border border-border/50">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
           <div>
-            <h3 className="text-2xl font-black text-white">Lifecycle & Tracking Ledger</h3>
+            <h3 className="text-2xl font-black text-text">Lifecycle & Tracking Ledger</h3>
             <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-1 italic">Continuous state tracking & timeline audits</p>
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-white/5 bg-background/30 shadow-2xl">
+        <div className="overflow-x-auto rounded-2xl border border-border/50 bg-background/30 shadow-2xl">
           <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
-              <tr className="bg-surface/50 border-b border-white/10">
+              <tr className="bg-surface/50 border-b border-border">
                 <th className="p-4 text-[10px] font-black uppercase tracking-widest text-primary">Task</th>
                 <th className="p-4 text-[10px] font-black uppercase tracking-widest text-text-muted">Specialist</th>
                 <th className="p-4 text-[10px] font-black uppercase tracking-widest text-text-muted">Module</th>
@@ -274,7 +274,7 @@ export default function TeamHeadDashboard({ me }: { me: User | null }) {
                       {task.assignee?.first_name || 'Generic Operator'}
                     </td>
                     <td className="p-4">
-                      <span className="px-2 py-0.5 bg-surface border border-white/5 rounded text-[10px] font-bold text-text-muted uppercase">
+                      <span className="px-2 py-0.5 bg-surface border border-border/50 rounded text-[10px] font-bold text-text-muted uppercase">
                         {task.module_slug || 'N/A'}
                       </span>
                     </td>

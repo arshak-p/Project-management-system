@@ -3,11 +3,12 @@ import { api, can, errorMessage, fullName, type Task } from '../../api';
 import { useAuth } from '../../auth';
 import TaskModal from '../../components/TaskModal';
 import { useLoad, useTaskOptions } from '../../hooks';
+import { allowedStates } from '../../workflow';
 import { Card, ErrorBox, PriorityBadge, Spinner, cx, fmtDate, inputCls } from '../../ui';
 
 export default function BoardView() {
   const { user } = useAuth();
-  const tasks = useLoad(() => api.tasks());
+  const tasks = useLoad(() => api.tasks(), [], { live: true });
   const opts = useTaskOptions();
   const [project, setProject] = useState('');
   const [open, setOpen] = useState<Task | null>(null);
@@ -26,7 +27,9 @@ export default function BoardView() {
     if (!t || t.state === stateId) return;
     setError('');
     try {
-      await api.reorder([{ id: taskId, state: stateId, board_position: 0 }]);
+      const res = await api.reorder([{ id: taskId, state: stateId, board_position: 0 }]);
+      const rejected = (res.data as { rejected?: { reason: string }[] }).rejected ?? [];
+      if (rejected.length) setError(rejected[0].reason);
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -60,7 +63,7 @@ export default function BoardView() {
                 {col.map((t) => {
                   const mine = t.assignee?.id === user?.id;
                   const draggable = movable && (can.manage(user?.role) || user?.role === 'team_head' || mine);
-                  const choices = user?.role === 'specialist' ? o.states.filter((st) => st.id === t.state || ['in-progress', 'team-head-review'].includes(st.slug)) : o.states;
+                  const choices = allowedStates(user?.role, t.state_slug, o.states);
                   return (
                     <Card key={t.id} className="cursor-pointer p-3 text-sm">
                       <div draggable={draggable} onDragStart={() => setDragId(t.id)} onClick={() => setOpen(t)}>

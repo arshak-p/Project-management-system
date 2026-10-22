@@ -134,10 +134,10 @@ export default function CyclesPage({ me: _me }: { me: User | null }) {
           <p className="text-text-muted mt-1">Manage project sprints, campaign timelines, and monthly retainers.</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-3 glass px-4 py-2.5 rounded-2xl cursor-pointer hover:bg-white/5 transition-all">
+          <label className="flex items-center gap-3 glass px-4 py-2.5 rounded-2xl cursor-pointer hover:bg-surface/50 transition-all">
             <span className="text-[10px] font-black uppercase tracking-widest">Archives</span>
             <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
-            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-surface'}`}>
               <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
             </div>
           </label>

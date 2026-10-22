@@ -83,7 +83,7 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
                 }
               }
             }}
-            className="hidden md:flex items-center justify-center gap-2 px-6 py-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all"
+            className="hidden md:flex items-center justify-center gap-2 px-6 py-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-500 hover:text-text transition-all"
           >
             <Clock className="w-4 h-4" /> Force EOM Backup
           </button>
@@ -102,7 +102,7 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
                 }
               }
             }}
-            className="hidden md:flex items-center justify-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all"
+            className="hidden md:flex items-center justify-center gap-2 px-6 py-3 bg-surface/50 border border-border rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-surface transition-all"
           >
             <Clock className="w-4 h-4" /> Generate Missing
           </button>
@@ -114,7 +114,7 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
             <Loader2 className="w-12 h-12 text-primary animate-spin" />
           </div>
         ) : backups.length === 0 ? (
-          <div className="glass p-20 rounded-[3rem] text-center border-dashed border-2 border-white/5">
+          <div className="glass p-20 rounded-[3rem] text-center border-dashed border-2 border-border/50">
             <Clock className="w-16 h-16 text-text-muted mx-auto mb-6 opacity-20" />
             <h3 className="text-xl font-bold mb-2">No backups pending</h3>
             <p className="text-text-muted">The system will automatically generate a request on the 1st of every month.</p>
@@ -125,7 +125,7 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
               key={backup.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass p-8 rounded-[2.5rem] border-white/5 flex flex-col md:flex-row items-center justify-between hover:border-primary/20 transition-all group"
+              className="glass p-8 rounded-[2.5rem] border-border/50 flex flex-col md:flex-row items-center justify-between hover:border-primary/20 transition-all group"
             >
               <div className="flex items-center gap-8 mb-6 md:mb-0">
                 <div className={`w-16 h-16 rounded-3xl flex items-center justify-center transition-colors duration-500 ${backup.is_approved ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary shadow-[0_0_20px_rgba(59,130,246,0.1)]'}`}>
@@ -153,7 +153,7 @@ export default function BackupsPage({ me: _me }: { me: User | null }) {
                   className={`flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold transition-all active:scale-95 disabled:opacity-50
                     ${!backup.is_approved 
                       ? 'bg-primary text-white hover:shadow-glow' 
-                      : 'glass border-white/10 hover:bg-white/10 text-text'}
+                      : 'glass border-border hover:bg-surface text-text'}
                   `}
                 >
                   {isProcessing === backup.id ? (

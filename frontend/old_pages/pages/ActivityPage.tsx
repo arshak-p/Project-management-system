@@ -38,7 +38,7 @@ export default function ActivityPage({ me: _me }: { me: User | null }) {
         if (action === 'created') return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
         if (action === 'deactivated') return 'text-error bg-error/10 border-error/20';
         if (action === 'updated') return 'text-primary bg-primary/10 border-primary/20';
-        return 'text-text-muted bg-white/5 border-white/10';
+        return 'text-text-muted bg-surface/50 border-border';
     };
 
     if (isLoading) return (
@@ -64,7 +64,7 @@ export default function ActivityPage({ me: _me }: { me: User | null }) {
                         value={filter}
                         onChange={e => setFilter(e.target.value)}
                         placeholder="Search logs (e.g. deactivated, user email)..."
-                        className="w-full pl-12 pr-6 py-3.5 bg-white/5 border border-white/10 rounded-[1.5rem] text-sm font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        className="w-full pl-12 pr-6 py-3.5 bg-surface/50 border border-border rounded-[1.5rem] text-sm font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
                     />
                 </div>
             </div>
@@ -83,7 +83,7 @@ export default function ActivityPage({ me: _me }: { me: User | null }) {
                         </thead>
                         <tbody className="divide-y divide-border/20">
                             {filtered.map((a) => (
-                                <tr key={a.id} className="hover:bg-white/[0.02] transition-colors group">
+                                <tr key={a.id} className="hover:bg-surface/20 transition-colors group">
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-3 text-text-muted font-bold text-xs">
                                             <Clock className="w-3.5 h-3.5 opacity-40" />
@@ -103,7 +103,7 @@ export default function ActivityPage({ me: _me }: { me: User | null }) {
                                     </td>
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-white/5 rounded-xl text-text-muted group-hover:text-primary transition-colors">
+                                            <div className="p-2 bg-surface/50 rounded-xl text-text-muted group-hover:text-primary transition-colors">
                                                 {getIcon(a.entity_type)}
                                             </div>
                                             <p className="text-xs font-black uppercase tracking-widest opacity-60">{a.entity_type.replace('_', ' ')}</p>

@@ -1,0 +1,514 @@
+﻿diff --git a/accounts/__pycache__/urls.cpython-313.pyc b/accounts/__pycache__/urls.cpython-313.pyc
+index 12fc0a7..298d775 100644
+Binary files a/accounts/__pycache__/urls.cpython-313.pyc and b/accounts/__pycache__/urls.cpython-313.pyc differ
+diff --git a/accounts/__pycache__/views.cpython-313.pyc b/accounts/__pycache__/views.cpython-313.pyc
+index 1775d56..f5e9445 100644
+Binary files a/accounts/__pycache__/views.cpython-313.pyc and b/accounts/__pycache__/views.cpython-313.pyc differ
+diff --git a/accounts/urls.py b/accounts/urls.py
+index 1697977..5f5e167 100644
+--- a/accounts/urls.py
++++ b/accounts/urls.py
+@@ -2,16 +2,13 @@ from django.urls import path
+ 
+ from accounts.views import (
+     LoginView, RefreshView, CreateUserView, 
+-    SendOTPView, VerifyOTPActionView,
+-    ActivateAccountView, ResendActivationEmailView
++    SendOTPView, VerifyOTPActionView
+ )
+ 
+ urlpatterns = [
+     path('login/', LoginView.as_view(), name='token_obtain_pair'),
+     path('refresh/', RefreshView.as_view(), name='token_refresh'),
+     path('create-user/', CreateUserView.as_view(), name='create_user'),
+-    path('activate/', ActivateAccountView.as_view(), name='activate_account'),
+-    path('resend-activation/', ResendActivationEmailView.as_view(), name='resend_activation'),
+     path('send-creation-otp/', SendOTPView.as_view(), name='send_creation_otp'),
+     path('verify-creation-otp/', VerifyOTPActionView.as_view(), name='verify_creation_otp'),
+ ]
+diff --git a/accounts/views.py b/accounts/views.py
+index 0cd8613..3e73116 100644
+--- a/accounts/views.py
++++ b/accounts/views.py
+@@ -50,6 +50,36 @@ class RefreshView(TokenRefreshView):
+     pass
+ 
+ 
++
++def verify_email_otp(email, otp_code):
++    from django.utils import timezone
++    import datetime
++    from rest_framework import status
++    from accounts.models import EmailOTP
++    
++    now = timezone.now()
++    locked_record = EmailOTP.objects.filter(email=email, locked_until__gt=now).first()
++    if locked_record:
++        return False, 'Too many failed attempts. Try again in 15 minutes.', status.HTTP_429_TOO_MANY_REQUESTS
++
++    otp_record = EmailOTP.objects.filter(email=email, is_used=False).order_by("-created_at").first()
++    if not otp_record or not otp_record.is_valid():
++        return False, 'Invalid or expired clearance code.', status.HTTP_400_BAD_REQUEST
++
++    if otp_record.otp != otp_code:
++        otp_record.failed_attempts += 1
++        if otp_record.failed_attempts >= 3:
++            otp_record.locked_until = now + datetime.timedelta(minutes=15)
++            otp_record.save()
++            return False, 'Too many failed attempts. Try again in 15 minutes.', status.HTTP_429_TOO_MANY_REQUESTS
++        otp_record.save()
++        return False, 'Invalid or expired clearance code.', status.HTTP_400_BAD_REQUEST
++
++    otp_record.is_used = True
++    otp_record.save()
++    return True, '', status.HTTP_200_OK
++
++
+ class CreateUserView(APIView):
+     """Admin-only: create a new team member with a password."""
+     permission_classes = [permissions.IsAuthenticated, IsHRManagement]
+@@ -58,6 +88,7 @@ class CreateUserView(APIView):
+         data = request.data
+         email = data.get('email', '').strip()
+         password = data.get('password', '')
++        otp_code = data.get('otp', '').strip()
+         first_name = data.get('first_name', '').strip()
+         last_name = data.get('last_name', '').strip()
+         role = data.get('role', User.Role.SPECIALIST)
+@@ -66,13 +97,16 @@ class CreateUserView(APIView):
+         date_joined = data.get('date_joined')
+         dob = data.get('date_of_birth')
+ 
+-        if not email or not password:
+-            return Response({'detail': 'Email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
++        if not email or not password or not otp_code:
++            return Response({'detail': 'Email, password, and OTP code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+ 
+         if User.objects.filter(email=email).exists():
+             return Response({'detail': 'A user with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+ 
+-        # Bypassing OTP check for admins. Setting up magic link activation flow.
++        is_valid, msg, status_code = verify_email_otp(email, otp_code)
++        if not is_valid:
++            return Response({'detail': msg}, status=status_code)
++
+ 
+         username = email.split('@')[0]
+         base = username
+@@ -93,22 +127,20 @@ class CreateUserView(APIView):
+         )
+         if date_joined:
+             user.date_joined = date_joined
+-        user.set_unusable_password()
+-        user.is_verified = False
++        user.set_password(password)
++        user.is_verified = True
+         user._activity_user = request.user
+         user.save()
+ 
+-        token = default_token_generator.make_token(user)
+-        activation_url = f"https://c1r9rt-workflow.in/activate?email={user.email}&token={token}"
+-
+-        # Instant Async Welcome Email
++        # Synchronous Welcome Email
+         send_reliable_email_async(
+-            subject='Welcome to Colour Parrot - Activate Your Account',
++            subject='Welcome to Colour Parrot - Account Created',
+             message=(
+                 f'Hello {first_name},\n\n'
+                 'Your account on the Colour Parrot Task Management System has been created.\n\n'
+-                'Please click the link below to verify your email and set your password to activate your account:\n'
+-                f'{activation_url}\n\n'
++                f'Username: {email}\n'
++                f'Password: {password}\n\n'
++                'Please log in at: https://c1r9rt-workflow.in\n\n'
+                 'Best regards,\n'
+                 'The Colour Parrot Team'
+             ),
+@@ -175,34 +207,9 @@ class VerifyOTPActionView(APIView):
+         if not email or not otp_code:
+             return Response({'detail': 'Email and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+ 
+-        from django.utils import timezone
+-        import datetime
+-        now = timezone.now()
+-
+-        # 1. Reject immediately if locked
+-        locked_record = EmailOTP.objects.filter(email=email, locked_until__gt=now).first()
+-        if locked_record:
+-            return Response({'detail': 'Too many failed attempts. Try again in 15 minutes.'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+-
+-        # 2. Get the most recent unused OTP for this email
+-        otp_record = EmailOTP.objects.filter(email=email, is_used=False).order_by("-created_at").first()
+-
+-        if not otp_record or not otp_record.is_valid():
+-            return Response({'detail': 'Invalid or expired clearance code.'}, status=status.HTTP_400_BAD_REQUEST)
+-
+-        # 3. Check the code
+-        if otp_record.otp != otp_code:
+-            otp_record.failed_attempts += 1
+-            if otp_record.failed_attempts >= 3:
+-                otp_record.locked_until = now + datetime.timedelta(minutes=15)
+-                otp_record.save()
+-                return Response({'detail': 'Too many failed attempts. Try again in 15 minutes.'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+-            otp_record.save()
+-            return Response({'detail': 'Invalid or expired clearance code.'}, status=status.HTTP_400_BAD_REQUEST)
+-
+-        # 4. Success
+-        otp_record.is_used = True
+-        otp_record.save()
++        is_valid, msg, status_code = verify_email_otp(email, otp_code)
++        if not is_valid:
++            return Response({'detail': msg}, status=status_code)
+ 
+         return Response({'detail': 'Identity verified. Member cleared for creation.', 'verified': True})
+ 
+diff --git a/frontend/frontend_build_for_hostinger.zip b/frontend/frontend_build_for_hostinger.zip
+deleted file mode 100644
+index 0d71232..0000000
+Binary files a/frontend/frontend_build_for_hostinger.zip and /dev/null differ
+diff --git a/frontend/frontend_build_for_hostinger_v2.zip b/frontend/frontend_build_for_hostinger_v2.zip
+deleted file mode 100644
+index 33e3435..0000000
+Binary files a/frontend/frontend_build_for_hostinger_v2.zip and /dev/null differ
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index a6319d2..d48787d 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
+ import axios from 'axios';
+ import { Lock, Mail, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+ import Dashboard from './Dashboard';
+-import ActivationScreen from './pages/ActivationScreen';
+ 
+ import { API_URL } from './api';
+ 
+diff --git a/frontend/src/api.ts b/frontend/src/api.ts
+index 401e707..650184f 100644
+--- a/frontend/src/api.ts
++++ b/frontend/src/api.ts
+@@ -307,11 +307,7 @@ export const api = {
+   markAllNotificationsRead: () => apiClient.post('notifications/mark-all-read/'),
+   createUser: (data: object) =>
+     apiClient.post('/auth/create-user/', data),
+-  activateAccount: (data: object) =>
+-    apiClient.post('/auth/activate/', data),
+-  resendActivation: (id: number) =>
+-    apiClient.post('/auth/resend-activation/', { user_id: id }),
+-  updateUser: (id: number, data: object) =>
++      updateUser: (id: number, data: object) =>
+     apiClient.patch(`/users/${id}/`, data),
+   deleteUser: (id: number) =>
+     apiClient.delete(`/users/${id}/`),
+diff --git a/frontend/src/pages/ActivationScreen.tsx b/frontend/src/pages/ActivationScreen.tsx
+deleted file mode 100644
+index 73fa06b..0000000
+--- a/frontend/src/pages/ActivationScreen.tsx
++++ /dev/null
+@@ -1,157 +0,0 @@
+-import React, { useState, useEffect } from 'react';
+-import { motion, AnimatePresence } from 'framer-motion';
+-import { Lock, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+-import { api } from '../api';
+-import axios from 'axios';
+-
+-interface ActivationScreenProps {
+-  onActivated: () => void;
+-}
+-
+-export default function ActivationScreen({ onActivated }: ActivationScreenProps) {
+-  const [email, setEmail] = useState('');
+-  const [token, setToken] = useState('');
+-  const [password, setPassword] = useState('');
+-  const [confirmPassword, setConfirmPassword] = useState('');
+-  
+-  const [isLoading, setIsLoading] = useState(false);
+-  const [error, setError] = useState('');
+-  const [success, setSuccess] = useState('');
+-
+-  useEffect(() => {
+-    const params = new URLSearchParams(window.location.search);
+-    const e = params.get('email');
+-    const t = params.get('token');
+-    if (e && t) {
+-      setEmail(e);
+-      setToken(t);
+-    } else {
+-      setError('Invalid activation link. Missing email or token.');
+-    }
+-  }, []);
+-
+-  const handleSubmit = async (e: React.FormEvent) => {
+-    e.preventDefault();
+-    if (!email || !token) {
+-      setError('Invalid link. Please check your email and click the link again.');
+-      return;
+-    }
+-    if (password.length < 8) {
+-      setError('Password must be at least 8 characters long.');
+-      return;
+-    }
+-    if (password !== confirmPassword) {
+-      setError('Passwords do not match.');
+-      return;
+-    }
+-
+-    setIsLoading(true);
+-    setError('');
+-    try {
+-      const res = await api.activateAccount({ email, token, new_password: password });
+-      setSuccess('Account activated successfully! Logging you in...');
+-      
+-      // Save tokens
+-      localStorage.setItem('access_token', res.data.access);
+-      if (res.data.refresh) localStorage.setItem('refresh_token', res.data.refresh);
+-      
+-      setTimeout(() => {
+-        onActivated();
+-      }, 1500);
+-    } catch (err: unknown) {
+-      if (axios.isAxiosError(err) && err.response) {
+-        const detail = err.response.data.detail || err.response.data.error;
+-        setError(Array.isArray(detail) ? detail.join(' ') : (typeof detail === 'string' ? detail : 'Activation failed.'));
+-      } else {
+-        setError('Connection error. Please try again.');
+-      }
+-    } finally {
+-      setIsLoading(false);
+-    }
+-  };
+-
+-  return (
+-    <div className="min-h-[111.11vh] w-[111.11vw] flex items-center justify-center p-4 relative overflow-hidden bg-background">
+-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary opacity-10 rounded-full blur-[120px]"></div>
+-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#8b5cf6] opacity-10 rounded-full blur-[120px]"></div>
+-      
+-      <motion.div 
+-        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+-        animate={{ opacity: 1, y: 0, scale: 1 }}
+-        transition={{ duration: 0.8 }}
+-        className="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl relative z-10 border border-border/50"
+-      >
+-        <div className="text-center mb-8">
+-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-[#8b5cf6] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+-            <Lock className="w-8 h-8 text-white" />
+-          </div>
+-          <h1 className="text-2xl font-black text-text mb-2 tracking-tighter">Activate Account</h1>
+-          <p className="text-text-muted text-sm font-medium">Set your permanent password to continue.</p>
+-        </div>
+-
+-        <form onSubmit={handleSubmit} className="space-y-6 relative z-20">
+-          <div className="space-y-2">
+-            <label className="text-xs font-black uppercase tracking-widest text-text-muted ml-4">Email Address</label>
+-            <div className="relative">
+-              <input 
+-                type="email" 
+-                value={email}
+-                disabled
+-                className="w-full px-6 py-4 bg-surface/50 border border-border/50 rounded-2xl text-sm outline-none text-text-muted cursor-not-allowed"
+-              />
+-            </div>
+-          </div>
+-          <div className="space-y-2">
+-            <label className="text-xs font-black uppercase tracking-widest text-text-muted ml-4">New Password</label>
+-            <div className="relative">
+-              <input 
+-                type="password" 
+-                value={password}
+-                onChange={(e) => setPassword(e.target.value)}
+-                required
+-                className="w-full px-6 py-4 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all placeholder:text-text-muted/50 text-text"
+-                placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
+-              />
+-            </div>
+-          </div>
+-          <div className="space-y-2">
+-            <label className="text-xs font-black uppercase tracking-widest text-text-muted ml-4">Confirm Password</label>
+-            <div className="relative">
+-              <input 
+-                type="password" 
+-                value={confirmPassword}
+-                onChange={(e) => setConfirmPassword(e.target.value)}
+-                required
+-                className="w-full px-6 py-4 bg-surface/50 border border-border/50 rounded-2xl text-sm focus:border-primary outline-none transition-all placeholder:text-text-muted/50 text-text"
+-                placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
+-              />
+-            </div>
+-          </div>
+-
+-          <AnimatePresence>
+-            {error && (
+-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-4 bg-error/10 border border-error/20 rounded-2xl flex items-start gap-3">
+-                <AlertCircle className="w-5 h-5 text-error shrink-0 mt-0.5" />
+-                <p className="text-sm font-medium text-error">{error}</p>
+-              </motion.div>
+-            )}
+-            {success && (
+-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-start gap-3">
+-                <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+-                <p className="text-sm font-medium text-primary">{success}</p>
+-              </motion.div>
+-            )}
+-          </AnimatePresence>
+-
+-          <button 
+-            type="submit" 
+-            disabled={isLoading || !email || !token || !!success}
+-            className="w-full py-4 bg-gradient-to-r from-primary to-[#8b5cf6] text-white rounded-2xl font-black uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 group shadow-glow disabled:opacity-50"
+-          >
+-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Activate & Login'}
+-          </button>
+-        </form>
+-      </motion.div>
+-    </div>
+-  );
+-}
+diff --git a/frontend/src/pages/TeamPage.tsx b/frontend/src/pages/TeamPage.tsx
+index 37a96fa..c45a0eb 100644
+--- a/frontend/src/pages/TeamPage.tsx
++++ b/frontend/src/pages/TeamPage.tsx
+@@ -67,6 +67,10 @@ export default function TeamPage({ me }: { me: User | null }) {
+   const [showArchived, setShowArchived] = useState(false);
+   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
+ 
++  const [showOtpModal, setShowOtpModal] = useState(false);
++  const [otpCode, setOtpCode] = useState('');
++  const [pendingPayload, setPendingPayload] = useState<Record<string, any> | null>(null);
++
+   // OTP logic removed
+ 
+   const load = useCallback(() => {
+@@ -84,6 +88,30 @@ export default function TeamPage({ me }: { me: User | null }) {
+ 
+   useEffect(() => { load(); }, [load]);
+ 
++  const handleOtpSubmit = async (e: React.FormEvent) => {
++    e.preventDefault();
++    if (!pendingPayload || !otpCode) return;
++    
++    setSaving(true); setError(''); setSuccess('');
++    try {
++      await api.createUser({ ...pendingPayload, otp: otpCode });
++      setSuccess(`Γ£à Member "${pendingPayload.first_name || pendingPayload.email}" added successfully!`);
++      setForm(defaultForm);
++      setEditingUser(null);
++      setIsChangingPassword(false);
++      setConfirmPassword('');
++      setOtpCode('');
++      setPendingPayload(null);
++      setShowOtpModal(false);
++      load();
++      setTimeout(() => { setShowModal(false); setSuccess(''); }, 1500);
++    } catch (err: unknown) {
++      const detail = (err as { response?: { data?: { detail?: string | string[]; error?: string | string[] } } })?.response?.data?.detail 
++        || (err as { response?: { data?: { detail?: string | string[]; error?: string | string[] } } })?.response?.data?.error;
++      setError(Array.isArray(detail) ? detail.join(' ') : (typeof detail === 'string' ? detail : 'Failed to save member.'));
++    } finally { setSaving(false); }
++  };
++
+   const handleSubmit = async (e: React.FormEvent) => {
+     e.preventDefault();
+     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+@@ -130,16 +158,17 @@ export default function TeamPage({ me }: { me: User | null }) {
+       if (editingUser) {
+         await api.updateUser(editingUser.id, payload);
+         setSuccess(`Γ£à Member details updated successfully!`);
++        setForm(defaultForm);
++        setEditingUser(null);
++        setIsChangingPassword(false);
++        setConfirmPassword('');
++        load();
++        setTimeout(() => { setShowModal(false); setSuccess(''); }, 1500);
+       } else {
+-        await api.createUser(payload);
+-        setSuccess(`Γ£à Member "${form.first_name || form.email}" added successfully!`);
++        await api.sendCreationOtp({ email: payload.email });
++        setPendingPayload(payload);
++        setShowOtpModal(true);
+       }
+-      setForm(defaultForm);
+-      setEditingUser(null);
+-      setIsChangingPassword(false);
+-      setConfirmPassword('');
+-      load();
+-      setTimeout(() => { setShowModal(false); setSuccess(''); }, 1500);
+     } catch (err: unknown) {
+       const detail = (err as { response?: { data?: { detail?: string | string[]; error?: string | string[] } } })?.response?.data?.detail 
+         || (err as { response?: { data?: { detail?: string | string[]; error?: string | string[] } } })?.response?.data?.error;
+@@ -148,17 +177,6 @@ export default function TeamPage({ me }: { me: User | null }) {
+   };
+ 
+   
+-  const handleResendInvite = async (user: User) => {
+-    try {
+-      await api.resendActivation(user.id);
+-      setSuccess(`Γ£à Activation email resent to ${user.email}`);
+-      setTimeout(() => setSuccess(''), 3000);
+-    } catch (err: unknown) {
+-      console.error(err);
+-      setError(`Failed to resend invite to ${user.email}`);
+-      setTimeout(() => setError(''), 3000);
+-    }
+-  };
+ 
+   const openEdit = (user: User) => {
+     setEditingUser(user);
+@@ -210,6 +228,41 @@ export default function TeamPage({ me }: { me: User | null }) {
+ 
+   return (
+     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
++
++      {showOtpModal && (
++        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
++          <div className="glass w-full max-w-sm rounded-2xl border border-primary/30 p-6 shadow-[0_25px_50px_-10px_rgba(0,0,0,0.5)] animate-in zoom-in-95">
++            <h3 className="font-bold text-lg mb-2">Verify Creation</h3>
++            <p className="text-sm text-text-muted mb-6">
++              A 6-digit verification code has been sent to <strong className="text-primary">{pendingPayload?.email}</strong>. Enter it below to finalize account creation.
++            </p>
++            <form onSubmit={handleOtpSubmit} className="space-y-4">
++              {error && (
++                <div className="p-3 bg-error/10 border border-error/20 rounded-xl text-sm text-error animate-in fade-in text-center">
++                  {error}
++                </div>
++              )}
++              <input 
++                type="text" 
++                maxLength={6} 
++                required 
++                value={otpCode} 
++                onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))} 
++                placeholder="000000" 
++                className="w-full text-center tracking-[0.5em] font-mono text-2xl py-3 bg-surface border border-border rounded-xl focus:border-primary outline-none"
++              />
++              <div className="flex gap-3">
++                <button type="button" onClick={() => setShowOtpModal(false)} className="flex-1 py-2.5 rounded-xl border border-border hover:bg-surface text-sm font-semibold transition-colors">
++                  Cancel
++                </button>
++                <button type="submit" disabled={saving || otpCode.length !== 6} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50">
++                  {saving ? 'Verifying...' : 'Verify & Create'}
++                </button>
++              </div>
++            </form>
++          </div>
++        </div>
++      )}
+       {showModal && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center lg:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+           <div className="glass w-full lg:max-w-lg h-full lg:h-auto lg:rounded-2xl border border-primary/30 shadow-[0_25px_50px_-10px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200 overflow-y-auto">
+@@ -515,15 +568,7 @@ export default function TeamPage({ me }: { me: User | null }) {
+             <div key={user.id} className={`glass rounded-2xl border border-border/50 hover:border-primary/30 transition-all group overflow-hidden relative ${!user.is_active ? 'opacity-60 grayscale-[0.6]' : ''}`}>
+               {(me?.is_superuser || me?.role === 'admin' || me?.role === 'hr') && (
+                 <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-10">
+-                  {!user.is_verified && (
+-                    <button 
+-                      onClick={(e) => { e.stopPropagation(); handleResendInvite(user); }}
+-                      className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all"
+-                      title="Resend Invite"
+-                    >
+-                      <Mail className="w-4 h-4" />
+-                    </button>
+-                  )}
++
+                    <button 
+                     onClick={(e) => { e.stopPropagation(); openEdit(user); }} 
+                     className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all"

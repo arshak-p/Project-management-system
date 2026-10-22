@@ -1,12 +1,14 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom';
 import {
   Bell, CalendarDays, CheckSquare, Clock, FolderKanban, LayoutDashboard, LogOut, Menu, Settings, User as UserIcon, Users,
 } from 'lucide-react';
-import { api, errorMessage, fullName, ROLE_LABELS, type Role } from './api';
+import { api, fullName, ROLE_LABELS, type Role } from './api';
 import { AuthProvider, useAuth } from './auth';
-import { Button, ErrorBox, Field, Spinner, cx, inputCls } from './ui';
+import { startRealtime } from './realtime';
+import { Spinner, cx } from './ui';
 import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
 import TasksPage from './pages/TasksPage';
 import ProjectsPage from './pages/ProjectsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -15,52 +17,6 @@ import TeamPage from './pages/TeamPage';
 import TimesheetsPage from './pages/TimesheetsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
-
-function Login() {
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setError('');
-    try {
-      await login(email, password);
-    } catch (err) {
-      const status = (err as { response?: { status?: number } }).response?.status;
-      setError(
-        status === 401 ? 'Wrong email or password.'
-          : status === 429 ? 'Too many attempts. Please wait a minute and try again.'
-            : errorMessage(err, 'Cannot reach the server. Try again.'),
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="flex min-h-full items-center justify-center p-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-        <div className="text-center">
-          <img src="/colour parrot-icon.webp" alt="" className="mx-auto mb-3 h-14 w-auto" onError={(e) => (e.currentTarget.style.display = 'none')} />
-          <h1 className="text-xl font-semibold">Colour Parrot</h1>
-          <p className="text-sm text-slate-500">Sign in to your workspace</p>
-        </div>
-        <ErrorBox text={error} />
-        <Field label="Email">
-          <input className={inputCls} type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </Field>
-        <Field label="Password">
-          <input className={inputCls} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-        </Field>
-        <Button type="submit" busy={busy} className="w-full">Sign in</Button>
-      </form>
-    </div>
-  );
-}
 
 interface NavItem { to: string; label: string; icon: typeof Menu; roles?: Role[] }
 
@@ -83,8 +39,11 @@ function Layout() {
     let alive = true;
     const poll = () => api.notifications().then((n) => alive && setUnread(n.filter((x) => !x.read).length)).catch(() => undefined);
     poll();
+    // Live: the server pushes a message the moment a notification is created. The slow poll is a fallback.
+    const stopRealtime = startRealtime();
+    window.addEventListener('cp:notification', poll);
     const t = setInterval(poll, 60000);
-    return () => { alive = false; clearInterval(t); };
+    return () => { alive = false; clearInterval(t); stopRealtime(); window.removeEventListener('cp:notification', poll); };
   }, []);
 
   if (!user) return null;
@@ -138,7 +97,7 @@ function Guard({ roles, children }: { roles?: Role[]; children: React.ReactNode 
 function Shell() {
   const { user, loading } = useAuth();
   if (loading) return <Spinner />;
-  if (!user) return <Login />;
+  if (!user) return <LoginPage />;
   const planners: Role[] = ['admin', 'project_manager', 'sales_manager', 'team_head', 'specialist'];
   const team: Role[] = ['admin', 'hr', 'project_manager', 'team_head', 'sales_manager'];
   const settings: Role[] = ['admin', 'project_manager', 'sales_manager'];

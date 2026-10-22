@@ -18,3 +18,4 @@ dj-database-url>=2.2
 fpdf2>=2.8.7
 eventlet>=0.41.0
 google-api-python-client>=2.100.0
+resend==2.36.0

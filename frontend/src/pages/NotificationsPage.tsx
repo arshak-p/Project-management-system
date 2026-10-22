@@ -1,9 +1,14 @@
+import { useEffect } from 'react';
 import { api } from '../api';
 import { useLoad } from '../hooks';
 import { Button, Card, Empty, ErrorBox, PageHeader, Spinner, cx } from '../ui';
 
 export default function NotificationsPage() {
   const { data, loading, error, reload } = useLoad(() => api.notifications());
+  useEffect(() => {
+    window.addEventListener('cp:notification', reload);
+    return () => window.removeEventListener('cp:notification', reload);
+  }, [reload]);
   if (loading) return <Spinner />;
   const unread = data?.filter((n) => !n.read) ?? [];
 

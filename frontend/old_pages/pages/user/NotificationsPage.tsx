@@ -183,7 +183,7 @@ export default function NotificationsPage({ me, onNavigate }: { me: User | null,
                         exit="exit"
                         layout
                         onClick={() => handleNotifyClick(n)}
-                        className="notif-row flex items-start gap-4 p-5 hover:bg-primary/5 transition-colors group bg-primary/[0.03] cursor-pointer border-b border-white/5 last:border-0"
+                        className="notif-row flex items-start gap-4 p-5 hover:bg-primary/5 transition-colors group bg-primary/[0.03] cursor-pointer border-b border-border/50 last:border-0"
                       >
                         <motion.div
                           whileHover={{ scale: 1.15, rotate: 8 }}

@@ -336,13 +336,13 @@ export default function StrategistPage({ me }: { me: User | null }) {
   const existingCount = rows.filter(r => !r._isNew).length;
 
   /* ─── Render helpers ─── */
-  const cellBaseClass = 'px-3 py-2.5 border-b border-white/5 shrink-0 flex items-center';
+  const cellBaseClass = 'px-3 py-2.5 border-b border-border/50 shrink-0 flex items-center';
 
   const inputClass = (disabled: boolean) =>
-    `w-full bg-transparent border-none outline-none text-xs font-semibold text-white placeholder:text-white/20 ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`;
+    `w-full bg-transparent border-none outline-none text-xs font-semibold text-text placeholder:text-text-muted/50 ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`;
 
   const selectClass = (disabled: boolean) =>
-    `w-full bg-transparent border-none outline-none text-xs font-semibold text-white appearance-none cursor-pointer ${disabled ? 'opacity-30 cursor-not-allowed pointer-events-none' : ''}`;
+    `w-full bg-transparent border-none outline-none text-xs font-semibold text-text appearance-none cursor-pointer ${disabled ? 'opacity-30 cursor-not-allowed pointer-events-none' : ''}`;
 
   /* ─── Loading state ─── */
   if (isLoading) return (
@@ -362,7 +362,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
       >
         <div className="relative">
           <div className="absolute -left-10 top-0 w-24 h-24 bg-primary/20 blur-[60px] rounded-full"></div>
-          <h1 className="text-5xl font-black tracking-tighter flex items-center gap-4 relative z-10 text-white">
+          <h1 className="text-5xl font-black tracking-tighter flex items-center gap-4 relative z-10 text-text">
             Strategy Planner <BrainCircuit className="w-10 h-10 text-primary" />
           </h1>
           <p className="text-text-muted mt-3 font-bold tracking-[0.4em] uppercase text-[10px] opacity-50 italic">
@@ -378,11 +378,11 @@ export default function StrategistPage({ me }: { me: User | null }) {
               setSelectedProject(e.target.value);
               setSelectedStrategy(null);
             }}
-            className="px-6 py-3.5 glass border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all text-white"
+            className="px-6 py-3.5 glass border border-border/50 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all text-text"
           >
-            <option value="" className="bg-background text-white">Select Project</option>
+            <option value="" className="bg-background text-text">Select Project</option>
             {projects.map(p => (
-              <option key={p.id} value={p.id} className="bg-background text-white">{p.name}</option>
+              <option key={p.id} value={p.id} className="bg-background text-text">{p.name}</option>
             ))}
           </select>
 
@@ -394,11 +394,11 @@ export default function StrategistPage({ me }: { me: User | null }) {
               setSelectedStrategy(strat || null);
             }}
             disabled={!selectedProject}
-            className="px-6 py-3.5 glass border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all text-white disabled:opacity-50"
+            className="px-6 py-3.5 glass border border-border/50 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all text-text disabled:opacity-50"
           >
-            <option value="" className="bg-background text-white">Select Strategy</option>
+            <option value="" className="bg-background text-text">Select Strategy</option>
             {strategies.filter(s => s.project.toString() === selectedProject).map(s => (
-              <option key={s.id} value={s.id} className="bg-background text-white">
+              <option key={s.id} value={s.id} className="bg-background text-text">
                 {s.name} {s.is_deployed ? '(Deployed)' : '(Draft)'}
               </option>
             ))}
@@ -407,7 +407,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
           {selectedProject && (
             <button
               onClick={() => setIsCreatingStrategy(true)}
-              className="px-4 py-3.5 glass hover:bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center transition-all text-primary"
+              className="px-4 py-3.5 glass hover:bg-surface/50 border border-border/50 rounded-2xl flex items-center justify-center transition-all text-primary"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -423,17 +423,17 @@ export default function StrategistPage({ me }: { me: User | null }) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="flex items-center gap-4 p-4 glass rounded-2xl border border-white/5">
+            <div className="flex items-center gap-4 p-4 glass rounded-2xl border border-border/50">
               <input
                 type="text"
                 placeholder="e.g. Monthly Strategy - January 2024"
                 value={newStrategyName}
                 onChange={e => setNewStrategyName(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-sm text-white placeholder:text-white/20"
+                className="flex-1 bg-transparent border-none outline-none text-sm text-text placeholder:text-text-muted/50"
               />
               <button
                 onClick={() => setIsCreatingStrategy(false)}
-                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-white transition-colors"
+                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-text transition-colors"
               >
                 Cancel
               </button>
@@ -459,7 +459,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
         <div className="flex items-center gap-4">
           <button
             onClick={addRow}
-            className="flex items-center gap-2 px-6 py-3.5 glass hover:bg-white/5 border border-white/5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all text-white"
+            className="flex items-center gap-2 px-6 py-3.5 glass hover:bg-surface/50 border border-border/50 rounded-2xl font-black text-xs uppercase tracking-widest transition-all text-text"
           >
             <Plus className="w-4 h-4 text-primary" /> Add Row
           </button>
@@ -468,7 +468,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
             disabled={!selectedStrategy || (draftCount === 0 && selectedStrategy?.is_deployed) || isDeploying}
             className="flex items-center gap-3 px-8 py-3.5 bg-gradient-to-r from-primary to-[#d946ef] text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-premium hover:opacity-90 disabled:opacity-40 transition-all overflow-hidden relative group"
           >
-            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-surface/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
             <Rocket className="w-4 h-4 relative z-10" />
             <span className="relative z-10">
               {isDeploying ? 'Deploying...' : (selectedStrategy?.is_deployed ? (draftCount > 0 ? 'Save New Drafts' : 'Deployed') : 'Deploy Strategy')}
@@ -478,7 +478,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
             onClick={exportCSV}
             disabled={!selectedStrategy || !selectedStrategy.is_deployed}
             title={selectedStrategy && !selectedStrategy.is_deployed ? 'Deploy strategy to export full sheet' : 'Export Full Strategy Sheet'}
-            className="flex items-center gap-2 px-6 py-3.5 glass hover:bg-white/5 border border-white/5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all text-white disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3.5 glass hover:bg-surface/50 border border-border/50 rounded-2xl font-black text-xs uppercase tracking-widest transition-all text-text disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4 text-emerald-400" /> Export Sheet
           </button>
@@ -513,7 +513,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
         <div className="overflow-x-auto custom-scrollbar">
           <div className="min-w-[1800px]">
             {/* Header row */}
-            <div className="flex items-center bg-surface/40 border-b border-white/10 sticky top-0 z-10">
+            <div className="flex items-center bg-surface/40 border-b border-border sticky top-0 z-10">
               {columns.map(col => (
                 <div
                   key={col.key}
@@ -559,7 +559,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, scale: 0.97 }}
                       transition={{ duration: 0.25, delay: idx * 0.02 }}
-                      className={`flex items-center hover:bg-white/[0.03] group relative transition-colors ${isNewRow ? 'bg-primary/[0.02]' : ''} ${row._dirty ? 'bg-amber-500/[0.02]' : ''}`}
+                      className={`flex items-center hover:bg-surface/30 group relative transition-colors ${isNewRow ? 'bg-primary/[0.02]' : ''} ${row._dirty ? 'bg-amber-500/[0.02]' : ''}`}
                     >
                       {/* Indicator stripe */}
                       {isNewRow && (
@@ -736,7 +736,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
                       </div>
 
                       {/* DELETE */}
-                      <div className="w-[56px] shrink-0 flex items-center justify-center border-b border-white/5">
+                      <div className="w-[56px] shrink-0 flex items-center justify-center border-b border-border/50">
                         {isNewRow && (
                           <button
                             onClick={() => removeRow(row._id)}
@@ -755,7 +755,7 @@ export default function StrategistPage({ me }: { me: User | null }) {
         </div>
 
         {/* Footer info bar */}
-        <div className="px-6 py-4 bg-surface/20 border-t border-white/5 flex items-center justify-between">
+        <div className="px-6 py-4 bg-surface/20 border-t border-border/50 flex items-center justify-between">
           <div className="flex items-center gap-6 text-[9px] font-black uppercase tracking-widest text-text-muted opacity-40">
             <span className="flex items-center gap-2">
               <ChevronRight className="w-3 h-3" /> {rows.length} total rows

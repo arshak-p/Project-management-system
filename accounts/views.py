@@ -3,6 +3,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 import threading
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework import permissions, status
@@ -10,6 +12,8 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.tokens import default_token_generator
 
 from accounts.models import User, EmailOTP
 from accounts.serializers import CustomTokenObtainPairSerializer
@@ -19,22 +23,32 @@ from tms.permissions import IsAdminRole, IsHRManagement
 from django.utils import timezone
 
 def send_reliable_email_async(subject, message, recipient_list):
-    """Fires the email into a background thread and returns instantly."""
-    def send():
-        try:
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=recipient_list,
-                fail_silently=False,
-            )
-        except Exception as e:
-            print(f"THREADED SMTP ERROR: {str(e)}")
+    """Sends email synchronously using Resend API to bypass Render's SMTP block."""
+    import resend
+    import os
+    try:
+        resend.api_key = os.environ.get("RESEND_API_KEY")
+        if not resend.api_key:
+            print("WARNING: RESEND_API_KEY is not set in the environment.")
+            return False
 
-    thread = threading.Thread(target=send, daemon=True)
-    thread.start()
-    return True
+        response = resend.Emails.send({
+            "from": "no-reply@c1r9rt-workflow.in",
+            "to": recipient_list,
+            "subject": subject,
+            "text": message,
+        })
+        print(f"Resend API Response: {response}")
+        return True
+    except Exception as e:
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"RESEND API ERROR: {str(e)}")
+        logger.error(traceback.format_exc())
+        print(f"RESEND API ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return False
 
 
 
@@ -51,6 +65,46 @@ class RefreshView(TokenRefreshView):
     throttle_scope = "refresh"
 
 
+
+def verify_email_otp(email, otp_code):
+    from django.utils import timezone
+    import datetime
+    from rest_framework import status
+    from accounts.models import EmailOTP
+    
+    now = timezone.now()
+    locked_record = EmailOTP.objects.filter(email=email, locked_until__gt=now).first()
+    if locked_record:
+        return False, 'Too many failed attempts. Try again in 15 minutes.', status.HTTP_429_TOO_MANY_REQUESTS
+
+    otp_record = EmailOTP.objects.filter(email=email, is_used=False).order_by("-created_at").first()
+    if not otp_record or not otp_record.is_valid():
+        return False, 'Invalid or expired clearance code.', status.HTTP_400_BAD_REQUEST
+
+    if not secrets.compare_digest(str(otp_record.otp), str(otp_code)):
+        otp_record.failed_attempts += 1
+        if otp_record.failed_attempts >= 3:
+            otp_record.locked_until = now + datetime.timedelta(minutes=15)
+            otp_record.save()
+            return False, 'Too many failed attempts. Try again in 15 minutes.', status.HTTP_429_TOO_MANY_REQUESTS
+        otp_record.save()
+        return False, 'Invalid or expired clearance code.', status.HTTP_400_BAD_REQUEST
+
+    otp_record.is_used = True
+    otp_record.save()
+    return True, '', status.HTTP_200_OK
+
+
+def email_recently_verified(email):
+    """True if a code for this email was successfully used in the last 15 minutes."""
+    import datetime
+    return EmailOTP.objects.filter(
+        email__iexact=email,
+        is_used=True,
+        created_at__gte=timezone.now() - datetime.timedelta(minutes=15),
+    ).exists()
+
+
 class CreateUserView(APIView):
     """Admin-only: create a new team member with a password."""
     permission_classes = [permissions.IsAuthenticated, IsHRManagement]
@@ -59,9 +113,10 @@ class CreateUserView(APIView):
         data = request.data
         email = str(data.get('email', '')).strip().lower()
         password = data.get('password', '')
+        otp_code = str(data.get('otp', '')).strip()
         first_name = data.get('first_name', '').strip()
         last_name = data.get('last_name', '').strip()
-        role = data.get('role', User.Role.SPECIALIST)
+        role = str(data.get('role', User.Role.SPECIALIST))
         title = data.get('title', '').strip()
         phone = data.get('phone', '').strip()
         date_joined = data.get('date_joined')
@@ -69,6 +124,11 @@ class CreateUserView(APIView):
 
         if not email or not password:
             return Response({'detail': 'Email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            validate_email(email)
+        except ValidationError:
+            return Response({'detail': 'Enter a valid email address.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if role not in User.Role.values:
             return Response({'detail': 'Invalid role.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -78,23 +138,19 @@ class CreateUserView(APIView):
         if User.objects.filter(email__iexact=email).exists():
             return Response({'detail': 'A user with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check if email is verified
-        from django.utils import timezone
-        import datetime
-        fifteen_mins_ago = timezone.now() - datetime.timedelta(minutes=15)
-        is_verified = EmailOTP.objects.filter(
-            email__iexact=email, 
-            is_used=True, 
-            created_at__gte=fifteen_mins_ago
-        ).exists()
-        
-        if not is_verified:
-            return Response({'detail': 'Email verification required before creating this account.'}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
             validate_password(password)
-        except Exception as e:
+        except ValidationError as e:
             return Response({'detail': list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # The email must be proven: either the code is sent with this request, or it was
+        # already verified in the last 15 minutes (the "verify" step of the add-person form).
+        if otp_code:
+            is_valid, msg, status_code = verify_email_otp(email, otp_code)
+            if not is_valid and not email_recently_verified(email):
+                return Response({'detail': msg}, status=status_code)
+        elif not email_recently_verified(email):
+            return Response({'detail': 'Email verification required before creating this account.'}, status=status.HTTP_400_BAD_REQUEST)
 
         username = email.split('@')[0]
         base = username
@@ -116,18 +172,19 @@ class CreateUserView(APIView):
         if date_joined:
             user.date_joined = date_joined
         user.set_password(password)
+        user.is_verified = True
         user._activity_user = request.user
         user.save()
 
-        # Instant Async Welcome Email
+        # Synchronous Welcome Email
         send_reliable_email_async(
-            subject='Welcome to Colour Parrot - Your Account is Ready!',
+            subject='Welcome to Colour Parrot - Account Created',
             message=(
                 f'Hello {first_name},\n\n'
                 'Your account on the Colour Parrot Task Management System has been created.\n\n'
-                'System Portal: https://c1r9rt-workflow.in\n'
-                f'Login Email: {email}\n\n'
-                'You can now log in and start collaborating on your assigned projects.\n\n'
+                f'Username: {email}\n'
+                f'Password: {password}\n\n'
+                'Please log in at: https://c1r9rt-workflow.in\n\n'
                 'Best regards,\n'
                 'The Colour Parrot Team'
             ),
@@ -176,20 +233,11 @@ class SendOTPView(APIView):
             'Best regards,\n'
             'The Colour Parrot Team'
         )
-        # Send now (not in a background thread) so a failure is reported instead of silently lost.
-        try:
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-        except Exception as exc:  # SMTP down, wrong password, blocked address...
-            print(f"OTP EMAIL ERROR: {exc}")
+        # The Resend helper returns False when the mail is rejected: say so instead of claiming success.
+        if not send_reliable_email_async(subject, message, [email]):
             EmailOTP.objects.filter(pk=otp_row.pk).delete()
             return Response(
-                {'detail': 'The code could not be emailed. Check the email address and the mail settings, then try again.'},
+                {'detail': 'The code could not be emailed. Check the email address and the RESEND_API_KEY setting, then try again.'},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
@@ -213,36 +261,82 @@ class VerifyOTPActionView(APIView):
         if not email or not otp_code:
             return Response({'detail': 'Email and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        from django.utils import timezone
-        import datetime
-        now = timezone.now()
-
-        # 1. Reject immediately if locked
-        locked_record = EmailOTP.objects.filter(email=email, locked_until__gt=now).first()
-        if locked_record:
-            return Response({'detail': 'Too many failed attempts. Try again in 15 minutes.'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
-
-        # 2. Get the most recent unused OTP for this email
-        otp_record = EmailOTP.objects.filter(email=email, is_used=False).order_by("-created_at").first()
-
-        if not otp_record or not otp_record.is_valid():
-            return Response({'detail': 'Invalid or expired clearance code.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 3. Check the code
-        if not secrets.compare_digest(str(otp_record.otp), otp_code):
-            otp_record.failed_attempts += 1
-            if otp_record.failed_attempts >= 3:
-                otp_record.locked_until = now + datetime.timedelta(minutes=15)
-                otp_record.save()
-                return Response({'detail': 'Too many failed attempts. Try again in 15 minutes.'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
-            otp_record.save()
-            return Response({'detail': 'Invalid or expired clearance code.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 4. Success
-        otp_record.is_used = True
-        otp_record.save()
+        is_valid, msg, status_code = verify_email_otp(email, otp_code)
+        if not is_valid:
+            return Response({'detail': msg}, status=status_code)
 
         return Response({'detail': 'Identity verified. Member cleared for creation.', 'verified': True})
+
+class ActivateAccountView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip()
+        token = request.data.get('token', '')
+        new_password = request.data.get('new_password', '')
+
+        if not email or not token or not new_password:
+            return Response({'detail': 'Email, token, and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'detail': 'This activation link is invalid or has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.is_verified or not default_token_generator.check_token(user, token):
+            return Response({'detail': 'This activation link is invalid or has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from django.contrib.auth.password_validation import validate_password
+            validate_password(new_password, user=user)
+        except Exception as e:
+            return Response({'detail': list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.is_verified = True
+        user.save()
+
+        # Generate tokens for auto-login
+        refresh = RefreshToken.for_user(user)
+        refresh["role"] = getattr(user, "role", "")
+        refresh["name"] = user.get_full_name() or user.email
+        refresh["email"] = user.email
+
+        return Response({
+            'detail': 'Account activated successfully.',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        })
+
+class ResendActivationEmailView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsHRManagement]
+
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+            
+        if user.is_verified:
+            return Response({'detail': 'User is already activated.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        token = default_token_generator.make_token(user)
+        activation_url = f"https://c1r9rt-workflow.in/activate?email={user.email}&token={token}"
+
+        send_reliable_email_async(
+            subject='Reminder: Activate Your Colour Parrot Account',
+            message=(
+                f'Hello {user.first_name},\n\n'
+                'Your account on the Colour Parrot Task Management System is waiting to be activated.\n\n'
+                'Please click the link below to verify your email and set your password to activate your account:\n'
+                f'{activation_url}\n\n'
+                'Best regards,\n'
+                'The Colour Parrot Team'
+            ),
+            recipient_list=[user.email]
+        )
+        return Response({'detail': 'Activation email resent successfully.'})
 
 
 class ChangePasswordView(APIView):
@@ -252,8 +346,6 @@ class ChangePasswordView(APIView):
     throttle_scope = "login"
 
     def post(self, request):
-        from django.core.exceptions import ValidationError
-
         old = str(request.data.get('old_password', ''))
         new = str(request.data.get('new_password', ''))
         if not request.user.check_password(old):

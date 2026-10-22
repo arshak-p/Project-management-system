@@ -96,11 +96,28 @@ export default function KanbanPage({ me }: { me: User | null }) {
 
   useEffect(() => { 
     Promise.resolve().then(() => load()); 
-    const interval = setInterval(() => load(), 4000); // Accelerated Polling: 4s
+    
+    // Connect to Workspace WebSocket
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/workspace/`;
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'workspace_update') {
+          // A task was created/updated/moved; refresh the board
+          load();
+        }
+      } catch (e) {
+        console.error("WS parse error", e);
+      }
+    };
+    
     const handleUpd = () => load();
     window.addEventListener('cp-task-updated', handleUpd);
+    
     return () => {
-      clearInterval(interval);
+      ws.close();
       window.removeEventListener('cp-task-updated', handleUpd);
     };
   }, [load]);
@@ -126,19 +143,19 @@ export default function KanbanPage({ me }: { me: User | null }) {
            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass w-full max-w-md p-8 rounded-[2rem] border border-primary/20 shadow-premium">
               <h3 className="text-2xl font-black tracking-tighter mb-6">Quick Task</h3>
               <form onSubmit={handleQuickCreate} className="space-y-4">
-                 <input autoFocus placeholder="Task Title..." className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} />
-                 <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.project} onChange={e => setTaskForm({...taskForm, project: e.target.value})}>
+                 <input autoFocus placeholder="Task Title..." className="w-full bg-surface/50 border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} />
+                 <select className="w-full bg-surface/50 border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.project} onChange={e => setTaskForm({...taskForm, project: e.target.value})}>
                     <option value="">Select Project</option>
                     {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                  </select>
-                 <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.priority} onChange={e => setTaskForm({...taskForm, priority: e.target.value})}>
+                 <select className="w-full bg-surface/50 border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-all" value={taskForm.priority} onChange={e => setTaskForm({...taskForm, priority: e.target.value})}>
                     <option value="low">Low Priority</option>
                     <option value="medium">Medium Priority</option>
                     <option value="high">High Priority</option>
                     <option value="urgent">Urgent</option>
                  </select>
                  <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all">Cancel</button>
+                    <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 bg-surface/50 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface transition-all">Cancel</button>
                     <button type="submit" className="flex-1 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-glow hover:scale-105 active:scale-95 transition-all">Create</button>
                  </div>
               </form>
@@ -155,7 +172,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
           <select 
             value={filterProject} 
             onChange={e => setFilterProject(e.target.value)}
-            className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
+            className="px-2 py-2 bg-surface/50 border border-border rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
           >
             <option value="">Projects</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -163,7 +180,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
           <select 
             value={filterModule} 
             onChange={e => setFilterModule(e.target.value)}
-            className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
+            className="px-2 py-2 bg-surface/50 border border-border rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
           >
             <option value="">Modules</option>
             {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -171,7 +188,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
           <select 
             value={filterJobTitle} 
             onChange={e => setFilterJobTitle(e.target.value)}
-            className="col-span-2 lg:col-auto px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
+            className="col-span-2 lg:col-auto px-2 py-2 bg-surface/50 border border-border rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all lg:min-w-[120px]"
           >
             <option value="">Job Titles</option>
             {jobTitles.map(jt => <option key={jt.id} value={jt.name}>{jt.name}</option>)}
@@ -198,14 +215,14 @@ export default function KanbanPage({ me }: { me: User | null }) {
               transition={{ delay: idx * 0.05 }}
               onDragOver={onDragOver}
               onDrop={(e) => onDrop(e, state.id)}
-              className="flex-shrink-0 w-[260px] lg:w-[300px] flex flex-col h-full bg-white/[0.01] rounded-[1.5rem] border border-white/5 p-3 hover:bg-white/[0.03] transition-colors"
+              className="flex-shrink-0 w-[260px] lg:w-[300px] flex flex-col h-full bg-white/[0.01] rounded-[1.5rem] border border-border/50 p-3 hover:bg-surface/30 transition-colors"
             >
               <div className="flex items-center justify-between mb-4 px-1 shrink-0">
                 <div className="flex items-center gap-2">
                    <div className={`w-1.5 h-1.5 rounded-full ${colors.text.replace('text-', 'bg-')} shadow-glow`}></div>
                    <h3 className={`font-black text-[10px] uppercase tracking-[0.2em] ${colors.text}`}>{state.name}</h3>
                 </div>
-                <span className="text-[9px] font-black bg-white/5 px-1.5 py-0.5 rounded border border-white/10 opacity-40">
+                <span className="text-[9px] font-black bg-surface/50 px-1.5 py-0.5 rounded border border-border opacity-40">
                   {columnTasks.length}
                 </span>
               </div>
@@ -225,7 +242,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
                         animate={{ opacity: isDragging ? 0.4 : 1, scale: isDragging ? 0.95 : 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         onClick={() => setSelectedTaskId(task.id)}
-                        className={`glass p-4 rounded-xl border-white/5 hover:border-primary/30 group cursor-grab active:cursor-grabbing relative transition-all ${
+                        className={`glass p-4 rounded-xl border-border/50 hover:border-primary/30 group cursor-grab active:cursor-grabbing relative transition-all ${
                           task.priority === 'urgent' ? 'border-red-500/40 bg-red-500/5 shadow-[0_0_15px_-5px_rgba(239,68,68,0.3)]' : ''
                         } ${task.state_slug === 're-edit' ? 'border-red-500/30' : ''}`}
                       >
@@ -257,7 +274,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
                                )}
                              </div>
                           </div>
-                          <div className="flex items-center justify-between mt-1 pt-2 border-t border-white/5 opacity-40 group-hover:opacity-80">
+                          <div className="flex items-center justify-between mt-1 pt-2 border-t border-border/50 opacity-40 group-hover:opacity-80">
                              <div className="flex items-center gap-1.5">
                                 <div className={`w-4 h-4 rounded-full ${cardColors.bg.replace('/10', '')} flex items-center justify-center text-[7px] font-black text-white`}>
                                    {task.assignee?.first_name?.[0] || '?'}
@@ -276,7 +293,7 @@ export default function KanbanPage({ me }: { me: User | null }) {
               <motion.button 
                 whileTap={{ scale: 0.98 }}
                 onClick={() => { setTargetStateId(state.id); setShowAddModal(true); }}
-                className="w-full py-2 bg-white/5 hover:bg-primary/5 border border-white/5 hover:border-primary/10 rounded-lg flex items-center justify-center text-text-muted hover:text-primary transition-all text-[9px] font-black uppercase tracking-widest shrink-0"
+                className="w-full py-2 bg-surface/50 hover:bg-primary/5 border border-border/50 hover:border-primary/10 rounded-lg flex items-center justify-center text-text-muted hover:text-primary transition-all text-[9px] font-black uppercase tracking-widest shrink-0"
               >
                 <Plus className="w-3 h-3 mr-2" /> Add Task
               </motion.button>

@@ -109,9 +109,25 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     }
     loadProfile();
     loadNotifications();
-    const interval = setInterval(loadNotifications, 3000); // High Speed: 3s
+    // Connect to Notifications WebSocket
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/notifications/`;
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'notification') {
+          loadNotifications(); // Fetch the latest to stay perfectly synced
+        }
+      } catch (e) {
+        console.error("WS parse error", e);
+      }
+    };
+
     document.documentElement.setAttribute('data-theme', theme);
-    return () => clearInterval(interval);
+    return () => {
+      ws.close();
+    };
   }, [loadProfile, loadNotifications, theme]);
 
   // Auto-dismiss notifications after 5 seconds robustly
@@ -156,7 +172,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   const navItemClass = (id: Page) => `
     relative w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] text-sm font-bold transition-all group
-    ${page === id ? 'text-primary' : 'text-text-muted hover:text-text hover:bg-white/5'}
+    ${page === id ? 'text-primary' : 'text-text-muted hover:text-text hover:bg-surface/50'}
   `;
 
   const navItems = [
@@ -196,7 +212,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       </AnimatePresence>
 
       <aside className={`
-        fixed md:sticky top-0 h-[calc(111.11vh-2rem)] w-72 lg:w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-white/5 shadow-premium transition-transform duration-500
+        fixed md:sticky top-0 h-[calc(111.11vh-2rem)] w-72 lg:w-80 z-50 flex flex-col m-4 rounded-[2.5rem] glass border-border/50 shadow-premium transition-transform duration-500
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+2rem)] md:translate-x-0'}
       `}>
         <div className="p-8 flex flex-col flex-1 min-h-0">
@@ -246,13 +262,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       <main className="flex-1 flex flex-col min-w-0 h-[111.11vh] overflow-hidden">
         <header className="h-24 flex items-center justify-between px-8 lg:px-12 shrink-0">
           <div className="flex items-center gap-4">
-             <button onClick={() => setSidebarOpen(true)} className="md:hidden p-3 bg-white/5 rounded-2xl">
+             <button onClick={() => setSidebarOpen(true)} className="md:hidden p-3 bg-surface/50 rounded-2xl">
                <Menu className="w-6 h-6" />
              </button>
              {history.length > 0 && (
                <button 
                  onClick={() => handleNav(history[history.length - 1], false)}
-                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-primary transition-colors bg-white/5 px-4 py-2 rounded-xl border border-white/5"
+                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-primary transition-colors bg-surface/50 px-4 py-2 rounded-xl border border-border/50"
                >
                  <ArrowLeft className="w-3.5 h-3.5" /> Back
                </button>
@@ -263,7 +279,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             <div className="relative group">
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-4 bg-white/5 hover:bg-primary/10 rounded-2xl relative transition-all border border-white/5 hover:border-primary/20 shadow-premium"
+                className="p-4 bg-surface/50 hover:bg-primary/10 rounded-2xl relative transition-all border border-border/50 hover:border-primary/20 shadow-premium"
                 title="Toggle Theme"
               >
                 {theme === 'dark' ? (
@@ -277,7 +293,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             <div className="relative group">
               <button 
                 onClick={() => setPage('notifications')}
-                className="p-4 bg-white/5 hover:bg-primary/10 rounded-2xl relative transition-all border border-white/5 hover:border-primary/20 shadow-premium"
+                className="p-4 bg-surface/50 hover:bg-primary/10 rounded-2xl relative transition-all border border-border/50 hover:border-primary/20 shadow-premium"
               >
                 <Bell className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" />
                 {unreadCount > 0 && (
@@ -289,7 +305,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             </div>
 
 
-            <div className="flex items-center gap-4 pl-6 border-l border-white/5">
+            <div className="flex items-center gap-4 pl-6 border-l border-border/50">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-black tracking-tight">{me?.first_name?.toUpperCase() || 'AGENT'}</p>
                 <p className="text-[9px] font-black uppercase tracking-widest text-primary mt-0.5">{me?.role === 'sales_manager' ? 'Strategist' : (me?.role || 'Clearance')}</p>
@@ -359,7 +375,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="glass p-4 rounded-[1.5rem] border border-white/10 shadow-glow pointer-events-auto cursor-pointer"
+              className="glass p-4 rounded-[1.5rem] border border-border shadow-glow pointer-events-auto cursor-pointer"
               onClick={() => {
                 if (n.link) {
                   if (n.link === '/dashboard') return handleNav('overview');
@@ -377,7 +393,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                      <Bell className="w-4 h-4" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-[11px] font-black uppercase tracking-wider text-white">{n.title}</h4>
+                    <h4 className="text-[11px] font-black uppercase tracking-wider text-text">{n.title}</h4>
                     <p className="text-[10px] text-text-muted mt-1 leading-relaxed">{n.body}</p>
                   </div>
                </div>

@@ -6,6 +6,7 @@ import {
 } from '../api';
 import { useAuth } from '../auth';
 import type { TaskOptions } from '../hooks';
+import { allowedStates } from '../workflow';
 import { Button, ErrorBox, Field, Modal, fmtDate, fmtMinutes, inputCls } from '../ui';
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low'];
@@ -71,12 +72,7 @@ export default function TaskModal({ task, options, onClose, onSaved }: Props) {
   const can_ = (f: Field_) => editable.has(f);
   const readOnly = editable.size === 0;
 
-  // Team members can only move their own cards forward to these two stages.
-  const stateChoices = user?.role === 'specialist'
-    ? options.states.filter((s) => s.id === task?.state || ['in-progress', 'team-head-review'].includes(s.slug))
-    : user?.role === 'client'
-      ? options.states.filter((s) => s.id === task?.state || ['client-review', 'completed-launched'].includes(s.slug))
-      : options.states;
+  const stateChoices = task ? allowedStates(user?.role, task.state_slug, options.states) : options.states;
 
   const save = async (e: FormEvent) => {
     e.preventDefault();

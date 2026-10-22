@@ -92,10 +92,10 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
           <p className="text-text-muted mt-2 font-bold uppercase tracking-[0.2em] text-[10px] opacity-60">Categorize your project workflow</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-3 glass px-4 py-2.5 rounded-2xl cursor-pointer hover:bg-white/5 transition-all">
+          <label className="flex items-center gap-3 glass px-4 py-2.5 rounded-2xl cursor-pointer hover:bg-surface/50 transition-all">
             <span className="text-[10px] font-black uppercase tracking-widest">Archives</span>
             <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
-            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-surface'}`}>
               <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
             </div>
           </label>
@@ -110,7 +110,7 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {modules.map(mod => (
-          <div key={mod.id} className="glass p-6 rounded-[2rem] border-white/5 group hover:border-primary/20 transition-all">
+          <div key={mod.id} className="glass p-6 rounded-[2rem] border-border/50 group hover:border-primary/20 transition-all">
             <div className="flex justify-between items-start mb-4">
               <div className="p-3 bg-emerald-500/10 rounded-2xl">
                 <Layers className="w-5 h-5 text-emerald-500" />
@@ -155,7 +155,7 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
         ))}
 
         {modules.length === 0 && (
-          <div className="col-span-full py-20 text-center glass rounded-[3rem] border-dashed border-white/10">
+          <div className="col-span-full py-20 text-center glass rounded-[3rem] border-dashed border-border">
             <Layers className="w-12 h-12 text-text-muted mx-auto mb-4 opacity-20" />
             <p className="text-text-muted font-bold">No modules defined yet.</p>
             <p className="text-xs text-text-muted mt-2">Add categories like "Design", "Development", or "Content".</p>
@@ -171,7 +171,7 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
                 <h3 className="text-2xl font-black italic">{editingId ? 'Edit Module' : 'Create Module'}</h3>
                 <p className="text-xs text-text-muted mt-1 uppercase tracking-widest font-black opacity-50">{editingId ? 'Update category details' : 'Define a new task category'}</p>
               </div>
-              <button onClick={resetForm} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+              <button onClick={resetForm} className="p-2 hover:bg-surface/50 rounded-xl transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -185,7 +185,7 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
                   placeholder="e.g. Graphic Design"
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm focus:border-primary outline-none transition-all placeholder:text-text-muted/40 text-white"
+                  className="w-full px-6 py-4 bg-surface/50 border border-border rounded-2xl text-sm focus:border-primary outline-none transition-all placeholder:text-text-muted/40 text-text"
                 />
               </div>
 
@@ -194,7 +194,7 @@ export default function ModulesPage({ me: _me }: { me: User | null }) {
                 <select
                   value={selectedJobTitle}
                   onChange={e => setSelectedJobTitle(e.target.value)}
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm focus:border-primary outline-none transition-all text-white cursor-pointer"
+                  className="w-full px-6 py-4 bg-surface/50 border border-border rounded-2xl text-sm focus:border-primary outline-none transition-all text-text cursor-pointer"
                   style={{ colorScheme: 'dark' }}
                 >
                   <option value="" className="bg-background">Select job title (optional)</option>

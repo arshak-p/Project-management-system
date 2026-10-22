@@ -189,3 +189,26 @@ def can_assign_role(actor: User, role: str) -> bool:
     if actor.role == User.Role.PROJECT_MANAGER:
         return role not in (User.Role.HR, User.Role.PROJECT_MANAGER)
     return False
+
+
+def is_valid_state_transition(user: User, work_item: WorkItem, new_state_slug: str) -> bool:
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser or user.role in [User.Role.ADMIN, User.Role.PROJECT_MANAGER]:
+        return True
+        
+    old_slug = work_item.state.slug if work_item.state else "backlog"
+    
+    # Allowed transitions (from -> to)
+    allowed = {
+        "backlog": ["in-progress"],
+        "in-progress": ["client-review"],
+        "client-review": ["completed-launched", "rework-revision"],
+        "rework-revision": ["in-progress"],
+        "completed-launched": []
+    }
+    
+    if old_slug not in allowed:
+        return False
+        
+    return new_state_slug in allowed[old_slug]

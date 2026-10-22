@@ -57,7 +57,7 @@ def track_work_item_state(sender, instance: WorkItem, **kwargs):
                 instance.last_state_change = now
 
                 # 2. Track Rework Counts
-                rework_slugs = ['re-edit', 'rework-revision']
+                rework_slugs = ['rework-revision']
                 if instance.state.slug in rework_slugs:
                     instance.rework_count = old_inst.rework_count + 1
                     
@@ -93,6 +93,21 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
             "deadline": str(instance.deadline) if instance.deadline else None,
         },
     )
+
+    # Real-time WebSockets push for Kanban/Workspace
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        async_to_sync(channel_layer.group_send)(
+            "workspace",
+            {
+                "type": "workspace.update",
+                "payload": {
+                    "action": "refresh",
+                    "task_id": instance.pk
+                }
+            }
+        )
+
 
     # --- Assignment Notification ---
     if instance.assignee and (created or getattr(instance, "_old_assignee_id", None) != instance.assignee.id):
@@ -158,34 +173,47 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
         if old_state_id != instance.state.id:
             slug = instance.state.slug
             
-            # 1. Notify Team Heads for Review
-            if slug == 'team-head-review':
-                notify_roles(
-                    [User.Role.PROJECT_MANAGER],
-                    title="Review Required",
-                    body=f"Task {instance.task_code} is ready for internal review.",
-                    link=f"/task/{instance.id}",
-                    exclude_user=actor
-                )
-            
-            # 2. Notify PMs for Client Review
-            elif slug == 'client-review':
+            # 1. Notify for Review
+            if slug == 'client-review':
+                if instance.department and getattr(instance.department, 'head', None):
+                    notify_user(
+                        instance.department.head.id,
+                        title=f"Review Required: {instance.task_code}",
+                        body=f"Task '{instance.title}' is ready for client review.",
+                        link=f"/task/{instance.id}"
+                    )
                 notify_roles(
                     [User.Role.PROJECT_MANAGER, User.Role.ADMIN],
-                    title="Ready for Client",
-                    body=f"Task {instance.task_code} is ready for client review (Purple Phase).",
+                    title="Ready for Client Review",
+                    body=f"Task {instance.task_code} is ready for client review.",
                     link=f"/task/{instance.id}",
                     exclude_user=actor
                 )
-
+            # 2. Notify for Rework
+            elif slug == 'rework-revision':
+                if instance.assignee:
+                    notify_user(
+                        instance.assignee.id,
+                        title="Re-work Required ⚠️",
+                        body=f"Task '{instance.title}' has been sent back for rework.",
+                        link=f"/task/{instance.id}"
+                    )
             # 3. Notify Completion
             elif slug == 'completed-launched':
-                 notify_user(
-                    instance.created_by.id if instance.created_by else instance.assignee.id,
-                    title="Project Launched! 🚀",
-                    body=f"Task {instance.task_code} has been officially launched.",
-                    link=f"/task/{instance.id}"
-                )
+                if instance.assignee:
+                    notify_user(
+                        instance.assignee.id,
+                        title="Task Launched! 🚀",
+                        body=f"Your task '{instance.title}' has been approved and completed.",
+                        link=f"/task/{instance.id}"
+                    )
+                if instance.created_by and getattr(instance.created_by, 'id', None) != getattr(instance.assignee, 'id', None):
+                    notify_user(
+                        instance.created_by.id,
+                        title="Project Launched! 🚀",
+                        body=f"Task {instance.task_code} has been officially launched.",
+                        link=f"/task/{instance.id}"
+                    )
 
     # --- Client Approval Success Notification ---
     if not created and actor and instance.is_client_approved:
@@ -220,59 +248,20 @@ def log_work_item_save(sender, instance: WorkItem, created: bool, **kwargs):
                 exclude_user=actor
             )
 
-        # Workflow Automation Notifications
-        if instance.state and getattr(instance, "_old_state_id", None) != instance.state_id:
-            if instance.state.slug == "team-head-review":
-                # Notify Department Head
-                if instance.department and instance.department.head:
-                    notify_user(
-                        instance.department.head.id,
-                        title=f"Review Required: {instance.task_code}",
-                        body=f"Task '{instance.title}' is ready for internal review.",
-                        link=f"/task/{instance.id}"
-                    )
-                # Notify PMs
-                notify_roles(
-                    [User.Role.PROJECT_MANAGER],
-                    title=f"Head Review Pending: {instance.task_code}",
-                    body=f"Task '{instance.title}' submitted to Head for review.",
-                    link=f"/task/{instance.id}"
-                )
-            elif instance.state.slug == "client-review":
-                 notify_roles(
-                    [User.Role.PROJECT_MANAGER, User.Role.ADMIN],
-                    title=f"Client Review Ready: {instance.task_code}",
-                    body=f"Task '{instance.title}' is ready for client presentation.",
-                    link=f"/task/{instance.id}"
-                )
-            elif instance.state.slug == "completed-launched":
-                 if instance.assignee:
-                     notify_user(
-                         instance.assignee.id,
-                         title="Task Launched! 🚀",
-                         body=f"Your task '{instance.title}' has been approved and completed.",
-                         link=f"/task/{instance.id}"
-                     )
-            elif instance.state.slug == "re-edit":
-                 if instance.assignee:
-                     notify_user(
-                         instance.assignee.id,
-                         title="Re-work Required ⚠️",
-                         body=f"Task '{instance.title}' has been sent back for re-editing.",
-                         link=f"/task/{instance.id}"
-                     )
-
-            # --- Automated Timer Logic ---
-            if instance.state.slug in ["in-progress", "revisions"]:
-                # Start timer if not already running
-                if not instance.timer_start:
-                    WorkItem.objects.filter(pk=instance.pk).update(timer_start=timezone.now())
-            
-            # Check if we just LEFT a tracked state
-            if getattr(instance, "_old_state_id", None):
+    # --- Automated Timer Logic ---
+    if not created and actor and instance.state:
+        # Check if we just transitioned states
+        old_state_id = getattr(instance, "_old_state_id", None)
+        if old_state_id != instance.state.id:
+            # Start timer if entering a tracked state
+            if instance.state.slug in ["in-progress", "rework-revision"] and not instance.timer_start:
+                WorkItem.objects.filter(pk=instance.pk).update(timer_start=timezone.now())
+        
+            # Stop timer if leaving a tracked state
+            if old_state_id:
                 try:
-                    old_state = State.objects.get(pk=instance._old_state_id)
-                    if old_state.slug in ["in-progress", "revisions"] and instance.timer_start:
+                    old_state = State.objects.get(pk=old_state_id)
+                    if old_state.slug in ["in-progress", "rework-revision"] and instance.timer_start:
                         # Calculate duration
                         duration = timezone.now() - instance.timer_start
                         minutes = int(duration.total_seconds() // 60)

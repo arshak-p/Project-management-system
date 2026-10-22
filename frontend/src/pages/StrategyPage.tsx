@@ -55,7 +55,7 @@ export default function StrategyPage() {
     e.preventDefault();
     const rows = drafts.filter((d) => d.title.trim() && d.module !== '');
     if (!plan || rows.length === 0) return setError('Add at least one post with a title and content type.');
-    const state = o.states.find((s) => s.slug === 'pending') ?? o.states[0];
+    const state = o.states.find((s) => s.slug === 'backlog') ?? o.states[0];
     run(async () => {
       const res = await api.bulkCreateTasks(rows.map((d) => ({
         project: plan.project, strategy: plan.id, title: d.title.trim(), module: d.module,

@@ -26,7 +26,7 @@ class Base(APITestCase):
         cls.member2 = make_user("member2@x.com", R.SPECIALIST)
         cls.strategist = make_user("strat@x.com", R.SALES_MANAGER)
         cls.project = Project.objects.create(name="Acme", slug="acme")
-        cls.state = State.objects.create(name="To Do", slug="todo", sort_order=1)
+        cls.state, _ = State.objects.get_or_create(slug="backlog", defaults={"name": "Pending", "sort_order": 0})
         cls.state2 = State.objects.create(name="Doing", slug="doing", sort_order=2)
         cls.module = Module.objects.create(name="Social", slug="social")
         cls.task = WorkItem.objects.create(
@@ -292,3 +292,64 @@ class ClientRoleTests(Base):
         self.assertNotEqual(c.post("/api/work-items/", {"project": self.project.id, "title": "x", "state": self.state.id, "module": self.module.id}).status_code, 201)
         self.assertEqual(c.get("/api/users/").status_code, 403)
         self.assertEqual(c.post("/api/projects/", {"name": "N", "slug": "n"}).status_code, 403)
+
+
+class LiveWorkflowTransitionTests(Base):
+    """The live 5-stage workflow: backlog -> in-progress -> client-review -> completed / rework."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        mk = lambda slug, name, order: State.objects.get_or_create(slug=slug, defaults={"name": name, "sort_order": order})[0]
+        cls.backlog, cls.prog = cls.state, mk("in-progress", "In Progress", 20)
+        cls.review, cls.rework = mk("client-review", "Client Review", 50), mk("rework-revision", "Rework", 60)
+        cls.done = mk("completed-launched", "Completed", 100)
+
+    def move(self, user, task, state):
+        return self.as_user(user).patch(f"/api/work-items/{task.id}/", {"state": state.id}, format="json")
+
+    def test_specialist_follows_the_pipeline(self):
+        t = self.task
+        self.assertIn(self.move(self.member, t, self.review).status_code, (400, 403))   # can't skip in-progress
+        self.assertEqual(self.move(self.member, t, self.prog).status_code, 200)
+        self.assertIn(self.move(self.member, t, self.done).status_code, (400, 403))     # can't finish own work
+        self.assertEqual(self.move(self.member, t, self.review).status_code, 200)       # send to client
+
+    def test_pm_can_move_anywhere(self):
+        for state in (self.done, self.backlog, self.review):
+            self.assertEqual(self.move(self.pm, self.task, state).status_code, 200)
+
+    def test_nobody_leaves_completed_except_admin_and_pm(self):
+        WorkItem.objects.filter(pk=self.task.pk).update(state=self.done)
+        self.assertIn(self.move(self.member, self.task, self.prog).status_code, (400, 403))
+        self.assertEqual(self.move(self.pm, self.task, self.prog).status_code, 200)
+
+    def test_team_head_can_send_back_for_rework(self):
+        head = self.head
+        WorkItem.objects.filter(pk=self.task.pk).update(state=self.review, assignee=head)
+        r = self.move(head, WorkItem.objects.get(pk=self.task.pk), self.rework)
+        self.assertEqual(r.status_code, 200, r.data)
+
+    def test_kanban_drag_obeys_the_same_rules(self):
+        body = [{"id": self.task.id, "state": self.review.id, "board_position": 0}]
+        r = self.as_user(self.member).post("/api/work-items/reorder/", body, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.data["rejected"]), 1)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.state_id, self.backlog.id)
+        body[0]["state"] = self.prog.id
+        r = self.as_user(self.member).post("/api/work-items/reorder/", body, format="json")
+        self.assertEqual(r.data["rejected"], [])
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.state_id, self.prog.id)
+
+    def test_client_approves_or_requests_changes_on_their_own_project_only(self):
+        client = make_user("cl@x.com", R.CLIENT)
+        client.tms_profile.client_project = self.project
+        client.tms_profile.save()
+        WorkItem.objects.filter(pk=self.task.pk).update(state=self.review)
+        self.assertEqual(self.move(client, self.task, self.rework).status_code, 200)
+        WorkItem.objects.filter(pk=self.task.pk).update(state=self.review)
+        self.assertEqual(self.move(client, self.task, self.done).status_code, 200)
+        self.task.refresh_from_db()
+        self.assertTrue(self.task.is_client_approved)

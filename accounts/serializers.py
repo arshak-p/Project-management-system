@@ -20,6 +20,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
+            "is_verified": user.is_verified,
             "role": user.role,
             "department_id": getattr(getattr(user, "tms_profile", None), "department_id", None),
             "client_project_id": getattr(

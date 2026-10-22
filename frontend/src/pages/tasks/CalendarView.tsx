@@ -8,7 +8,7 @@ import { Button, Card, ErrorBox, Spinner, cx, todayISO } from '../../ui';
 const iso = (d: Date) => d.toLocaleDateString('en-CA');
 
 export default function CalendarView() {
-  const tasks = useLoad(() => api.tasks());
+  const tasks = useLoad(() => api.tasks(), [], { live: true });
   const opts = useTaskOptions();
   const [month, setMonth] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [open, setOpen] = useState<Task | null>(null);

@@ -8,7 +8,7 @@ import { Badge, Card, Empty, ErrorBox, PriorityBadge, Spinner, fmtDate, inputCls
 
 export default function ListView() {
   const { user } = useAuth();
-  const tasks = useLoad(() => api.tasks());
+  const tasks = useLoad(() => api.tasks(), [], { live: true });
   const opts = useTaskOptions();
   const [q, setQ] = useState('');
   const [project, setProject] = useState('');

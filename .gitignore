@@ -94,4 +94,5 @@ database_backups/
 .idea/
 google_drive_key.json
 python/google_drive_key.json
+token.json
 google_drive_key.json

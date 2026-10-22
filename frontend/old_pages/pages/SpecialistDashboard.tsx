@@ -67,7 +67,7 @@ export default function SpecialistDashboard({ me }: { me: User | null }) {
         className="flex flex-col md:flex-row md:items-end justify-between gap-6"
       >
         <div>
-          <h1 className="text-3xl lg:text-5xl font-black tracking-tighter text-white">
+          <h1 className="text-3xl lg:text-5xl font-black tracking-tighter text-text">
             My Workspace
           </h1>
           <p className="text-[10px] text-text-muted mt-2 font-bold tracking-widest uppercase opacity-60 italic">Your Active Missions for Today</p>
@@ -87,7 +87,7 @@ export default function SpecialistDashboard({ me }: { me: User | null }) {
             <ClipboardList className="w-6 h-6 text-primary" />
           </motion.div>
           <div>
-            <h3 className="text-xl font-black text-white">Today's Work Items</h3>
+            <h3 className="text-xl font-black text-text">Today's Work Items</h3>
             <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Tasks Requiring Your Action</p>
           </div>
         </motion.div>
@@ -97,7 +97,7 @@ export default function SpecialistDashboard({ me }: { me: User | null }) {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4, delay: 0.15 }}
-              className="p-10 bg-background/50 border border-white/5 rounded-[2rem] text-center"
+              className="p-10 bg-background/50 border border-border/50 rounded-[2rem] text-center"
             >
               <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 3, repeat: Infinity }}>
                 <ClipboardList className="w-12 h-12 text-primary/30 mx-auto mb-4" />
@@ -118,14 +118,14 @@ export default function SpecialistDashboard({ me }: { me: User | null }) {
                   layout
                   onClick={() => setSelectedTaskId(task.id)}
                   whileHover={{ y: -3, scale: 1.005 }}
-                  className="task-card p-6 bg-background border border-white/5 rounded-[2rem] flex items-center justify-between cursor-pointer group shadow-xl"
+                  className="task-card p-6 bg-background border border-border/50 rounded-[2rem] flex items-center justify-between cursor-pointer group shadow-xl"
                 >
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-widest text-primary block mb-2">{task.task_code} • {task.project__slug || 'GENERAL'}</span>
-                    <h4 className="text-base font-bold text-text-muted group-hover:text-white transition-colors">{task.title}</h4>
+                    <h4 className="text-base font-bold text-text-muted group-hover:text-text transition-colors">{task.title}</h4>
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest bg-white/5 text-text-muted px-4 py-2 rounded-xl border border-white/10">
+                    <span className="text-[10px] font-black uppercase tracking-widest bg-surface/50 text-text-muted px-4 py-2 rounded-xl border border-border">
                       {task.state__name}
                     </span>
                     {task.due_date && (

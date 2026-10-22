@@ -112,9 +112,13 @@ client.interceptors.response.use(
         const access = await refreshing;
         original.headers.Authorization = `Bearer ${access}`;
         return client(original);
-      } catch {
-        tokens.clear();
-        window.dispatchEvent(new Event('auth:logout'));
+      } catch (refreshError) {
+        // Only an invalid/expired refresh token ends the session; a network or server error should not.
+        const code = (refreshError as AxiosError).response?.status;
+        if (code === 400 || code === 401) {
+          tokens.clear();
+          window.dispatchEvent(new Event('auth:logout'));
+        }
       }
     }
     return Promise.reject(error);

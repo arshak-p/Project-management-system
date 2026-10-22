@@ -55,7 +55,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
       if (!isMounted) return;
       load().finally(() => {
         if (isMounted) {
-          timeoutId = setTimeout(poll, 3000);
+          timeoutId = window.setTimeout(poll, 30000);
         }
       });
     };
@@ -101,12 +101,12 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
         </div>
         <div className="flex items-center gap-4">
           {/* Time Filter Toggle */}
-          <div className="glass p-1 rounded-2xl border border-white/5 flex items-center shadow-inner scale-90 md:scale-100">
+          <div className="glass p-1 rounded-2xl border border-border/50 flex items-center shadow-inner scale-90 md:scale-100">
             <button
               onClick={() => setViewMode('month')}
               className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all ${viewMode === 'month'
                   ? 'bg-primary text-white shadow-glow'
-                  : 'text-text-muted hover:text-white hover:bg-white/5'
+                  : 'text-text-muted hover:text-text hover:bg-surface/50'
                 }`}
             >
               Month
@@ -115,16 +115,16 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
               onClick={() => setViewMode('all')}
               className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all ${viewMode === 'all'
                   ? 'bg-primary text-white shadow-glow'
-                  : 'text-text-muted hover:text-white hover:bg-white/5'
+                  : 'text-text-muted hover:text-text hover:bg-surface/50'
                 }`}
             >
               All
             </button>
           </div>
 
-          <div className="px-4 lg:px-5 py-2.5 lg:py-3 glass rounded-xl lg:rounded-2xl border border-white/5 flex items-center gap-3">
+          <div className="px-4 lg:px-5 py-2.5 lg:py-3 glass rounded-xl lg:rounded-2xl border border-border/50 flex items-center gap-3">
             <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">System Optimal</span>
+            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-text">System Optimal</span>
           </div>
         </div>
       </div>
@@ -145,21 +145,21 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
             <div className="absolute inset-0 bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#d946ef] opacity-20 blur-3xl group-hover:opacity-30 transition-opacity"></div>
             <div className="relative glass border-[#ec4899]/30 rounded-[2.5rem] p-8 lg:p-12 flex flex-col lg:flex-row items-center gap-8 shadow-2xl">
               <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-[2rem] bg-gradient-to-br from-[#ec4899] to-[#d946ef] flex items-center justify-center shadow-glow-lg animate-bounce-slow relative">
-                <Cake className="w-12 h-12 lg:w-16 lg:h-16 text-white" />
+                <Cake className="w-12 h-12 lg:w-16 lg:h-16 text-text" />
                 <div className="absolute -top-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
                   <PartyPopper className="w-4 h-4 text-[#ec4899]" />
                 </div>
               </div>
               <div className="text-center lg:text-left flex-1">
-                <h2 className="text-3xl lg:text-5xl font-black tracking-tighter text-white mb-2">Happy Birthday, {me?.first_name || 'Legend'}! 🎂</h2>
+                <h2 className="text-3xl lg:text-5xl font-black tracking-tighter text-text mb-2">Happy Birthday, {me?.first_name || 'Legend'}! 🎂</h2>
                 <p className="text-sm lg:text-base text-text-muted font-bold max-w-2xl opacity-80">
                   Today the Command Center celebrates you. Thank you for your incredible contribution to the Colour Parrot team. Have an amazing day filled with joy and success!
                 </p>
               </div>
               <div className="flex gap-4">
-                <div className="px-6 py-4 glass border-white/10 rounded-2xl flex flex-col items-center">
+                <div className="px-6 py-4 glass border-border rounded-2xl flex flex-col items-center">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ec4899]">Agency Status</span>
-                  <span className="text-lg font-black text-white">Guest of Honor</span>
+                  <span className="text-lg font-black text-text">Guest of Honor</span>
                 </div>
               </div>
             </div>
@@ -201,7 +201,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
           </div>
 
           <div className="w-full md:w-64 flex flex-col gap-4 relative z-10">
-            <div className="glass p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden bento-item cursor-pointer" onClick={(e) => { e.stopPropagation(); onNavigate?.('tasks'); }}>
+            <div className="glass p-8 rounded-[2.5rem] border border-border/50 relative overflow-hidden bento-item cursor-pointer" onClick={(e) => { e.stopPropagation(); onNavigate?.('tasks'); }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="p-3 bg-indigo-500/10 rounded-2xl"><Briefcase className="w-6 h-6 text-indigo-400" /></div>
               </div>
@@ -211,7 +211,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
               </div>
             </div>
 
-            <div className="glass p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden bento-item cursor-pointer" onClick={(e) => { e.stopPropagation(); onNavigate?.('projects'); }}>
+            <div className="glass p-8 rounded-[2.5rem] border border-border/50 relative overflow-hidden bento-item cursor-pointer" onClick={(e) => { e.stopPropagation(); onNavigate?.('projects'); }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="p-3 bg-fuchsia-500/10 rounded-2xl"><Calendar className="w-6 h-6 text-fuchsia-400" /></div>
               </div>
@@ -223,7 +223,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
           </div>
         </motion.div>
 
-        <div className="glass p-8 rounded-[3rem] border border-white/5 flex flex-col justify-center relative overflow-hidden bento-item cursor-pointer" onClick={() => onNavigate?.('tasks')}>
+        <div className="glass p-8 rounded-[3rem] border border-border/50 flex flex-col justify-center relative overflow-hidden bento-item cursor-pointer" onClick={() => onNavigate?.('tasks')}>
           <div className="flex flex-col gap-10">
             <div className="flex items-center gap-6">
               <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center">
@@ -238,7 +238,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
             </div>
 
             <div className="w-full">
-              <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
+              <div className="h-3 w-full bg-surface/50 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-primary to-[#d946ef] shadow-glow"
                   style={{ width: `${Math.min(100, (analytics?.totals?.pending || 0) / (analytics?.totals?.all || 1) * 100)}%` }}
@@ -345,7 +345,7 @@ export default function OverviewPage({ onNavigate, me }: { onNavigate?: (page: s
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {recentActivity.map((a) => (
-              <div key={a.id} className="p-5 bg-white/5 rounded-[2rem] border border-white/5 flex flex-col gap-3 hover:bg-white/10 transition-all group cursor-pointer" onClick={() => a.payload && (a.payload as { id: number }).id && setSelectedTaskId((a.payload as { id: number }).id)}>
+              <div key={a.id} className="p-5 bg-surface/50 rounded-[2rem] border border-border/50 flex flex-col gap-3 hover:bg-surface transition-all group cursor-pointer" onClick={() => a.payload && (a.payload as { id: number }).id && setSelectedTaskId((a.payload as { id: number }).id)}>
                 <div className="flex justify-between items-center">
                   <div className="p-2 bg-primary/10 rounded-xl"><ActivityIcon className="w-4 h-4 text-primary" /></div>
                   <span className="text-[9px] font-black text-text-muted/40 uppercase tracking-widest">{new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>

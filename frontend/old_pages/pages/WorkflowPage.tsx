@@ -79,11 +79,11 @@ export default function WorkflowPage({ me: _me }: { me: User | null }) {
           <p className="text-text-muted mt-2 font-bold uppercase tracking-[0.2em] text-[10px] opacity-60">Manage your task lifecycle states</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-3 glass px-4 py-2.5 rounded-2xl cursor-pointer hover:bg-white/5 transition-all">
+          <label className="flex items-center gap-3 glass px-4 py-2.5 rounded-2xl cursor-pointer hover:bg-surface/50 transition-all">
             <Database className={`w-4 h-4 ${showArchived ? 'text-amber-500' : 'text-text-muted'}`} />
             <span className="text-[10px] font-black uppercase tracking-widest">Archives</span>
             <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="sr-only" />
-            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-white/10'}`}>
+            <div className={`w-8 h-4 rounded-full relative transition-colors ${showArchived ? 'bg-amber-500' : 'bg-surface'}`}>
               <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${showArchived ? 'left-4.5' : 'left-0.5'}`}></div>
             </div>
           </label>
@@ -98,7 +98,7 @@ export default function WorkflowPage({ me: _me }: { me: User | null }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {states.map(state => (
-          <div key={state.id} className="glass p-6 rounded-[2rem] border-white/5 group hover:border-primary/20 transition-all">
+          <div key={state.id} className="glass p-6 rounded-[2rem] border-border/50 group hover:border-primary/20 transition-all">
             <div className="flex justify-between items-start mb-4">
               <div className="p-3 rounded-2xl" style={{ backgroundColor: `${state.color}20` }}>
                 <LayoutGrid className="w-5 h-5" style={{ color: state.color }} />
@@ -139,7 +139,7 @@ export default function WorkflowPage({ me: _me }: { me: User | null }) {
         ))}
 
         {states.length === 0 && (
-          <div className="col-span-full py-20 text-center glass rounded-[3rem] border-dashed border-white/10">
+          <div className="col-span-full py-20 text-center glass rounded-[3rem] border-dashed border-border">
             <Workflow className="w-12 h-12 text-text-muted mx-auto mb-4 opacity-20" />
             <p className="text-text-muted font-bold">No workflow states defined.</p>
             <p className="text-xs text-text-muted mt-2">Create states like "To Do", "In Progress", or "Review".</p>
@@ -155,7 +155,7 @@ export default function WorkflowPage({ me: _me }: { me: User | null }) {
                 <h3 className="text-2xl font-black italic">{editingId ? 'Edit State' : 'Create State'}</h3>
                 <p className="text-xs text-text-muted mt-1 uppercase tracking-widest font-black opacity-50">{editingId ? 'Modify pipeline stage' : 'Add new pipeline stage'}</p>
               </div>
-              <button onClick={() => { setShowModal(false); setEditingId(null); setForm({ name: '', slug: '', description: '', color: '#3b82f6', is_active: true }); }} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+              <button onClick={() => { setShowModal(false); setEditingId(null); setForm({ name: '', slug: '', description: '', color: '#3b82f6', is_active: true }); }} className="p-2 hover:bg-surface/50 rounded-xl transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -170,7 +170,7 @@ export default function WorkflowPage({ me: _me }: { me: User | null }) {
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
                   placeholder="e.g. In Creative Review"
-                  className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm focus:border-primary outline-none transition-all"
+                  className="w-full px-5 py-3 bg-surface/50 border border-border rounded-2xl text-sm focus:border-primary outline-none transition-all"
                 />
               </div>
 
@@ -180,7 +180,7 @@ export default function WorkflowPage({ me: _me }: { me: User | null }) {
                   value={form.slug}
                   onChange={e => setForm({ ...form, slug: e.target.value })}
                   placeholder="e.g. creative-review"
-                  className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm font-mono focus:border-primary outline-none transition-all"
+                  className="w-full px-5 py-3 bg-surface/50 border border-border rounded-2xl text-sm font-mono focus:border-primary outline-none transition-all"
                 />
               </div>
 
@@ -191,13 +191,13 @@ export default function WorkflowPage({ me: _me }: { me: User | null }) {
                   onChange={e => setForm({ ...form, description: e.target.value })}
                   placeholder="What happens in this stage?"
                   rows={2}
-                  className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm focus:border-primary outline-none transition-all resize-none"
+                  className="w-full px-5 py-3 bg-surface/50 border border-border rounded-2xl text-sm focus:border-primary outline-none transition-all resize-none"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-text-muted">Theme Color</label>
-                <div className="flex items-center gap-4 px-4 py-2 bg-white/5 border border-white/10 rounded-2xl">
+                <div className="flex items-center gap-4 px-4 py-2 bg-surface/50 border border-border rounded-2xl">
                   <input 
                     type="color" 
                     value={form.color}

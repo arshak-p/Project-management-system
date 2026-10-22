@@ -4,6 +4,8 @@ import io
 import zipfile
 from unittest import mock
 
+import os
+
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.core import mail
@@ -35,7 +37,7 @@ class Base(APITestCase):
         cls.member = make_user("member@x.com", R.SPECIALIST)
         cls.member2 = make_user("member2@x.com", R.SPECIALIST)
         cls.project = Project.objects.create(name="Acme", slug="acme")
-        cls.state, _ = State.objects.get_or_create(slug="pending", defaults={"name": "Pending", "sort_order": 1})
+        cls.state, _ = State.objects.get_or_create(slug="backlog", defaults={"name": "Pending", "sort_order": 0})
         cls.module = Module.objects.create(name="Reel", slug="reel")
 
     def setUp(self):
@@ -48,7 +50,30 @@ class Base(APITestCase):
 
 
 # ---------------------------------------------------------------- OTP
+class FakeResend:
+    """Stands in for the Resend HTTP API so tests never send real email."""
+
+    def __init__(self, fail=False):
+        self.sent, self.fail = [], fail
+
+    def send(self, payload):
+        if self.fail:
+            raise OSError("resend down")
+        self.sent.append(payload)
+        return {"id": "fake"}
+
+
 class OTPFlowTests(Base):
+    def setUp(self):
+        super().setUp()
+        self.resend = FakeResend()
+        patcher = mock.patch.dict(os.environ, {"RESEND_API_KEY": "test-key"})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        emails = mock.patch("resend.Emails", self.resend)
+        emails.start()
+        self.addCleanup(emails.stop)
+
     def send(self, email="new@x.com", user=None):
         return self.as_user(user or self.hr).post("/api/auth/send-creation-otp/", {"email": email})
 
@@ -64,11 +89,11 @@ class OTPFlowTests(Base):
     def test_code_is_emailed_and_matches_database(self):
         r = self.send()
         self.assertEqual(r.status_code, 200, r.data)
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].to, ["new@x.com"])
+        self.assertEqual(len(self.resend.sent), 1)
+        self.assertEqual(self.resend.sent[0]["to"], ["new@x.com"])
         code = EmailOTP.objects.get(email="new@x.com").otp
         self.assertEqual(len(code), 6)
-        self.assertIn(code, mail.outbox[0].body)
+        self.assertIn(code, self.resend.sent[0]["text"])
 
     def test_full_happy_path_creates_the_account(self):
         self.send()
@@ -121,10 +146,34 @@ class OTPFlowTests(Base):
         self.assertEqual(self.create().status_code, 400)
 
     def test_email_failure_is_reported_not_hidden(self):
-        with mock.patch("accounts.views.send_mail", side_effect=OSError("smtp down")):
+        self.resend.fail = True
+        r = self.send()
+        self.assertEqual(r.status_code, 502)
+        self.assertFalse(EmailOTP.objects.filter(email="new@x.com").exists())
+
+    def test_missing_resend_key_is_reported_not_hidden(self):
+        with mock.patch.dict(os.environ, {"RESEND_API_KEY": ""}):
             r = self.send()
         self.assertEqual(r.status_code, 502)
         self.assertFalse(EmailOTP.objects.filter(email="new@x.com").exists())
+
+    def test_old_style_create_with_code_in_the_request_still_works(self):
+        self.send()
+        code = EmailOTP.objects.get(email="new@x.com").otp
+        r = self.as_user(self.hr).post(
+            "/api/auth/create-user/",
+            {"email": "new@x.com", "password": "Str0ng-pass-123", "first_name": "N", "role": R.SPECIALIST, "otp": code},
+        )
+        self.assertEqual(r.status_code, 201, r.data)
+        self.assertTrue(User.objects.get(email="new@x.com").is_verified)
+
+    def test_create_with_a_wrong_code_is_refused(self):
+        self.send()
+        r = self.as_user(self.hr).post(
+            "/api/auth/create-user/",
+            {"email": "new@x.com", "password": "Str0ng-pass-123", "first_name": "N", "role": R.SPECIALIST, "otp": "000001"},
+        )
+        self.assertEqual(r.status_code, 400)
 
     def test_existing_member_cannot_be_invited_again(self):
         self.assertEqual(self.send("member@x.com").status_code, 400)
@@ -238,7 +287,7 @@ class WebsocketTests(TransactionTestCase):
         self.other = make_user("other@x.com", R.SPECIALIST)
         self.pm = make_user("pm@x.com", R.PROJECT_MANAGER)
         project = Project.objects.create(name="Acme", slug="acme")
-        state, _ = State.objects.get_or_create(slug="pending", defaults={"name": "Pending", "sort_order": 1})
+        state, _ = State.objects.get_or_create(slug="backlog", defaults={"name": "Pending", "sort_order": 0})
         module = Module.objects.create(name="Reel", slug="reel")
         self.mine = WorkItem.objects.create(project=project, title="Mine", state=state, module=module, assignee=self.member, created_by=self.pm)
         self.theirs = WorkItem.objects.create(project=project, title="Theirs", state=state, module=module, assignee=self.other, created_by=self.pm)

@@ -223,17 +223,23 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"Failed to email backups: {str(e)}"))
 
         # Upload to Google Drive into a Separate Folder
-        drive_key_path = os.path.join(settings.BASE_DIR, 'google_drive_key.json')
-        if os.path.exists(drive_key_path):
+        token_path = os.path.join(settings.BASE_DIR, 'token.json')
+        if os.path.exists(token_path):
             self.stdout.write(f"Uploading {month_str} backup to Google Drive...")
             try:
-                from google.oauth2 import service_account
+                from google.oauth2.credentials import Credentials
                 from googleapiclient.discovery import build
                 from googleapiclient.http import MediaIoBaseUpload
+                from google.auth.transport.requests import Request
 
-                SCOPES = ['https://www.googleapis.com/auth/drive']
-                creds = service_account.Credentials.from_service_account_file(
-                    drive_key_path, scopes=SCOPES)
+                SCOPES = ['https://www.googleapis.com/auth/drive.file']
+                creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+                
+                if creds and creds.expired and creds.refresh_token:
+                    creds.refresh(Request())
+                    with open(token_path, 'w') as token:
+                        token.write(creds.to_json())
+
                 drive_service = build('drive', 'v3', credentials=creds)
                 
                 # 1. Check for Master Folder (Must be created and shared by the User)
@@ -243,15 +249,15 @@ class Command(BaseCommand):
                 items = results.get('files', [])
                 
                 if not items:
-                    error_msg = (
-                        f"Master folder '{master_folder_name}' not found! "
-                        "Because this is an automated bot, it has 0 bytes of its own storage. "
-                        "You MUST create a folder named 'TMS_Agency_Backups' in your personal Google Drive, "
-                        "and share it as an Editor with: tms-backup-bot@colour-parrot-backup.iam.gserviceaccount.com"
-                    )
-                    raise Exception(error_msg)
-                
-                master_id = items[0].get('id')
+                    self.stdout.write("Master folder not found. Creating 'TMS_Agency_Backups'...")
+                    folder_metadata = {
+                        'name': master_folder_name,
+                        'mimeType': 'application/vnd.google-apps.folder'
+                    }
+                    master_folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
+                    master_id = master_folder.get('id')
+                else:
+                    master_id = items[0].get('id')
 
                 # 2. Create a folder for the month inside the User's Master Folder
                 folder_name = first_day_prev_month.strftime("%d/%m/%Y")
