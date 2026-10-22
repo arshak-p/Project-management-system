@@ -11,12 +11,12 @@ export default function ProjectList() {
   const { user } = useAuth();
   const manage = can.manageProjects(user?.role);
   const projects = useLoad(() => api.projects());
-  const tasks = useLoad(() => api.tasks());
+  const stats = useLoad(() => api.analytics());
   const [editing, setEditing] = useState<Project | null | undefined>(undefined);
 
-  if (projects.loading || tasks.loading) return <Spinner />;
+  if (projects.loading || stats.loading) return <Spinner />;
   const counts = new Map<number, number>();
-  tasks.data?.forEach((t) => counts.set(t.project, (counts.get(t.project) ?? 0) + 1));
+  stats.data?.by_project?.forEach((p) => counts.set(p.project_id, p.c));
 
   return (
     <>

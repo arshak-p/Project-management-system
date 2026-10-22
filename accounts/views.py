@@ -164,7 +164,7 @@ class SendOTPView(APIView):
 
         otp_code = f"{secrets.randbelow(900000) + 100000}"
         
-        EmailOTP.objects.create(email=email, otp=otp_code)
+        otp_row = EmailOTP.objects.create(email=email, otp=otp_code)
 
         subject = 'Welcome to Colour Parrot! - Your Tactical Clearance Code'
         message = (
@@ -176,7 +176,22 @@ class SendOTPView(APIView):
             'Best regards,\n'
             'The Colour Parrot Team'
         )
-        send_reliable_email_async(subject, message, [email])
+        # Send now (not in a background thread) so a failure is reported instead of silently lost.
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception as exc:  # SMTP down, wrong password, blocked address...
+            print(f"OTP EMAIL ERROR: {exc}")
+            EmailOTP.objects.filter(pk=otp_row.pk).delete()
+            return Response(
+                {'detail': 'The code could not be emailed. Check the email address and the mail settings, then try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
         return Response({
             'detail': 'Code Dispatched successfully.',
@@ -214,7 +229,7 @@ class VerifyOTPActionView(APIView):
             return Response({'detail': 'Invalid or expired clearance code.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # 3. Check the code
-        if otp_record.otp != otp_code:
+        if not secrets.compare_digest(str(otp_record.otp), otp_code):
             otp_record.failed_attempts += 1
             if otp_record.failed_attempts >= 3:
                 otp_record.locked_until = now + datetime.timedelta(minutes=15)

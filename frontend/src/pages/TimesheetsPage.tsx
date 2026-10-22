@@ -11,20 +11,19 @@ const csvCell = (v: string | number) => {
 };
 
 export default function TimesheetsPage() {
-  const data = useLoad(async () => {
-    const [logs, tasks] = await Promise.all([api.timeLogs(), api.tasks()]);
-    return { logs, tasks };
-  });
-  const [from, setFrom] = useState('');
+  const [from, setFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 31); return d.toLocaleDateString('en-CA'); });
   const [to, setTo] = useState('');
+  const data = useLoad(async () => {
+    const [logs, tasks] = await Promise.all([api.timeLogsBetween(from, to), api.tasks()]);
+    return { logs, tasks };
+  }, [from, to]);
 
   const rows = useMemo(() => {
     if (!data.data) return [];
     const byId = new Map(data.data.tasks.map((t) => [t.id, t]));
     return data.data.logs
-      .filter((l) => (!from || l.logged_at.slice(0, 10) >= from) && (!to || l.logged_at.slice(0, 10) <= to))
       .map((l) => ({ ...l, task: l.work_item == null ? undefined : byId.get(l.work_item) }));
-  }, [data.data, from, to]);
+  }, [data.data]);
 
   const perPerson = useMemo(() => {
     const m = new Map<string, number>();

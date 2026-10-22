@@ -1,6 +1,8 @@
+import io
 import os
 import subprocess
 import csv
+import zipfile
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q, Sum
@@ -784,7 +786,7 @@ class WorkItemAttachmentViewSet(SalesSafeViewSet):
 
 class TimeLogViewSet(SalesSafeViewSet):
     serializer_class = TimeLogSerializer
-    filterset_fields = ("work_item",)
+    filterset_fields = {"work_item": ["exact"], "logged_at": ["gte", "lte", "date__gte", "date__lte"]}
 
     def get_queryset(self):
         visible = access.work_items_for_user(self.request.user).values_list("id", flat=True)
@@ -1263,15 +1265,8 @@ class BackupViewSet(viewsets.ModelViewSet):
         call_command('run_monthly_backup', months_ago=1)
         return Response({"status": "Manual backup generation triggered for the last 2 months."})
 
-    @action(detail=True, methods=["post"], url_path="approve-and-download")
-    def approve_and_download(self, request, pk=None):
-        backup = self.get_object()
-        
-        backup.is_approved = True
-        backup.approved_by = request.user
-        backup.approved_at = timezone.now()
-        backup.save()
-
+    def _zip_response(self, backup):
+        """Build the full backup zip for one month and return it as a download."""
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, 'w') as zip_file:
             # 1-5: CSV Files (Previously implemented)
@@ -1426,6 +1421,13 @@ class BackupViewSet(viewsets.ModelViewSet):
                     proc = subprocess.run(d_cmd, env=env, capture_output=True, text=True)
                     if proc.returncode == 0:
                         zip_file.writestr("DATABASE_SAFE_BACKUP/colour_parrot_dump.sql", proc.stdout)
+                    else:
+                        zip_file.writestr("DATABASE_BACKUP_ERROR.txt", "pg_dump failed:\n" + (proc.stderr or "")[:2000])
+                else:
+                    zip_file.writestr(
+                        "DATABASE_BACKUP_SKIPPED.txt",
+                        "The database is not PostgreSQL, so no SQL dump was made. The CSV files in this zip are complete.",
+                    )
             except Exception as db_err:
                     zip_file.writestr("DATABASE_BACKUP_ERROR.txt", str(db_err))
 
@@ -1434,17 +1436,23 @@ class BackupViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="Full_Agency_Backup_{backup.month}.zip"'
         return response
 
+    @action(detail=True, methods=["post"], url_path="approve-and-download")
+    def approve_and_download(self, request, pk=None):
+        backup = self.get_object()
+        # Build first: if the zip fails the backup must not be marked as approved.
+        response = self._zip_response(backup)
+        backup.is_approved = True
+        backup.approved_by = request.user
+        backup.approved_at = timezone.now()
+        backup.save()
+        return response
+
     @action(detail=True, methods=["get"], url_path="download")
     def download(self, request, pk=None):
         backup = self.get_object()
-        file_path = backup.file.path
-        if not os.path.exists(file_path):
-            return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-        from django.http import FileResponse
-        response = FileResponse(open(file_path, 'rb'))
-        response['Content-Disposition'] = f'attachment; filename="Full_Agency_Backup_{backup.month}.zip"'
-        return response
+        if not backup.is_approved:
+            return Response({"detail": "Approve this backup first."}, status=status.HTTP_400_BAD_REQUEST)
+        return self._zip_response(backup)
 
     @action(detail=False, methods=["post"], url_path="trigger-automated")
     def trigger_automated(self, request):

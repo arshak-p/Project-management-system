@@ -1,0 +1,147 @@
+# Render Blueprint for Colour Parrot TMS.
+# Render dashboard -> New -> Blueprint -> pick this repository. See DEPLOY_RENDER.md.
+#
+# Everything is placed in Singapore, the Render region closest to India.
+# Change `plan` values to suit your budget (free web services sleep after 15 minutes and are slow to wake;
+# free Postgres is deleted after 30 days, so the database below uses a paid plan).
+
+databases:
+  - name: colour-parrot-db
+    region: singapore
+    plan: basic-256mb
+    databaseName: colour_parrot
+    user: colour_parrot
+
+services:
+  # Key Value store used for live notifications / comments (Django Channels) and Celery.
+  - type: keyvalue
+    name: colour-parrot-redis
+    region: singapore
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []          # only services in this Render account can connect
+
+  # The API (Django + Daphne for WebSockets).
+  - type: web
+    name: colour-parrot-api
+    runtime: python
+    region: singapore
+    plan: starter
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: python manage.py migrate --noinput && python create_admin.py && python seed_workflow.py && daphne -b 0.0.0.0 -p $PORT colour_parrot.asgi:application
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true          # Render creates a long random value once
+      - key: DATABASE_URL
+        fromDatabase:
+          name: colour-parrot-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: colour-parrot-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: colour-parrot-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: colour-parrot-redis
+          property: connectionString
+      # Where the website is served from (add your own domain here).
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://c1r9rt-workflow.in,https://www.c1r9rt-workflow.in,https://colour-parrot-web.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://c1r9rt-workflow.in,https://www.c1r9rt-workflow.in,https://colour-parrot-web.onrender.com
+      - key: DJANGO_BEHIND_PROXY
+        value: "true"
+      - key: SECURE_SSL_REDIRECT
+        value: "true"
+      # Secrets: Render asks you for these on first deploy and never stores them in git.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+
+  # Background worker + scheduler: monthly backups, deadline reminders, birthdays.
+  - type: worker
+    name: colour-parrot-worker
+    runtime: python
+    region: singapore
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A colour_parrot worker -B -l info
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY        # must be the same value as the API service
+        fromService:
+          type: web
+          name: colour-parrot-api
+          envVarKey: DJANGO_SECRET_KEY
+      - key: DATABASE_URL
+        fromDatabase:
+          name: colour-parrot-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: colour-parrot-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: colour-parrot-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: colour-parrot-redis
+          property: connectionString
+      - key: EMAIL_HOST_USER
+        fromService:
+          type: web
+          name: colour-parrot-api
+          envVarKey: EMAIL_HOST_USER
+      - key: EMAIL_HOST_PASSWORD
+        fromService:
+          type: web
+          name: colour-parrot-api
+          envVarKey: EMAIL_HOST_PASSWORD
+
+  # The website (React). Served from Render's CDN, so no server to wake up.
+  - type: web
+    name: colour-parrot-web
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: VITE_API_URL
+        value: https://colour-parrot-api.onrender.com
+    routes:
+      - type: rewrite              # lets /tasks, /team ... work when the page is reloaded
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: X-Frame-Options
+        value: DENY

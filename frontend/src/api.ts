@@ -70,6 +70,7 @@ export interface Backup { id: number; month: string; created_at: string; is_appr
 export interface Analytics {
   totals: { all: number; completed_or_launched: number; pending: number; total_time_minutes: number };
   by_state: { state__slug: string; state__name: string; c: number }[];
+  by_project?: { project_id: number; c: number }[];
 }
 
 const client = axios.create({ baseURL: API_URL });
@@ -198,6 +199,8 @@ export const api = {
   deleteAttachment: (id: number) => client.delete(`/attachments/${id}/`),
 
   timeLogs: (params?: object) => list<TimeLog>('/time-logs/', params),
+  timeLogsBetween: (from?: string, to?: string) =>
+    list<TimeLog>('/time-logs/', { ...(from ? { logged_at__date__gte: from } : {}), ...(to ? { logged_at__date__lte: to } : {}) }),
   addTimeLog: (work_item: number, minutes: number, note: string) =>
     client.post('/time-logs/', { work_item, minutes, note, logged_at: new Date().toISOString() }),
   deleteTimeLog: (id: number) => client.delete(`/time-logs/${id}/`),

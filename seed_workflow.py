@@ -19,7 +19,9 @@ DEFAULTS = [
 def run():
     print("Starting Workflow Sync...")
     for slug, name, color, order in DEFAULTS:
-        state, created = State.objects.update_or_create(
+        # Only create stages that are missing; never overwrite names, colours or archived flags
+        # that an admin changed in Settings.
+        state, created = State.objects.get_or_create(
             slug=slug,
             defaults={
                 'name': name,
@@ -31,11 +33,7 @@ def run():
         status = "Created" if created else "Synced"
         print(f"  - [{status}] {name} ({color})")
     
-    # Deactivate any other states to keep the UI clean
-    valid_slugs = [d[0] for d in DEFAULTS]
-    deactivated = State.objects.exclude(slug__in=valid_slugs).update(is_active=False)
-    if deactivated:
-        print(f"Cleaned up {deactivated} old states.")
+    # Stages created by admins in Settings are left alone (they used to be deactivated on every deploy).
     
     print("Workflow Sync Complete! Your dashboard is now 100% ready.")
 

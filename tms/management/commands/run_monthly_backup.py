@@ -72,6 +72,8 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.SUCCESS(f"DB snapshot created at {db_path}"))
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"DB snapshot failed (pg_dump might be missing): {e}"))
+                    if os.path.exists(db_path) and os.path.getsize(db_path) == 0:
+                        os.remove(db_path)
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Error checking DB settings: {e}"))
 
